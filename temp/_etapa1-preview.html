@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JustDoIt — Etapa 1 (tokens · reset · global)</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/reset.css">
+<link rel="stylesheet" href="styles/global.css">
+</head>
+<body>
+<div class="container" style="padding-block: var(--space-xl);">
+  <div class="row row--between">
+    <h1>Concentre-se no que importa.</h1>
+    <button class="surface-card" id="theme" style="padding: var(--space-sm) var(--space-md); border-radius: var(--radius-pill); font-weight: var(--weight-semibold);">Alternar tema</button>
+  </div>
+  <p class="lead">Etapa 1 concluída — fundações de estilo (tokens, reset, global) prontas e validadas.</p>
+  <span class="text-meta">QUI · 7 JUN · FUNDAÇÕES</span>
+
+  <hr class="divider" style="margin-block: var(--space-lg);">
+
+  <h3>Cores semânticas</h3>
+  <div class="grid" style="grid-template-columns: repeat(5, 1fr); margin-top: var(--space-md);">
+    <div class="surface-card" style="height:70px; background:var(--color-primary);"></div>
+    <div class="surface-card" style="height:70px; background:var(--color-accent);"></div>
+    <div class="surface-card" style="height:70px; background:var(--brand-sage);"></div>
+    <div class="surface-card" style="height:70px;"></div>
+    <div class="surface-card" style="height:70px; background:var(--color-surface-sunken);"></div>
+  </div>
+
+  <h3 style="margin-top: var(--space-lg);">Prioridades (RF11)</h3>
+  <div class="row row--wrap" style="margin-top: var(--space-md);">
+    <span style="padding:4px 12px;border-radius:var(--radius-pill);background:var(--color-priority-urgent-soft);color:var(--color-priority-urgent);font-weight:600;font-size:var(--font-size-sm)">Urgente</span>
+    <span style="padding:4px 12px;border-radius:var(--radius-pill);background:var(--color-priority-important-soft);color:var(--color-priority-important);font-weight:600;font-size:var(--font-size-sm)">Importante</span>
+    <span style="padding:4px 12px;border-radius:var(--radius-pill);background:var(--color-priority-normal-soft);color:var(--color-priority-normal);font-weight:600;font-size:var(--font-size-sm)">Normal</span>
+    <span style="padding:4px 12px;border-radius:var(--radius-pill);background:var(--color-priority-low-soft);color:var(--color-priority-low);font-weight:600;font-size:var(--font-size-sm)">Baixa</span>
+  </div>
+
+  <h3 style="margin-top: var(--space-lg);">Cards</h3>
+  <div class="grid" style="grid-template-columns: repeat(3, 1fr); margin-top: var(--space-md);">
+    <div class="surface-card" style="padding: var(--space-lg);">
+      <h4>Estudos</h4>
+      <p>Ciclos de foco com Pomodoro integrado.</p>
+    </div>
+    <div class="surface-card" style="padding: var(--space-lg);">
+      <h4>Casa</h4>
+      <p>Tarefas recorrentes que se renovam sozinhas.</p>
+    </div>
+    <div class="surface-inverse" style="padding: var(--space-lg); border-radius: var(--radius-md);">
+      <h4 style="color:var(--color-text-on-dark)">Genérico</h4>
+      <p style="color:var(--color-text-on-dark);opacity:.85">Trava de 24h para decisões mais calmas.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('theme').addEventListener('click', () => {
+    const r = document.documentElement;
+    r.setAttribute('data-theme', r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+</script>
+</body>
+</html>

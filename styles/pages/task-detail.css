@@ -1,0 +1,135 @@
+/* ============================================================
+   JustDoIt — task-detail.css
+   Editor completo de tarefa: cabeçalho editável, módulos
+   ativáveis, cronômetro, notas e subtarefas.
+   ============================================================ */
+
+.detail { max-width: 860px; margin-inline: auto; padding: var(--space-xl); }
+
+/* Voltar */
+.detail__back { display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-lg); }
+.detail__back svg { width: 16px; height: 16px; }
+.detail__back:hover { color: var(--color-text); }
+
+/* Cabeçalho editável */
+.detail__head { display: flex; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-md); }
+.detail__check {
+  width: 28px; height: 28px; flex: none; margin-top: 4px;
+  border: 1.5px solid var(--color-border-strong); border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; background: var(--color-card);
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+.detail__check:hover { border-color: var(--color-accent); }
+.detail__check svg { width: 16px; height: 16px; color: #fff; opacity: 0; }
+.detail.is-done .detail__check { background: var(--color-success); border-color: var(--color-success); }
+.detail.is-done .detail__check svg { opacity: 1; }
+
+/* Campos editáveis inline (contenteditable) */
+.edit-title {
+  font-family: var(--font-display); font-size: var(--font-size-2xl); font-weight: var(--weight-medium);
+  color: var(--color-text); line-height: 1.2; letter-spacing: -0.01em;
+  outline: none; border-radius: var(--radius-sm); padding: 2px 6px; margin: -2px -6px;
+  transition: background var(--duration-fast), box-shadow var(--duration-fast);
+}
+.edit-title:hover { background: var(--color-surface-sunken); }
+.edit-title:focus { background: var(--color-card); box-shadow: var(--focus-ring); }
+.detail.is-done .edit-title { color: var(--color-text-muted); text-decoration: line-through; text-decoration-color: var(--color-border-strong); }
+
+.edit-desc {
+  font-size: var(--font-size-md); color: var(--color-text-soft); line-height: var(--leading-relaxed);
+  outline: none; border-radius: var(--radius-sm); padding: 6px; margin: var(--space-sm) 0 var(--space-lg) 40px;
+  transition: background var(--duration-fast), box-shadow var(--duration-fast);
+}
+.edit-desc:hover { background: var(--color-surface-sunken); }
+.edit-desc:focus { background: var(--color-card); box-shadow: var(--focus-ring); }
+.edit-desc:empty::before { content: attr(data-placeholder); color: var(--color-text-faint); }
+
+/* Chips de meta (categoria, data, prioridade) */
+.detail__chips { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: 0 0 var(--space-xl) 40px; }
+
+/* ---------- Painel de módulos ativáveis (RF05) ---------- */
+.modules { margin-bottom: var(--space-xl); }
+.modules__title { font-size: var(--font-size-xs); font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-faint); margin-bottom: var(--space-md); }
+.modules__grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-sm); }
+.module-toggle {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: var(--space-md) var(--space-sm);
+  background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  cursor: pointer; text-align: center;
+  transition: border-color var(--duration-fast), background var(--duration-fast), transform var(--duration-fast);
+}
+.module-toggle:hover { border-color: var(--color-border-strong); }
+.module-toggle__ic { width: 38px; height: 38px; border-radius: var(--radius-md); display: grid; place-items: center; background: var(--color-surface-sunken); color: var(--color-text-muted); transition: background var(--duration-fast), color var(--duration-fast); }
+.module-toggle__ic svg { width: 19px; height: 19px; }
+.module-toggle__name { font-size: var(--font-size-sm); font-weight: var(--weight-medium); color: var(--color-text-soft); }
+.module-toggle.is-on { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.module-toggle.is-on .module-toggle__ic { background: var(--color-accent); color: var(--color-text-on-dark); }
+.module-toggle.is-on .module-toggle__name { color: var(--color-text); }
+
+/* Painéis dos módulos ativos */
+.module-panels { display: flex; flex-direction: column; gap: var(--space-md); }
+.module-panel { padding: var(--space-lg); }
+.module-panel__head { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-md); }
+.module-panel__head svg { width: 18px; height: 18px; color: var(--color-accent); }
+.module-panel__title { font-weight: var(--weight-semibold); color: var(--color-text); }
+
+/* Cronômetro (RF13) + Foco (RF06) */
+.timer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-lg); }
+.timer__display { font-family: var(--font-mono); font-size: var(--font-size-3xl); font-weight: var(--weight-semibold); color: var(--color-text); font-variant-numeric: tabular-nums; }
+.timer__actions { display: flex; gap: var(--space-sm); }
+
+.pomo { display: flex; align-items: center; gap: var(--space-xl); }
+.pomo__ring { --pct: 0; width: 118px; height: 118px; border-radius: 50%; display: grid; place-items: center; position: relative; flex: none; background: conic-gradient(var(--color-accent) calc(var(--pct) * 1%), var(--color-surface-sunken) 0); transition: background .5s linear; }
+.pomo__ring::before { content: ''; position: absolute; inset: 11px; border-radius: 50%; background: var(--color-card); }
+.pomo__inner { position: relative; text-align: center; }
+.pomo__time { font-family: var(--font-mono); font-size: var(--font-size-xl); font-weight: var(--weight-semibold); color: var(--color-text); }
+.pomo__phase { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-text-muted); margin-top: 3px; }
+.pomo__side { flex: 1; }
+.pomo__actions { display: flex; gap: var(--space-sm); margin-top: var(--space-md); }
+
+/* Prioridade — seletor */
+.prio-picker { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
+.prio-opt {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong); background: var(--color-card);
+  font-size: var(--font-size-sm); font-weight: var(--weight-medium); color: var(--color-text-soft); cursor: pointer;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+.prio-opt__dot { width: 9px; height: 9px; border-radius: 50%; }
+.prio-opt.is-on { border-color: currentColor; }
+
+/* Recorrência — opções */
+.cycle-opts { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
+.cycle-opt { padding: 7px 14px; border-radius: var(--radius-pill); border: 1px solid var(--color-border-strong); background: var(--color-card); font-size: var(--font-size-sm); color: var(--color-text-soft); cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast), color var(--duration-fast); }
+.cycle-opt.is-on { border-color: var(--color-accent); background: var(--color-accent-soft); color: var(--color-text); }
+
+/* Notas */
+.notes-area { width: 100%; min-height: 90px; resize: vertical; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); padding: var(--space-md); font-family: var(--font-body); font-size: var(--font-size-md); color: var(--color-text); background: var(--color-card); outline: none; transition: border-color var(--duration-fast), box-shadow var(--duration-fast); }
+.notes-area:focus { border-color: var(--color-accent); box-shadow: var(--focus-ring); }
+
+/* ---------- Subtarefas com progresso em cascata (RF03) ---------- */
+.subtasks__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm); }
+.subtasks__progress { display: flex; align-items: center; gap: 10px; margin-bottom: var(--space-md); }
+.subtasks__progress .progress { flex: 1; }
+.subtasks__count { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); white-space: nowrap; }
+.subtask { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--color-border); }
+.subtask:last-child { border-bottom: 0; }
+.subtask__check { width: 19px; height: 19px; flex: none; border: 1.5px solid var(--color-border-strong); border-radius: var(--radius-sm); display: grid; place-items: center; cursor: pointer; background: var(--color-card); }
+.subtask__check svg { width: 12px; height: 12px; color: #fff; opacity: 0; }
+.subtask.is-done .subtask__check { background: var(--color-accent); border-color: var(--color-accent); }
+.subtask.is-done .subtask__check svg { opacity: 1; }
+.subtask__label { flex: 1; font-size: var(--font-size-md); color: var(--color-text); }
+.subtask.is-done .subtask__label { color: var(--color-text-muted); text-decoration: line-through; text-decoration-color: var(--color-border-strong); }
+.subtask__add { display: flex; align-items: center; gap: 8px; padding-top: var(--space-md); }
+.subtask__add input { flex: 1; border: 0; outline: 0; background: transparent; font-size: var(--font-size-md); color: var(--color-text); }
+.subtask__add input::placeholder { color: var(--color-text-faint); }
+
+@media (max-width: 880px) {
+  .detail { padding: var(--space-lg); }
+  .modules__grid { grid-template-columns: repeat(3, 1fr); }
+  .pomo { flex-direction: column; align-items: stretch; }
+}
+@media (max-width: 520px) {
+  .modules__grid { grid-template-columns: repeat(2, 1fr); }
+}

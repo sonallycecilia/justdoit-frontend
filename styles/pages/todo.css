@@ -1,0 +1,74 @@
+/* ============================================================
+   JustDoIt — todo.css
+   Lista de tarefas priorizada com filtros e ação rápida.
+   ============================================================ */
+
+/* Barra de filtros */
+.filters { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-lg); }
+.filter-group { display: inline-flex; padding: 3px; background: var(--color-surface-sunken); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.filter-chip {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font-family: var(--font-body); font-size: var(--font-size-sm); font-weight: var(--weight-medium);
+  color: var(--color-text-muted); padding: 6px 13px; border-radius: 7px;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.filter-chip:hover { color: var(--color-text-soft); }
+.filter-chip.is-active { background: var(--color-card); color: var(--color-text); box-shadow: var(--shadow-card); }
+.filter-chip__dot { width: 8px; height: 8px; border-radius: 50%; }
+.filters__spacer { flex: 1; }
+.filters__count { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-muted); }
+
+/* Grupos de prioridade */
+.prio-group { margin-bottom: var(--space-lg); }
+.prio-group__head {
+  display: flex; align-items: center; gap: var(--space-sm);
+  margin-bottom: var(--space-sm); padding: 0 4px;
+}
+.prio-group__bar { width: 4px; height: 16px; border-radius: var(--radius-pill); }
+.prio-group__title { font-size: var(--font-size-sm); font-weight: var(--weight-semibold); color: var(--color-text); }
+.prio-group__n { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
+
+/* Linha de tarefa (To Do) */
+.todo-list { display: flex; flex-direction: column; background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-card); overflow: hidden; }
+.todo-item {
+  display: flex; align-items: center; gap: var(--space-md);
+  padding: 13px var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--duration-fast);
+}
+.todo-item:last-child { border-bottom: 0; }
+.todo-item:hover { background: var(--color-surface); }
+.todo-item.is-done { opacity: .6; }
+
+.todo-check {
+  width: 22px; height: 22px; flex: none;
+  border: 1.5px solid var(--color-border-strong); border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; background: var(--color-card);
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+.todo-check:hover { border-color: var(--color-accent); }
+.todo-check svg { width: 13px; height: 13px; color: #fff; opacity: 0; transition: opacity var(--duration-fast); }
+.todo-item.is-done .todo-check { background: var(--color-success); border-color: var(--color-success); }
+.todo-item.is-done .todo-check svg { opacity: 1; }
+
+.todo-main { flex: 1; min-width: 0; cursor: pointer; }
+.todo-title { font-size: var(--font-size-md); color: var(--color-text); }
+.todo-item.is-done .todo-title { text-decoration: line-through; color: var(--color-text-muted); text-decoration-color: var(--color-border-strong); }
+.todo-meta { display: flex; align-items: center; gap: 10px; margin-top: 3px; flex-wrap: wrap; }
+.todo-cat { display: inline-flex; align-items: center; gap: 5px; font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.todo-cat__dot { width: 7px; height: 7px; border-radius: 50%; }
+.todo-date { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
+.todo-date svg { width: 12px; height: 12px; }
+.todo-date.is-overdue { color: var(--color-danger); }
+.todo-right { display: flex; align-items: center; gap: var(--space-sm); flex: none; }
+
+/* Estado vazio */
+.empty { text-align: center; padding: var(--space-2xl) var(--space-lg); color: var(--color-text-muted); }
+.empty svg { width: 40px; height: 40px; color: var(--color-border-strong); margin-bottom: var(--space-sm); }
+.empty p { font-family: var(--font-display); font-style: italic; font-size: var(--font-size-lg); }
+
+@media (max-width: 880px) {
+  .filters { gap: 6px; }
+  .filters__spacer { flex-basis: 100%; height: 0; }
+}

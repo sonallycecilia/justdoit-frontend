@@ -1,0 +1,76 @@
+/* ============================================================
+   JustDoIt — calendar.css
+   Calendário (React island). Grade semanal com blocos de tempo,
+   alternância dia/semana/mês, cor por categoria + prioridade.
+   ============================================================ */
+
+.cal-wrap { display: flex; flex-direction: column; height: 100vh; }
+
+/* Topbar */
+.cal-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); padding: var(--space-lg) var(--space-xl); border-bottom: 1px solid var(--color-border); flex: none; }
+.cal-top__left { display: flex; align-items: center; gap: var(--space-lg); }
+.cal-top__title { font-family: var(--font-display); font-size: var(--font-size-2xl); font-weight: var(--weight-medium); }
+.cal-top__nav { display: flex; align-items: center; gap: var(--space-sm); }
+.cal-top__range { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-soft); min-width: 116px; text-align: center; }
+.cal-top__right { display: flex; align-items: center; gap: var(--space-md); }
+
+/* Segmented dia/semana/mês */
+.cal-seg { display: inline-flex; padding: 3px; background: var(--color-surface-sunken); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.cal-seg button { appearance: none; border: 0; background: transparent; cursor: pointer; font-family: var(--font-body); font-size: var(--font-size-sm); font-weight: var(--weight-medium); color: var(--color-text-muted); padding: 6px 14px; border-radius: 7px; transition: background var(--duration-fast), color var(--duration-fast); }
+.cal-seg button.is-active { background: var(--color-card); color: var(--color-text); box-shadow: var(--shadow-card); }
+
+/* Scroll area */
+.cal-scroll { flex: 1; overflow: auto; }
+
+/* ---------- Grade semanal ---------- */
+.cal-grid { --time-w: 64px; --row-h: 56px; min-width: 880px; }
+.cal-head { display: grid; grid-template-columns: var(--time-w) repeat(var(--cols, 7), 1fr); position: sticky; top: 0; z-index: 5; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.cal-corner { border-right: 1px solid var(--color-border); }
+.cal-day { padding: 10px 12px; border-right: 1px solid var(--color-border); }
+.cal-day__dow { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-muted); }
+.cal-day__num { font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: var(--weight-medium); color: var(--color-text); line-height: 1.1; margin-top: 2px; }
+.cal-day.is-today .cal-day__num { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 6px; background: var(--color-accent); color: var(--color-text-on-dark); border-radius: var(--radius-pill); }
+.cal-day.is-today .cal-day__dow { color: var(--color-accent); }
+
+.cal-body { display: grid; grid-template-columns: var(--time-w) repeat(var(--cols, 7), 1fr); }
+.cal-rail { border-right: 1px solid var(--color-border); }
+.cal-slot { height: var(--row-h); position: relative; }
+.cal-slot > span { position: absolute; top: -7px; right: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--color-text-faint); }
+.cal-col { position: relative; border-right: 1px solid var(--color-border); background-image: linear-gradient(var(--color-border) 1px, transparent 1px); background-size: 100% var(--row-h); }
+.cal-col.is-today { background-color: var(--color-accent-soft); }
+.cal-col.drag-over { background-color: var(--color-surface-sunken); }
+
+/* Bloco de tempo */
+.timeblock { position: absolute; left: 5px; right: 5px; border-radius: var(--radius-sm); padding: 6px 9px 6px 12px; overflow: hidden; cursor: grab; border: 1px solid; display: flex; flex-direction: column; gap: 3px; transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast); }
+.timeblock:hover { transform: translateY(-1px); box-shadow: var(--shadow-raised); z-index: 3; }
+.timeblock:active { cursor: grabbing; }
+.timeblock.is-dragging { opacity: .4; }
+.timeblock__prio { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.timeblock__title { font-size: var(--font-size-sm); font-weight: var(--weight-semibold); line-height: 1.2; }
+.timeblock__meta { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; opacity: .85; }
+.timeblock--estudos { background: var(--color-priority-low-soft); border-color: color-mix(in srgb, var(--color-cat-estudos) 40%, transparent); color: var(--color-cat-estudos); }
+.timeblock--casa { background: var(--color-priority-important-soft); border-color: color-mix(in srgb, var(--color-cat-casa) 40%, transparent); color: var(--color-cat-casa); }
+.timeblock--generico { background: var(--color-surface-sunken); border-color: color-mix(in srgb, var(--color-cat-generico) 45%, transparent); color: var(--color-text-soft); }
+
+/* Linha do "agora" */
+.cal-now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--color-danger); z-index: 4; }
+.cal-now::before { content: ''; position: absolute; left: -4px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-danger); }
+
+/* ---------- Visão Mês ---------- */
+.cal-month { padding: var(--space-lg) var(--space-xl); }
+.cal-month__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--color-border); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+.cal-month__dow { background: var(--color-card); padding: 8px; text-align: center; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-muted); }
+.cal-month__cell { background: var(--color-card); min-height: 96px; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.cal-month__cell.is-out { background: var(--color-surface); }
+.cal-month__num { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-soft); }
+.cal-month__cell.is-today .cal-month__num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: var(--color-accent); color: var(--color-text-on-dark); border-radius: 50%; }
+.cal-month__ev { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--color-text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-month__dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+.cal-legend { display: flex; align-items: center; gap: var(--space-lg); padding: var(--space-md) var(--space-xl); border-top: 1px solid var(--color-border); flex: none; }
+.cal-legend__item { display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-size-sm); color: var(--color-text-soft); }
+.cal-legend__dot { width: 10px; height: 10px; border-radius: 3px; }
+
+@media (max-width: 880px) {
+  .cal-top { padding: var(--space-md) var(--space-lg); flex-wrap: wrap; }
+}

@@ -1,0 +1,68 @@
+/* JustDoIt — marketing landing page styles */
+
+.mkt { font-family:var(--font-body); color:var(--color-text); background:var(--color-surface); }
+.mkt__wrap { max-width:1120px; margin:0 auto; padding:0 32px; }
+
+/* Nav */
+.mkt-nav { position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--color-surface) 82%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--color-border); }
+.mkt-nav__in { display:flex; align-items:center; justify-content:space-between; height:68px; }
+.mkt-brand { display:flex; align-items:center; gap:9px; color:var(--brand-pine); }
+.mkt-brand__mark { color:var(--brand-teal); display:flex; }
+.mkt-brand__word { font-family:var(--font-display); font-size:21px; font-weight:500; letter-spacing:-0.01em; }
+.mkt-nav__links { display:flex; align-items:center; gap:28px; }
+.mkt-nav__link { font-size:var(--font-size-md); color:var(--color-text-soft); text-decoration:none; cursor:pointer; }
+.mkt-nav__link:hover { color:var(--color-text); }
+.mkt-nav__cta { display:flex; align-items:center; gap:14px; }
+.mkt-theme { display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-card); color:var(--color-text-soft); cursor:pointer; transition:background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast); }
+.mkt-theme:hover { background:var(--color-surface-sunken); border-color:var(--color-border-strong); color:var(--color-text); }
+.mkt-theme svg { width:18px; height:18px; }
+
+/* Hero */
+.mkt-hero { padding:84px 0 72px; display:grid; grid-template-columns:1.05fr 0.95fr; gap:56px; align-items:center; }
+.mkt-hero__eyebrow { display:inline-flex; margin-bottom:22px; }
+.mkt-hero h1 { font-family:var(--font-display); font-weight:500; font-size:var(--font-size-6xl); line-height:1.04; letter-spacing:-0.025em; margin:0 0 22px; text-wrap:balance; }
+.mkt-hero h1 em { font-style:italic; color:var(--brand-teal); }
+.mkt-hero__sub { font-size:var(--font-size-lg); line-height:1.6; color:var(--color-text-soft); max-width:46ch; margin:0 0 30px; }
+.mkt-hero__actions { display:flex; align-items:center; gap:14px; }
+.mkt-hero__note { font-size:var(--font-size-sm); color:var(--color-text-muted); margin-top:16px; display:flex; align-items:center; gap:7px; }
+.mkt-hero__note i, .mkt-hero__note svg { width:15px; height:15px; }
+
+/* Hero product mock */
+.mkt-mock { background:var(--color-card); border:1px solid var(--color-border); border-radius:var(--radius-xl); box-shadow:var(--shadow-raised); overflow:hidden; }
+.mkt-mock__bar { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--color-border); }
+.mkt-mock__day { font-family:var(--font-display); font-size:var(--font-size-lg); font-weight:500; }
+.mkt-mock__date { font-family:var(--font-mono); font-size:11px; color:var(--color-text-muted); }
+.mkt-mock__rows { display:flex; flex-direction:column; }
+.mkt-mock__row { display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--color-border); }
+.mkt-mock__row:last-child { border-bottom:0; }
+.mkt-mock__t { flex:1; font-size:var(--font-size-md); }
+.mkt-mock__foot { padding:14px 18px; background:var(--color-surface); }
+
+/* Features */
+.mkt-features { padding:40px 0 84px; }
+.mkt-sec-head { text-align:center; max-width:620px; margin:0 auto 48px; }
+.mkt-sec-head h2 { font-family:var(--font-display); font-weight:500; font-size:var(--font-size-4xl); letter-spacing:-0.02em; margin:0 0 14px; }
+.mkt-sec-head p { font-size:var(--font-size-lg); color:var(--color-text-soft); line-height:1.6; margin:0; }
+.mkt-grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+.mkt-feat { background:var(--color-card); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:28px; }
+.mkt-feat__ic { width:44px; height:44px; border-radius:var(--radius-md); background:var(--color-accent-soft); color:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:18px; }
+.mkt-feat__ic i, .mkt-feat__ic svg { width:22px; height:22px; }
+.mkt-feat h3 { font-family:var(--font-display); font-size:var(--font-size-xl); font-weight:500; margin:0 0 8px; }
+.mkt-feat p { font-size:var(--font-size-md); color:var(--color-text-soft); line-height:1.6; margin:0; }
+
+/* Inverse CTA band */
+.mkt-band { background:var(--color-inverse); color:var(--color-text-on-dark); }
+.mkt-band__in { padding:80px 32px; text-align:center; max-width:760px; margin:0 auto; }
+.mkt-band__mark { color:#6aa9a4; display:flex; justify-content:center; margin-bottom:22px; }
+.mkt-band h2 { font-family:var(--font-display); font-weight:500; font-size:var(--font-size-5xl); letter-spacing:-0.02em; line-height:1.1; margin:0 0 18px; text-wrap:balance; }
+.mkt-band p { font-size:var(--font-size-lg); color:#a3cac6; line-height:1.6; margin:0 0 30px; }
+
+/* Footer */
+.mkt-foot { border-top:1px solid var(--color-border); }
+.mkt-foot__in { display:flex; align-items:center; justify-content:space-between; padding:28px 0; flex-wrap:wrap; gap:16px; }
+.mkt-foot__brand { display:flex; align-items:center; gap:9px; color:var(--brand-pine); }
+.mkt-foot__brand .mkt-brand__mark { color:var(--brand-teal); }
+.mkt-foot__tag { font-size:var(--font-size-xs); letter-spacing:0.07em; text-transform:uppercase; color:var(--brand-sage); }
+.mkt-foot__links { display:flex; gap:22px; }
+.mkt-foot__links a { font-size:var(--font-size-sm); color:var(--color-text-muted); text-decoration:none; }
+.mkt-foot__links a:hover { color:var(--color-text); }

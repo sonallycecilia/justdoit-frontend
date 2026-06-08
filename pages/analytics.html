@@ -1,0 +1,127 @@
+<!-- @dsCard group="JustDoIt Frontend" viewport="1100x900" name="Análise" subtitle="Dashboard analítico semanal — desvio, categorias, insights" -->
+<!-- @startingPoint section="JustDoIt Frontend" subtitle="Análise semanal (React) — gráficos de desvio e categorias" viewport="1240x900" -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JustDoIt — Análise</title>
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/reset.css">
+<link rel="stylesheet" href="../styles/global.css">
+<link rel="stylesheet" href="../styles/components/button.css">
+<link rel="stylesheet" href="../styles/components/sidebar.css">
+<link rel="stylesheet" href="../styles/components/card.css">
+<link rel="stylesheet" href="../styles/components/badge.css">
+<link rel="stylesheet" href="../styles/pages/analytics.css">
+</head>
+<body>
+  <div class="app">
+    <aside data-sidebar data-active="analytics"></aside>
+    <main class="app__main">
+      <div class="page">
+        <header class="page__head">
+          <div>
+            <div class="page__eyebrow">Semana de 8 – 14 jun</div>
+            <h1 class="page__title">Análise semanal</h1>
+          </div>
+        </header>
+
+        <div class="an-grid">
+          <!-- Desvio planejado vs. executado -->
+          <div class="card an-card an-wide">
+            <div class="an-card__head">
+              <span class="an-card__title">Planejado vs. executado</span>
+              <div class="an-legend">
+                <span class="an-legend__item"><span class="an-legend__sw" style="background:var(--color-border-strong)"></span>Planejado</span>
+                <span class="an-legend__item"><span class="an-legend__sw" style="background:var(--color-accent)"></span>Executado</span>
+              </div>
+            </div>
+            <div id="deviation"></div>
+          </div>
+
+          <!-- Alocação por categoria -->
+          <div class="card an-card">
+            <div class="an-card__head">
+              <span class="an-card__title">Tempo por categoria</span>
+            </div>
+            <div id="category"></div>
+          </div>
+
+          <!-- Taxa de conclusão -->
+          <div class="card an-card">
+            <div class="an-card__head">
+              <span class="an-card__title">Conclusão da semana</span>
+            </div>
+            <div id="rate"></div>
+          </div>
+
+          <!-- Insights -->
+          <div class="card an-card an-wide">
+            <div class="an-card__head">
+              <span class="an-card__title">Resumo e insights</span>
+              <span class="an-card__hint">Gerado a partir da sua semana</span>
+            </div>
+            <div class="an-insights">
+              <div class="an-insight">
+                <span class="an-insight__ic an-insight__ic--up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M21 7v6h-6"/></svg></span>
+                <p class="an-insight__text">Você executou <strong>15h30 das 18h planejadas</strong> — uma taxa de aderência de <strong>86%</strong>. Bom ritmo, sem sobrecarga.</p>
+              </div>
+              <div class="an-insight">
+                <span class="an-insight__ic an-insight__ic--info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
+                <p class="an-insight__text"><strong>Estudos</strong> foi sua categoria de maior foco (<strong>7h30</strong>, 49% do tempo) — alinhado com a semana de provas.</p>
+              </div>
+              <div class="an-insight">
+                <span class="an-insight__ic an-insight__ic--down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 6 6 4-4 8 8"/><path d="M21 17v-6h-6"/></svg></span>
+                <p class="an-insight__text">O fim de semana teve o maior desvio (<strong>−1h</strong>). Considere planejar blocos mais curtos no sábado e domingo.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../scripts/storage.js"></script>
+  <script src="../scripts/utils.js"></script>
+  <script src="../scripts/sidebar.js"></script>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script src="../components/Dashboard/analytics-data.js"></script>
+  <script type="text/babel" src="../components/Dashboard/DeviationChart.jsx"></script>
+  <script type="text/babel" src="../components/Dashboard/CategoryChart.jsx"></script>
+  <script type="text/babel">
+    const { conclusao } = window.AN_DATA;
+    const pctConcl = Math.round((conclusao.feitas / conclusao.total) * 100);
+
+    function RateRing() {
+      const r = 58, c = 2 * Math.PI * r, dash = (pctConcl / 100) * c;
+      return (
+        <div className="an-rate">
+          <svg className="an-rate__ring" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r={r} fill="none" stroke="var(--color-surface-sunken)" strokeWidth="14" />
+            <circle cx="70" cy="70" r={r} fill="none" stroke="var(--color-success)" strokeWidth="14"
+              strokeLinecap="round" strokeDasharray={`${dash} ${c - dash}`} transform="rotate(-90 70 70)" />
+            <text x="70" y="76" textAnchor="middle" fontSize="30" fontWeight="600" fill="var(--color-text)" style={{ fontFamily: 'var(--font-display)' }}>{pctConcl}%</text>
+          </svg>
+          <div className="an-rate__info">
+            <div className="an-rate__sub">tarefas concluídas</div>
+            <div className="an-rate__stats">
+              <div><div className="an-rate__stat-v">{conclusao.feitas}</div><div className="an-rate__stat-l">concluídas</div></div>
+              <div><div className="an-rate__stat-v">{conclusao.total - conclusao.feitas}</div><div className="an-rate__stat-l">restantes</div></div>
+              <div><div className="an-rate__stat-v">{conclusao.total}</div><div className="an-rate__stat-l">no total</div></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('deviation')).render(<DeviationChart dados={window.AN_DATA.desvio} />);
+    ReactDOM.createRoot(document.getElementById('category')).render(<CategoryChart dados={window.AN_DATA.categorias} />);
+    ReactDOM.createRoot(document.getElementById('rate')).render(<RateRing />);
+  </script>
+</body>
+</html>

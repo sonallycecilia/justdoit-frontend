@@ -1,0 +1,109 @@
+<!-- @dsCard group="JustDoIt Frontend" viewport="1100x820" name="Dashboard" subtitle="Home semanal — resumo, tarefas do dia, atalhos" -->
+<!-- @startingPoint section="JustDoIt Frontend" subtitle="Dashboard / home semanal — sidebar + resumo + tarefas + atalhos" viewport="1240x820" -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JustDoIt — Visão geral</title>
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/reset.css">
+<link rel="stylesheet" href="../styles/global.css">
+<link rel="stylesheet" href="../styles/components/button.css">
+<link rel="stylesheet" href="../styles/components/sidebar.css">
+<link rel="stylesheet" href="../styles/components/card.css">
+<link rel="stylesheet" href="../styles/components/badge.css">
+<link rel="stylesheet" href="../styles/pages/dashboard.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar (renderizada por sidebar.js) -->
+    <aside data-sidebar data-active="dashboard"></aside>
+
+    <main class="app__main">
+      <div class="page">
+        <!-- Cabeçalho -->
+        <header class="page__head">
+          <div>
+            <div class="page__eyebrow" id="eyebrow">Semana atual</div>
+            <h1 class="page__title" id="greeting">Boa tarde, <em>Sonally.</em></h1>
+          </div>
+          <div class="page__head-actions">
+            <a class="btn btn--secondary btn--md" href="calendar.html">Ver semana</a>
+            <a class="btn btn--primary btn--md" href="task-detail.html">+ Nova tarefa</a>
+          </div>
+        </header>
+
+        <!-- Resumo -->
+        <section class="section">
+          <div class="stats-grid">
+            <div class="stat">
+              <span class="stat__label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                Concluídas</span>
+              <span class="stat__value">7 <small>/ 12</small></span>
+              <span class="stat__hint">tarefas desta semana</span>
+            </div>
+            <div class="stat">
+              <span class="stat__label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Foco hoje</span>
+              <span class="stat__value">3h20</span>
+              <span class="stat__hint">em 4 ciclos de Pomodoro</span>
+            </div>
+            <div class="stat stat--wide">
+              <span class="stat__label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                Planejado vs. executado</span>
+              <div class="progress" style="margin-top:6px">
+                <div class="progress__head"><span class="progress__label">18h planejadas · 14h30 executadas</span><span class="progress__value">81%</span></div>
+                <div class="progress__track"><div class="progress__fill" style="width:81%"></div></div>
+              </div>
+              <span class="stat__hint">desvio de −3h30 — bom ritmo, semana sob controle</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tarefas do dia (priorizadas) -->
+        <section class="section">
+          <div class="row row--between" style="margin-bottom: var(--space-md)">
+            <h2 class="section-title" style="margin:0">Hoje, priorizadas</h2>
+            <a class="link" href="todo.html">Ver todas →</a>
+          </div>
+          <div class="card">
+            <div class="tasklist" id="tasklist"></div>
+          </div>
+        </section>
+
+        <!-- Atalhos -->
+        <section class="section">
+          <h2 class="section-title">Atalhos</h2>
+          <div class="shortcut-grid">
+            <a class="shortcut" href="calendar.html">
+              <span class="shortcut__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+              <span><span class="shortcut__title">Calendário</span><br><span class="shortcut__desc">Blocos da semana</span></span>
+            </a>
+            <a class="shortcut" href="todo.html">
+              <span class="shortcut__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3M16 6H3M21 18H3"/><path d="m15 9 2 2 4-4"/></svg></span>
+              <span><span class="shortcut__title">To Do</span><br><span class="shortcut__desc">Lista priorizada</span></span>
+            </a>
+            <a class="shortcut" href="analytics.html">
+              <span class="shortcut__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="13" y="6" width="3" height="11"/></svg></span>
+              <span><span class="shortcut__title">Análise</span><br><span class="shortcut__desc">Desvio semanal</span></span>
+            </a>
+            <a class="shortcut" href="settings.html">
+              <span class="shortcut__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></span>
+              <span><span class="shortcut__title">Configurações</span><br><span class="shortcut__desc">Perfil e categorias</span></span>
+            </a>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="../scripts/storage.js"></script>
+  <script src="../scripts/utils.js"></script>
+  <script src="../scripts/sidebar.js"></script>
+  <script src="../scripts/dashboard.js"></script>
+</body>
+</html>

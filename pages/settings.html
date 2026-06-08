@@ -1,0 +1,146 @@
+<!-- @dsCard group="JustDoIt Frontend" viewport="1100x860" name="Configurações" subtitle="Preferências, tema e gestão de categorias" -->
+<!-- @startingPoint section="JustDoIt Frontend" subtitle="Configurações — preferências, tema, categorias" viewport="1240x860" -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JustDoIt — Configurações</title>
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/reset.css">
+<link rel="stylesheet" href="../styles/global.css">
+<link rel="stylesheet" href="../styles/components/button.css">
+<link rel="stylesheet" href="../styles/components/sidebar.css">
+<link rel="stylesheet" href="../styles/components/card.css">
+<link rel="stylesheet" href="../styles/components/badge.css">
+<link rel="stylesheet" href="../styles/pages/settings.css">
+</head>
+<body>
+  <div class="app">
+    <aside data-sidebar data-active="settings"></aside>
+    <main class="app__main">
+      <div class="set">
+        <header class="page__head" style="margin-bottom: var(--space-xl)">
+          <div>
+            <div class="page__eyebrow">Preferências</div>
+            <h1 class="page__title">Configurações</h1>
+          </div>
+        </header>
+
+        <!-- Perfil -->
+        <div class="set-section">
+          <div class="set-section__title">Conta</div>
+          <div class="card">
+            <div class="set-profile">
+              <span class="set-profile__avatar">SV</span>
+              <div style="flex:1">
+                <div class="set-profile__name">Sonally Vitorino</div>
+                <div class="set-profile__email">sonally@exemplo.com</div>
+              </div>
+              <button class="btn btn--secondary btn--sm">Editar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aparência -->
+        <div class="set-section">
+          <div class="set-section__title">Aparência</div>
+          <div class="card">
+            <div class="set-row">
+              <div class="set-row__main">
+                <div class="set-row__label">Tema</div>
+                <div class="set-row__desc">Claro, escuro ou conforme o sistema</div>
+              </div>
+              <div class="set-seg" id="themeSeg">
+                <button data-theme="light">Claro</button>
+                <button data-theme="dark">Escuro</button>
+                <button data-theme="system">Sistema</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preferências -->
+        <div class="set-section">
+          <div class="set-section__title">Preferências</div>
+          <div class="card">
+            <div class="set-row">
+              <div class="set-row__main">
+                <div class="set-row__label">Lembretes diários</div>
+                <div class="set-row__desc">Receba um resumo das tarefas do dia pela manhã</div>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span></label>
+            </div>
+            <div class="set-row">
+              <div class="set-row__main">
+                <div class="set-row__label">Notificações de prazo</div>
+                <div class="set-row__desc">Avisar quando uma tarefa estiver perto de vencer</div>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span></label>
+            </div>
+            <div class="set-row">
+              <div class="set-row__main">
+                <div class="set-row__label">Som ao concluir ciclo de foco</div>
+                <div class="set-row__desc">Toque sutil ao fim de cada Pomodoro</div>
+              </div>
+              <label class="switch"><input type="checkbox"><span class="switch__track"><span class="switch__thumb"></span></span></label>
+            </div>
+            <div class="set-row">
+              <div class="set-row__main">
+                <div class="set-row__label">Início da semana</div>
+                <div class="set-row__desc">Primeiro dia exibido no calendário</div>
+              </div>
+              <div class="set-seg">
+                <button class="is-active">Segunda</button>
+                <button>Domingo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categorias -->
+        <div class="set-section">
+          <div class="set-section__title">Categorias</div>
+          <div class="card">
+            <div class="cat-list" id="catList"></div>
+            <div class="divider"></div>
+            <div class="cat-add">
+              <div class="cat-add__colors" id="catColors">
+                <span class="cat-add__swatch is-sel" style="background:var(--color-cat-estudos)" data-color="var(--color-cat-estudos)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-cat-casa)" data-color="var(--color-cat-casa)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-priority-urgent)" data-color="var(--color-priority-urgent)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-priority-normal)" data-color="var(--color-priority-normal)"></span>
+                <span class="cat-add__swatch" style="background:var(--brand-sage)" data-color="var(--brand-sage)"></span>
+              </div>
+              <input class="cat-add__input" id="catInput" placeholder="Nova categoria… pressione Enter">
+              <button class="btn btn--primary btn--sm" id="catAddBtn">Adicionar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dados / Exportação (RF) -->
+        <div class="set-section">
+          <div class="set-section__title">Dados</div>
+          <div class="card">
+            <div class="set-row">
+              <div class="set-row__main">
+                <div class="set-row__label">Exportar tarefas</div>
+                <div class="set-row__desc">Baixe seus dados em CSV ou JSON</div>
+              </div>
+              <div class="row" style="gap: var(--space-sm)">
+                <button class="btn btn--secondary btn--sm">CSV</button>
+                <button class="btn btn--secondary btn--sm">JSON</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../scripts/storage.js"></script>
+  <script src="../scripts/utils.js"></script>
+  <script src="../scripts/sidebar.js"></script>
+  <script src="../scripts/settings.js"></script>
+</body>
+</html>

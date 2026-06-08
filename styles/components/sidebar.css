@@ -1,0 +1,125 @@
+/* ============================================================
+   JustDoIt — sidebar.css
+   Navegação lateral fixa do app (shell compartilhado entre as
+   páginas internas: dashboard, calendar, todo, analytics…).
+   ============================================================ */
+
+.app { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-lg) var(--space-sm);
+  background: var(--color-card);
+  border-right: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+  transition: width 200ms ease;
+}
+.sidebar.is-resizing { transition: none; }
+
+.sidebar__brand { display: flex; align-items: center; gap: 9px; padding: 6px var(--space-sm) var(--space-lg); color: var(--color-text); }
+.sidebar__mark { color: var(--color-accent); display: flex; flex: none; }
+.sidebar__word { font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: var(--weight-medium); letter-spacing: -0.01em; flex: 1; white-space: nowrap; overflow: hidden; }
+
+.sidebar__collapse {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: var(--radius-sm);
+  color: var(--color-text-muted); cursor: pointer; flex: none;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.sidebar__collapse:hover { background: var(--color-accent-soft); color: var(--color-accent); }
+.sidebar__collapse svg { width: 16px; height: 16px; transition: transform 200ms ease; }
+.sidebar--collapsed .sidebar__collapse svg { transform: rotate(180deg); }
+
+.sidebar__resizer {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 4px;
+  cursor: col-resize; z-index: 10;
+}
+.sidebar__resizer::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--color-accent); opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+.sidebar__resizer:hover::after, .sidebar__resizer.is-dragging::after { opacity: 0.35; }
+
+.sidebar__nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-soft);
+  font-size: var(--font-size-md);
+  width: 100%; text-align: left;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.nav-item:hover { background: var(--color-surface-sunken); }
+.nav-item.is-active { background: var(--color-accent-soft); color: var(--color-text); font-weight: var(--weight-semibold); }
+.nav-item__ic { display: flex; color: var(--color-text-muted); }
+.nav-item.is-active .nav-item__ic { color: var(--color-accent); }
+.nav-item__ic svg { width: 18px; height: 18px; }
+.nav-item__label { flex: 1; }
+.nav-item__count { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
+.nav-item.is-active .nav-item__count { color: var(--color-accent); }
+
+.sidebar__section {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: var(--font-size-xs); font-weight: var(--weight-semibold);
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--color-text-faint);
+  padding: var(--space-lg) 10px 6px;
+}
+.sidebar__cat-toggle {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: var(--radius-sm);
+  color: var(--color-text-muted); cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.sidebar__cat-toggle:hover { background: var(--color-accent-soft); color: var(--color-accent); }
+.sidebar__cat-toggle svg { width: 15px; height: 15px; }
+
+.cat-dot { width: 9px; height: 9px; border-radius: 50%; margin: 0 4px; flex: none; }
+
+.sidebar__foot {
+  margin-top: auto;
+  display: flex; align-items: center; gap: 10px;
+  padding: var(--space-md) 6px 2px;
+  border-top: 1px solid var(--color-border);
+}
+.sidebar__avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #d4e7e4; color: #013a3a;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: var(--weight-semibold); font-size: var(--font-size-xs);
+  flex: none; text-transform: uppercase;
+}
+.sidebar__user { flex: 1; min-width: 0; }
+.sidebar__name { font-size: var(--font-size-sm); font-weight: var(--weight-semibold); color: var(--color-text); }
+.sidebar__plan { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+/* Conteúdo principal ao lado da sidebar */
+.app__main { flex: 1; min-width: 0; overflow-y: auto; max-height: 100vh; }
+
+/* ---------- Estado recolhido ---------- */
+.sidebar--collapsed { width: 72px !important; }
+.sidebar--collapsed .sidebar__word,
+.sidebar--collapsed .nav-item__label,
+.sidebar--collapsed .nav-item__count,
+.sidebar--collapsed .sidebar__section span,
+.sidebar--collapsed .sidebar__user,
+.sidebar--collapsed .cat-dot { display: none; }
+.sidebar--collapsed .sidebar__section { justify-content: center; }
+.sidebar--collapsed .nav-item { justify-content: center; }
+.sidebar--collapsed .sidebar__resizer { display: none; }
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 880px) {
+  .sidebar { width: 72px; }
+  .sidebar__word, .nav-item__label, .nav-item__count,
+  .sidebar__section span, .sidebar__user, .cat-dot + .nav-item__label { display: none; }
+  .sidebar__section { justify-content: center; }
+  .nav-item { justify-content: center; }
+  .sidebar__collapse, .sidebar__resizer { display: none; }
+}

@@ -1,0 +1,71 @@
+<!-- @dsCard group="JustDoIt Frontend" viewport="1100x860" name="To Do" subtitle="Lista priorizada com filtros e ação rápida" -->
+<!-- @startingPoint section="JustDoIt Frontend" subtitle="To Do list priorizada — filtros por categoria/status/data" viewport="1240x860" -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JustDoIt — To Do</title>
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/reset.css">
+<link rel="stylesheet" href="../styles/global.css">
+<link rel="stylesheet" href="../styles/components/button.css">
+<link rel="stylesheet" href="../styles/components/sidebar.css">
+<link rel="stylesheet" href="../styles/components/card.css">
+<link rel="stylesheet" href="../styles/components/badge.css">
+<link rel="stylesheet" href="../styles/pages/todo.css">
+</head>
+<body>
+  <div class="app">
+    <aside data-sidebar data-active="todo"></aside>
+
+    <main class="app__main">
+      <div class="page">
+        <header class="page__head">
+          <div>
+            <div class="page__eyebrow">Todas as tarefas</div>
+            <h1 class="page__title">To Do</h1>
+          </div>
+          <div class="page__head-actions">
+            <a class="btn btn--primary btn--md" href="task-detail.html">+ Nova tarefa</a>
+          </div>
+        </header>
+
+        <!-- Filtros -->
+        <div class="filters">
+          <!-- Categoria -->
+          <div class="filter-group" data-filter="cat">
+            <button class="filter-chip is-active" data-value="all">Todas</button>
+            <button class="filter-chip" data-value="Estudos"><span class="filter-chip__dot" style="background:var(--color-cat-estudos)"></span>Estudos</button>
+            <button class="filter-chip" data-value="Casa"><span class="filter-chip__dot" style="background:var(--color-cat-casa)"></span>Casa</button>
+            <button class="filter-chip" data-value="Genérico"><span class="filter-chip__dot" style="background:var(--color-cat-generico)"></span>Genérico</button>
+          </div>
+          <!-- Status -->
+          <div class="filter-group" data-filter="status">
+            <button class="filter-chip is-active" data-value="open">Abertas</button>
+            <button class="filter-chip" data-value="done">Concluídas</button>
+            <button class="filter-chip" data-value="all">Todas</button>
+          </div>
+          <!-- Data -->
+          <div class="filter-group" data-filter="date">
+            <button class="filter-chip is-active" data-value="all">Qualquer data</button>
+            <button class="filter-chip" data-value="today">Hoje</button>
+            <button class="filter-chip" data-value="week">Esta semana</button>
+          </div>
+          <div class="filters__spacer"></div>
+          <span class="filters__count" id="count">0 tarefas</span>
+        </div>
+
+        <!-- Lista agrupada por prioridade -->
+        <div id="groups"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../scripts/storage.js"></script>
+  <script src="../scripts/utils.js"></script>
+  <script src="../scripts/sidebar.js"></script>
+  <script src="../scripts/modules/priority.js"></script>
+  <script src="../scripts/todo.js"></script>
+</body>
+</html>
