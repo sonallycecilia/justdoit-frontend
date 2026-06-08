@@ -3,6 +3,68 @@
    Lista de tarefas priorizada com filtros e ação rápida.
    ============================================================ */
 
+/* Bloco de anotações */
+.notepad {
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  margin-bottom: var(--space-lg);
+  overflow: hidden;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.notepad:hover,
+.notepad:focus-within {
+  border-color: var(--color-text-muted);
+  box-shadow: var(--shadow-raised);
+}
+.notepad__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-lg) 0;
+}
+.notepad__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.notepad__label svg { width: 13px; height: 13px; }
+.notepad__hint {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-faint);
+  opacity: 0;
+  transition: opacity var(--duration-base);
+}
+.notepad__hint.is-visible { opacity: 1; }
+.notepad__area {
+  display: block;
+  width: 100%;
+  min-height: 88px;
+  max-height: 300px;
+  resize: vertical;
+  border: 0;
+  margin: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  line-height: var(--leading-relaxed);
+  padding: var(--space-md) var(--space-lg);
+  outline: none;
+  caret-color: var(--color-accent);
+  box-sizing: border-box;
+}
+.notepad__area::placeholder { color: var(--color-text-faint); }
+.notepad__area:focus-visible { box-shadow: none; }
+
 /* Barra de filtros */
 .filters { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-lg); }
 .filter-group { display: inline-flex; padding: 3px; background: var(--color-surface-sunken); border: 1px solid var(--color-border); border-radius: var(--radius-md); }

@@ -90,7 +90,10 @@
     });
     // Abrir detalhe
     groups.querySelectorAll('[data-open]').forEach(el => {
-      el.addEventListener('click', () => { window.location.href = 'task-detail.html'; });
+      el.addEventListener('click', () => {
+        const id = el.closest('.todo-item').getAttribute('data-id');
+        window.location.href = 'task-detail.html?id=' + id;
+      });
     });
   }
 
@@ -108,4 +111,16 @@
   });
 
   pintar();
+
+  // Bloco de anotações — persiste via Storage
+  const notepadArea = document.getElementById('notepadArea');
+  const notepadHint = document.getElementById('notepadHint');
+  notepadArea.value = Storage.ler('todo-notas', '');
+  let hintTimer;
+  notepadArea.addEventListener('input', () => {
+    Storage.gravar('todo-notas', notepadArea.value);
+    notepadHint.classList.add('is-visible');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => notepadHint.classList.remove('is-visible'), 2000);
+  });
 })();

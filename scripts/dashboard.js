@@ -58,6 +58,15 @@
         pintar();
       });
     });
+
+    // Abrir especificações ao clicar no título
+    lista.querySelectorAll('.task__main').forEach(el => {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', () => {
+        const id = el.closest('.task').getAttribute('data-id');
+        window.location.href = 'task-detail.html?id=' + id;
+      });
+    });
   }
   if (lista) pintar();
 })();

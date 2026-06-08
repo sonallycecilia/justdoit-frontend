@@ -1,5 +1,5 @@
-<!-- @dsCard group="JustDoIt Frontend" viewport="1100x900" name="Detalhe da tarefa" subtitle="Editor com módulos, cronômetro e subtarefas" -->
-<!-- @startingPoint section="JustDoIt Frontend" subtitle="Detalhe da tarefa — módulos ativáveis, Pomodoro, subtarefas" viewport="1240x900" -->
+<!-- @dsCard group="JustDoIt Frontend" viewport="1100x900" name="Detalhe da tarefa" subtitle="Especificações, módulos, Pomodoro e subtarefas" -->
+<!-- @startingPoint section="JustDoIt Frontend" subtitle="Detalhe / especificações de tarefa — módulos, Pomodoro, subtarefas" viewport="1240x900" -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="../styles/components/card.css">
 <link rel="stylesheet" href="../styles/components/badge.css">
 <link rel="stylesheet" href="../styles/pages/task-detail.css">
+<script>if (new URLSearchParams(location.search).get('embed')) document.documentElement.classList.add('is-embed');</script>
 </head>
 <body>
   <div class="app">
@@ -21,24 +22,108 @@
 
     <main class="app__main">
       <div class="detail" id="detail">
-        <a class="detail__back" href="todo.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          Voltar para To Do
-        </a>
+
+        <!-- Barra superior -->
+        <div class="detail__topbar">
+          <a class="detail__back" href="todo.html" id="backLink">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            Voltar para To Do
+          </a>
+          <div class="detail__topbar-actions">
+            <button class="btn btn--secondary btn--md" id="focoBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              Iniciar foco
+            </button>
+            <button class="btn btn--primary btn--md" id="saveBtn">Registrar tarefa</button>
+          </div>
+        </div>
 
         <!-- Cabeçalho editável -->
         <div class="detail__head">
           <button class="detail__check" id="taskCheck" aria-label="Concluir tarefa">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
           </button>
-          <h1 class="edit-title" id="title" contenteditable="true" spellcheck="false">Revisar Cálculo II — capítulo 4</h1>
+          <h1 class="edit-title" id="title" contenteditable="true" spellcheck="false" data-placeholder="Nome da tarefa…"></h1>
         </div>
-        <div class="edit-desc" id="desc" contenteditable="true" data-placeholder="Adicione uma descrição…">Cobrir limites e derivadas. Focar nos exercícios marcados na lista da professora.</div>
+        <div class="edit-desc" id="desc" contenteditable="true" data-placeholder="Adicione uma descrição…"></div>
 
+        <!-- Chips de meta -->
         <div class="detail__chips">
-          <span class="chip"><span class="chip__dot" style="background:var(--color-cat-estudos)"></span>Estudos</span>
-          <span class="badge badge--info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Hoje · 14:30</span>
+          <div class="date-pick" id="datePick">
+            <button class="badge badge--info date-pick__btn" id="dateBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <span id="dataChip">Hoje</span>
+              <svg class="date-pick__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+          <button class="chip chip--pick" id="catChip" data-cat="Estudos">
+            <span class="chip__dot" id="catDot" style="background:var(--color-cat-estudos)"></span>
+            <span id="catLabel">Estudos</span>
+          </button>
           <span class="badge badge--urgent" id="prioBadge">Urgente</span>
+          <div class="chips-progress hidden" id="chipsProgress">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;flex:none"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            <div class="chips-progress__bar"><div class="chips-progress__fill" id="chipsSubFill" style="width:0%"></div></div>
+            <span class="chips-progress__count" id="chipsSubCount">0/0</span>
+          </div>
+        </div>
+
+        <!-- Painel de especificações (visível ao editar tarefa existente) -->
+        <div class="detail__spec hidden" id="specPanel">
+          <div class="spec-item">
+            <span class="spec-item__ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            </span>
+            <div class="spec-item__body">
+              <span class="spec-item__label">Status</span>
+              <span class="spec-item__value" id="specStatus">Aberta</span>
+            </div>
+          </div>
+          <div class="spec-item">
+            <span class="spec-item__ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
+            </span>
+            <div class="spec-item__body">
+              <span class="spec-item__label">Recorrência</span>
+              <span class="spec-item__value" id="specCiclo">—</span>
+            </div>
+          </div>
+          <div class="spec-item">
+            <span class="spec-item__ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </span>
+            <div class="spec-item__body">
+              <span class="spec-item__label">Tempo gasto</span>
+              <span class="spec-item__value spec-item__value--mono" id="specTempo">00:00</span>
+            </div>
+          </div>
+          <div class="spec-item">
+            <span class="spec-item__ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            </span>
+            <div class="spec-item__body">
+              <span class="spec-item__label">Ciclos Pomodoro</span>
+              <span class="spec-item__value spec-item__value--mono" id="specPomos">0</span>
+            </div>
+          </div>
+          <div class="spec-item">
+            <span class="spec-item__ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            </span>
+            <div class="spec-item__body">
+              <span class="spec-item__label">Subtarefas</span>
+              <span class="spec-item__value spec-item__value--mono" id="specSubs">0 / 0</span>
+            </div>
+          </div>
+          <div class="spec-item">
+            <span class="spec-item__ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </span>
+            <div class="spec-item__body">
+              <span class="spec-item__label">Módulos ativos</span>
+              <span class="spec-item__value" id="specMods">—</span>
+            </div>
+          </div>
         </div>
 
         <!-- Módulos ativáveis (RF05) -->
@@ -65,6 +150,10 @@
               <span class="module-toggle__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg></span>
               <span class="module-toggle__name">Notas</span>
             </button>
+            <button class="module-toggle is-on" data-mod="subtarefas">
+              <span class="module-toggle__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+              <span class="module-toggle__name">Subtarefas</span>
+            </button>
           </div>
         </div>
 
@@ -77,12 +166,18 @@
               <span class="module-panel__title">Foco — Pomodoro</span>
             </div>
             <div class="pomo">
-              <div class="pomo__ring" id="pomoRing"><div class="pomo__inner"><div class="pomo__time" id="pomoTime">25:00</div><div class="pomo__phase" id="pomoPhase">Foco · ciclo 1/4</div></div></div>
+              <div class="pomo__ring" id="pomoRing">
+                <div class="pomo__inner">
+                  <div class="pomo__time" id="pomoTime">25:00</div>
+                  <div class="pomo__phase" id="pomoPhase">Foco · ciclo 1/4</div>
+                </div>
+              </div>
               <div class="pomo__side">
                 <p class="text-soft" style="margin:0">Trabalhe em blocos de 25 minutos com pausas curtas. Os ciclos concluídos contam para o seu tempo de foco do dia.</p>
                 <div class="pomo__actions">
                   <button class="btn btn--primary btn--md" id="pomoToggle">Iniciar</button>
                   <button class="btn btn--ghost btn--md" id="pomoSkip">Pular fase</button>
+                  <button class="btn btn--ghost btn--md" id="pomoReset">Reiniciar</button>
                 </div>
               </div>
             </div>
@@ -129,23 +224,25 @@
             </div>
             <textarea class="notes-area" id="notes" placeholder="Anote lembretes, links ou ideias para esta tarefa…"></textarea>
           </div>
+
+          <!-- Subtarefas (RF03) -->
+          <div class="card module-panel" data-panel="subtarefas">
+            <div class="module-panel__head">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+              <span class="module-panel__title">Subtarefas</span>
+            </div>
+            <div class="subtasks__progress">
+              <div class="progress"><div class="progress__track"><div class="progress__fill" id="subFill" style="width:0%"></div></div></div>
+              <span class="subtasks__count" id="subCount">0/0</span>
+            </div>
+            <div id="subList"></div>
+            <div class="subtask__add">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M12 5v14M5 12h14"/></svg>
+              <input id="subInput" placeholder="Adicionar subtarefa… pressione Enter">
+            </div>
+          </div>
         </div>
 
-        <!-- Subtarefas (RF03) -->
-        <div class="card card--pad" style="margin-top: var(--space-xl)">
-          <div class="subtasks__head">
-            <span class="module-panel__title">Subtarefas</span>
-          </div>
-          <div class="subtasks__progress">
-            <div class="progress"><div class="progress__track"><div class="progress__fill" id="subFill" style="width:0%"></div></div></div>
-            <span class="subtasks__count" id="subCount">0/0</span>
-          </div>
-          <div id="subList"></div>
-          <div class="subtask__add">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M12 5v14M5 12h14"/></svg>
-            <input id="subInput" placeholder="Adicionar subtarefa… pressione Enter">
-          </div>
-        </div>
       </div>
     </main>
   </div>

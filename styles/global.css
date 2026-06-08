@@ -60,6 +60,23 @@ a.link:hover { text-decoration: underline; }
   padding-inline: var(--space-lg);
 }
 
+/* ---------- App page layout ---------- */
+.page { padding: var(--space-xl); max-width: 980px; margin-inline: auto; }
+
+.page__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-lg); margin-bottom: var(--space-xl); }
+.page__eyebrow { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); margin-bottom: 7px; }
+.page__title { font-size: var(--font-size-3xl); line-height: 1.05; }
+.page__title em { font-style: italic; color: var(--color-accent); }
+.page__head-actions { display: flex; align-items: center; gap: var(--space-sm); }
+
+.section-title { font-family: var(--font-display); font-size: var(--font-size-xl); font-weight: var(--weight-medium); margin-bottom: var(--space-md); }
+.section + .section { margin-top: var(--space-xl); }
+
+@media (max-width: 880px) {
+  .page { padding: var(--space-lg); }
+  .page__title { font-size: var(--font-size-2xl); }
+}
+
 .stack > * + * { margin-top: var(--space-md); }   /* empilhamento vertical */
 .row   { display: flex; align-items: center; gap: var(--space-md); }
 .row--between { justify-content: space-between; }
@@ -95,6 +112,10 @@ a.link:hover { text-decoration: underline; }
   border: 2px solid var(--color-surface);
 }
 *::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- Modo embed (iframe) ---------- */
+html.is-embed aside[data-sidebar] { display: none !important; }
+html.is-embed .app__main { width: 100%; }
 
 /* ---------- Responsivo ---------- */
 @media (max-width: 768px) {

@@ -3,6 +3,8 @@
    Bloco de tempo alocado no calendário. Cor por categoria,
    barra de prioridade à esquerda, arrastável (drag-and-drop).
    ============================================================ */
+const { useRef } = React;
+
 const COR_PRIORIDADE = {
   urgent: 'var(--color-priority-urgent)',
   important: 'var(--color-priority-important)',
@@ -23,17 +25,19 @@ function fmtHora(x) {
   return `${String(h).padStart(2, '0')}:${m}`;
 }
 
-function TimeBlock({ ev, rowH, startHour, onDragStart, onDragEnd, dragging }) {
+function TimeBlock({ ev, rowH, startHour, onDragStart, onDragEnd, dragging, onOpen, onDrawer }) {
+  const wasDragged = useRef(false);
   const top = (ev.ini - startHour) * rowH;
   const height = (ev.fim - ev.ini) * rowH - 4;
 
   return (
     <div
-      className={`timeblock timeblock--${ev.cat} ${dragging ? 'is-dragging' : ''}`}
+      className={`timeblock timeblock--${ev.cat} ${dragging ? 'is-dragging' : ''} ${ev.done ? 'timeblock--done' : ''}`}
       style={{ top: `${top}px`, height: `${height}px` }}
       draggable="true"
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); }}
-      onDragEnd={onDragEnd}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); wasDragged.current = true; }}
+      onDragEnd={() => { onDragEnd(); setTimeout(() => { wasDragged.current = false; }, 0); }}
+      onClick={() => { if (!wasDragged.current && onOpen) onOpen(ev); }}
       title={ev.titulo}
     >
       <span className="timeblock__prio" style={{ background: COR_PRIORIDADE[ev.prio] }}></span>
@@ -46,6 +50,17 @@ function TimeBlock({ ev, rowH, startHour, onDragStart, onDragEnd, dragging }) {
           </svg>
         )}
       </span>
+      {onDrawer && (
+        <button
+          className="timeblock__arrow"
+          onClick={(e) => { e.stopPropagation(); onDrawer(ev); }}
+          title="Abrir painel lateral"
+        >
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -53,3 +68,4 @@ function TimeBlock({ ev, rowH, startHour, onDragStart, onDragEnd, dragging }) {
 window.TimeBlock = TimeBlock;
 window.fmtHora = fmtHora;
 window.COR_PRIORIDADE = COR_PRIORIDADE;
+window.ICONES_MOD = ICONES_MOD;
