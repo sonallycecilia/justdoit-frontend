@@ -26,11 +26,6 @@
 .auth__quote h2 em { font-style: italic; color: #6aa9a4; }
 .auth__quote p { color: #a3cac6; line-height: var(--leading-relaxed); }
 .auth__foot { position: relative; z-index: 2; font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: 0.14em; text-transform: uppercase; color: #6aa9a4; }
-/* anéis concêntricos sutis */
-.auth__rings { position: absolute; right: -160px; bottom: -160px; width: 520px; height: 520px; border-radius: 50%; border: 1px solid rgba(106,169,164,.16); }
-.auth__rings::before, .auth__rings::after { content: ''; position: absolute; border-radius: 50%; border: 1px solid rgba(106,169,164,.14); }
-.auth__rings::before { inset: 70px; }
-.auth__rings::after { inset: 150px; border-color: rgba(106,169,164,.20); }
 
 /* ---------- Painel do formulário (direita) ---------- */
 .auth__main { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--space-xl) var(--space-lg); }

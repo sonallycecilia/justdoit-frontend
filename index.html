@@ -11,15 +11,181 @@
 <link rel="stylesheet" href="styles/components/button.css">
 <link rel="stylesheet" href="styles/components/badge.css">
 <link rel="stylesheet" href="styles/components/card.css">
-<link rel="stylesheet" href="marketing/marketing.css">
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="marketing/marketing.js"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="stylesheet" href="styles/pages/marketing.css">
+<script>
+(function(){
+  var t = localStorage.getItem('jdi.tema') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+  if (t === 'dark') document.documentElement.setAttribute('data-theme','dark');
+})();
+</script>
 </head>
-<body>
-<div id="root"></div>
-<script type="text/babel" src="marketing/marketing.jsx"></script>
+<body class="mkt">
+
+<!-- Logo reutilizável via <use> -->
+<svg style="display:none" aria-hidden="true">
+  <defs>
+    <filter id="mmark-shadow" x="-35%" y="-35%" width="170%" height="170%">
+      <feDropShadow dx="1.1" dy="1.8" stdDeviation="0.9" flood-color="#012326" flood-opacity="0.3"/>
+    </filter>
+    <symbol id="mmark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path filter="url(#mmark-shadow)" d="M33 7 L46.5 21 L39.6 21 L39.6 36.4 C39.6 44.2 34.6 48.9 27 48.3 C19.8 47.7 15.3 42.6 15.9 37.5 C16.3 33.9 18.9 31.9 21.9 32.5 C24.4 33 25.6 35.4 24.2 37.4 C23.2 38.8 21.4 38.7 20.6 37.6 M33 7 L19.5 21 L26.4 21 L26.4 36.4 C26.4 40 28.8 42.3 32.2 42.3"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- Nav -->
+<header class="mkt-nav">
+  <div class="mkt__wrap mkt-nav__in">
+    <a class="mkt-brand" href="#">
+      <span class="mkt-brand__mark"><svg width="22" height="22"><use href="#mmark"/></svg></span>
+      <span class="mkt-brand__word">JustDoIt</span>
+    </a>
+    <nav class="mkt-nav__links">
+      <a class="mkt-nav__link" href="#">Recursos</a>
+      <a class="mkt-nav__link" href="#">Preços</a>
+      <a class="mkt-nav__link" href="#">Sobre</a>
+    </nav>
+    <div class="mkt-nav__cta">
+      <button class="mkt-theme" id="themeToggle" aria-label="Alternar tema">
+        <i data-lucide="moon-star"></i>
+      </button>
+      <button class="btn btn--primary btn--sm" onclick="location.href='pages/login.html'">Entrar</button>
+    </div>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="mkt__wrap mkt-hero">
+  <div>
+    <span class="mkt-hero__eyebrow">
+      <span class="badge badge--info"><span class="badge__dot"></span>Gerenciador de tarefas</span>
+    </span>
+    <h1>Concentre-se no <em>que importa.</em></h1>
+    <p class="mkt-hero__sub">
+      O JustDoIt deixa o seu dia leve: uma lista clara, lembretes na hora certa
+      e a calma de saber exatamente o próximo passo.
+    </p>
+    <div class="mkt-hero__actions">
+      <button class="btn btn--primary btn--lg" onclick="location.href='pages/signup.html'">
+        Começar de graça <i data-lucide="arrow-up"></i>
+      </button>
+      <button class="btn btn--secondary btn--lg">
+        <i data-lucide="play"></i> Ver demo
+      </button>
+    </div>
+    <div class="mkt-hero__note"><i data-lucide="check"></i> Sem cartão de crédito · Em português</div>
+  </div>
+
+  <!-- Mock do produto -->
+  <div class="mkt-mock">
+    <div class="mkt-mock__bar">
+      <span class="mkt-mock__day">Hoje</span>
+      <span class="mkt-mock__date">QUI · 7 JUN</span>
+    </div>
+    <div class="mkt-mock__rows">
+      <div class="mkt-mock__row">
+        <input type="checkbox" class="mkt-mock__check">
+        <span class="mkt-mock__t">Revisar a proposta de orçamento</span>
+        <span class="badge badge--info">Hoje</span>
+      </div>
+      <div class="mkt-mock__row">
+        <input type="checkbox" class="mkt-mock__check" checked>
+        <span class="mkt-mock__t mkt-mock__t--done">Pagar conta de luz</span>
+      </div>
+      <div class="mkt-mock__row">
+        <input type="checkbox" class="mkt-mock__check">
+        <span class="mkt-mock__t">Caminhada de 30 minutos</span>
+        <span class="badge badge--warning">17:00</span>
+      </div>
+      <div class="mkt-mock__row">
+        <input type="checkbox" class="mkt-mock__check">
+        <span class="mkt-mock__t">Agendar a transportadora</span>
+        <span class="badge badge--danger">Alta</span>
+      </div>
+    </div>
+    <div class="mkt-mock__foot">
+      <div class="progress">
+        <div class="progress__head">
+          <span class="progress__label">Concluído hoje</span>
+          <span class="progress__value">25%</span>
+        </div>
+        <div class="progress__track">
+          <div class="progress__fill" style="width:25%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="mkt__wrap mkt-features">
+  <div class="mkt-sec-head">
+    <h2>Menos ruído. Mais feito.</h2>
+    <p>Ferramentas calmas para um dia produtivo — sem a ansiedade das listas intermináveis.</p>
+  </div>
+  <div class="mkt-grid3">
+    <article class="mkt-feat">
+      <div class="mkt-feat__ic"><i data-lucide="sun"></i></div>
+      <h3>Comece pelo hoje</h3>
+      <p>Só o que precisa da sua atenção agora. O resto espera, sem ruído.</p>
+    </article>
+    <article class="mkt-feat">
+      <div class="mkt-feat__ic"><i data-lucide="bell"></i></div>
+      <h3>Lembretes na hora</h3>
+      <p>Prazos que chegam no momento certo — nunca cedo demais, nunca tarde.</p>
+    </article>
+    <article class="mkt-feat">
+      <div class="mkt-feat__ic"><i data-lucide="folder-tree"></i></div>
+      <h3>Projetos organizados</h3>
+      <p>Agrupe por contexto e veja o progresso de cada projeto num relance.</p>
+    </article>
+  </div>
+</section>
+
+<!-- CTA Band -->
+<section class="mkt-band">
+  <div class="mkt-band__in">
+    <div class="mkt-band__mark"><svg width="40" height="40"><use href="#mmark"/></svg></div>
+    <h2>Seu dia, tranquilo. Sua lista, feita.</h2>
+    <p>Junte-se a quem trocou o caos das tarefas pela calma de uma lista bem cuidada.</p>
+    <button class="btn btn--primary btn--lg" onclick="location.href='pages/signup.html'">
+      Começar agora <i data-lucide="arrow-up"></i>
+    </button>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="mkt-foot">
+  <div class="mkt__wrap mkt-foot__in">
+    <div class="mkt-foot__brand">
+      <span class="mkt-brand__mark"><svg width="20" height="20"><use href="#mmark"/></svg></span>
+      <div>
+        <div class="mkt-brand__word" style="font-size:18px">JustDoIt</div>
+        <div class="mkt-foot__tag">Gerenciador de Tarefas</div>
+      </div>
+    </div>
+    <nav class="mkt-foot__links">
+      <a href="#">Recursos</a>
+      <a href="#">Preços</a>
+      <a href="#">Privacidade</a>
+      <a href="#">Contato</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+(function () {
+  'use strict';
+  lucide.createIcons();
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var r = document.documentElement;
+    var dark = r.getAttribute('data-theme') === 'dark';
+    r.setAttribute('data-theme', dark ? 'light' : 'dark');
+    localStorage.setItem('jdi.tema', dark ? 'light' : 'dark');
+    lucide.createIcons();
+  });
+})();
+</script>
 </body>
 </html>
