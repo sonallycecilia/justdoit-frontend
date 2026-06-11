@@ -46,7 +46,7 @@
 .cat-add__swatch:hover { transform: scale(1.12); }
 .cat-add__swatch.is-sel { border-color: var(--color-text); }
 .cat-add__input { flex: 1; height: 38px; padding: 0 12px; background: var(--color-card); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); font-size: var(--font-size-md); color: var(--color-text); outline: none; }
-.cat-add__input:focus { border-color: var(--color-accent); box-shadow: var(--focus-ring); }
+.cat-add__input:focus { border-color: var(--color-accent); }
 
 /* Perfil resumo */
 .set-profile { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); }

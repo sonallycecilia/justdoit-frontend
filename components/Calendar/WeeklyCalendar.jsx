@@ -23,12 +23,19 @@ const SEMENTE = [
   { id: 'a6', titulo: 'Trocar o filtro de água',               cat: 'Casa',     prioridade: 'normal',    quando: 'past',  data: 'Atrasada',    done: false },
   { id: 'a7', titulo: 'Planejar a próxima semana',             cat: 'Genérico', prioridade: 'low',       quando: 'week',  data: 'Dom, 14 jun', done: false },
   { id: 'a8', titulo: 'Organizar fotos do celular',            cat: 'Casa',     prioridade: 'low',       quando: 'all',   data: 'Sem data',    done: false },
-  { id: 'a9', titulo: 'Caminhada de 30 minutos',               cat: 'Casa',     prioridade: 'normal',    quando: 'today', data: 'Hoje',        done: true  },
+  { id: 'a9',  titulo: 'Caminhada de 30 minutos',               cat: 'Casa',     prioridade: 'normal',    quando: 'today', data: 'Hoje',        done: true  },
+  { id: 'a10', titulo: 'Academia',                              cat: 'Casa',     prioridade: 'normal',    quando: 'week',  data: 'Amanhã',      done: false },
+  { id: 'a11', titulo: 'Reunião de equipe',                     cat: 'Genérico', prioridade: 'important', quando: 'today', data: 'Hoje',        done: false },
+  { id: 'a12', titulo: 'Mercado',                               cat: 'Casa',     prioridade: 'normal',    quando: 'week',  data: 'Qua, 10 jun', done: false },
+  { id: 'a13', titulo: 'Pomodoro: Algoritmos',                  cat: 'Estudos',  prioridade: 'normal',    quando: 'week',  data: 'Qui, 11 jun', done: false },
+  { id: 'a14', titulo: 'Apresentação ao time',                  cat: 'Genérico', prioridade: 'important', quando: 'today', data: 'Hoje',        done: false },
+  { id: 'a15', titulo: 'Faxina da semana',                      cat: 'Casa',     prioridade: 'normal',    quando: 'week',  data: 'Sáb, 13 jun', done: false },
 ];
 
 function fmtHora(x) {
-  const h = Math.floor(x), m = x % 1 ? '30' : '00';
-  return `${String(h).padStart(2, '0')}:${m}`;
+  const h = Math.floor(x);
+  const m = Math.round((x % 1) * 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 function Icon({ d, size = 16 }) {
@@ -160,6 +167,63 @@ function MonthView({ eventos }) {
   );
 }
 
+/* ── TimePickerInline ────────────────────────────────────── */
+function TimePickerInline({ ini, fim, onChange }) {
+  const [open, setOpen] = useState(false);
+  const h = Math.floor(ini);
+  const m = Math.round((ini % 1) * 60);
+
+  function selHora(novoH) {
+    const novoIni = novoH + m / 60;
+    const dur = fim - ini;
+    onChange(novoIni, Math.round((novoIni + dur) * 4) / 4);
+  }
+  function selMin(novoM) {
+    const novoIni = h + novoM / 60;
+    const dur = fim - ini;
+    onChange(novoIni, Math.round((novoIni + dur) * 4) / 4);
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        className={`task-modal__time-btn${open ? ' is-open' : ''}`}
+        onClick={() => setOpen(o => !o)}
+      >
+        {fmtHora(ini)} – {fmtHora(fim)}
+        <Icon d="m6 9 6 6 6-6" size={11} />
+      </button>
+      {open && <>
+        <div className="task-modal__date-overlay" onClick={() => setOpen(false)} />
+        <div className="task-modal__time-menu">
+          <div className="task-modal__time-label">Hora</div>
+          <div className="task-modal__time-hours">
+            {Array.from({ length: 24 }, (_, i) => (
+              <button key={i}
+                className={`task-modal__time-cell${i === h ? ' is-on' : ''}`}
+                onClick={e => { e.stopPropagation(); selHora(i); }}
+              >
+                {String(i).padStart(2, '0')}
+              </button>
+            ))}
+          </div>
+          <div className="task-modal__time-label" style={{ marginTop: 6 }}>Minuto</div>
+          <div className="task-modal__time-mins">
+            {[0, 15, 30, 45].map(n => (
+              <button key={n}
+                className={`task-modal__time-min${n === m ? ' is-on' : ''}`}
+                onClick={e => { e.stopPropagation(); selMin(n); }}
+              >
+                :{String(n).padStart(2, '0')}
+              </button>
+            ))}
+          </div>
+        </div>
+      </>}
+    </div>
+  );
+}
+
 /* ── TaskModal (popup centralizado) ──────────────────────── */
 function TaskModal({ ev, dia, onClose, onUpdate }) {
   const [dateOpen, setDateOpen] = useState(false);
@@ -187,7 +251,9 @@ function TaskModal({ ev, dia, onClose, onUpdate }) {
         <div className="task-modal__info">
           <div className="task-modal__row">
             <span className="task-modal__label">Horário</span>
-            <span className="task-modal__val task-modal__time">{fmtHora(ev.ini)} – {fmtHora(ev.fim)}</span>
+            <span className="task-modal__val">
+              <TimePickerInline ini={ev.ini} fim={ev.fim} onChange={(novoIni, novoFim) => onUpdate({ ini: novoIni, fim: novoFim })} />
+            </span>
           </div>
           <div className="task-modal__row">
             <span className="task-modal__label">Dia</span>
@@ -326,6 +392,24 @@ function WeeklyCalendar() {
   const [drawerEv, setDrawerEv] = useState(null);
   const dias = window.CAL_DATA.dias;
 
+  // Ouve mensagens do iframe (drawer) para atualizar hora em tempo real
+  useEffect(() => {
+    function onMsg(e) {
+      if (!e.data || e.data.type !== 'jdi-hora-update') return;
+      const { taskId, hora } = e.data;
+      if (!hora) return;
+      const [hh, mm] = hora.split(':').map(Number);
+      const novoIni = hh + mm / 60;
+      setEventos(evs => evs.map(ev => {
+        if (ev.taskId !== taskId) return ev;
+        const dur = ev.fim - ev.ini;
+        return { ...ev, ini: novoIni, fim: Math.round((novoIni + dur) * 4) / 4 };
+      }));
+    }
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
   const eventosComNum = eventos.map(ev => ({ ...ev, num: dias[ev.d] ? dias[ev.d].num : 0 }));
 
   function mover(id, novoDia, novaIni) {
@@ -353,6 +437,7 @@ function WeeklyCalendar() {
         if (changes.prio !== undefined) t.prioridade = changes.prio;
         if (changes.done !== undefined) t.done = changes.done;
         if (changes.cat  !== undefined) t.cat = CAT_LABEL[changes.cat] || changes.cat;
+        if (changes.ini  !== undefined) t.hora = fmtHora(changes.ini);
         window.Storage.gravar('todo-tarefas', lista);
       }
     }

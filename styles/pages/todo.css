@@ -123,6 +123,8 @@
 .todo-date { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
 .todo-date svg { width: 12px; height: 12px; }
 .todo-date.is-overdue { color: var(--color-danger); }
+.todo-time { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
+.todo-time svg { width: 12px; height: 12px; }
 .todo-right { display: flex; align-items: center; gap: var(--space-sm); flex: none; }
 
 /* Estado vazio */

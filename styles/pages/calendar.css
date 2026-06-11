@@ -179,6 +179,49 @@
 .task-modal__cal-day.is-on { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); border-radius: 50%; }
 .task-modal__cal-day.is-today.is-on { background: var(--color-accent); color: var(--color-text-on-dark); }
 
+/* ---------- Time picker inline (modal) ---------- */
+.task-modal__time-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px 4px 10px; border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong); background: var(--color-card);
+  font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--weight-medium);
+  color: var(--color-text-soft); cursor: pointer;
+  transition: border-color var(--duration-fast), color var(--duration-fast);
+}
+.task-modal__time-btn:hover, .task-modal__time-btn.is-open { border-color: var(--color-accent); color: var(--color-accent); }
+
+.task-modal__time-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 11;
+  background: var(--color-card); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); padding: 10px; box-shadow: var(--shadow-raised);
+  min-width: 212px; animation: modal-fade-in var(--duration-fast) var(--ease-out);
+}
+.task-modal__time-label {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--color-text-faint); margin-bottom: 5px;
+}
+.task-modal__time-hours { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; margin-bottom: 4px; }
+.task-modal__time-cell {
+  height: 28px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: var(--weight-medium);
+  color: var(--color-text-soft); background: transparent; border: 1px solid transparent;
+  cursor: pointer; transition: background var(--duration-fast), color var(--duration-fast);
+}
+.task-modal__time-cell:hover { background: var(--color-surface-sunken); }
+.task-modal__time-cell.is-on { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); border-radius: 50%; }
+
+.task-modal__time-mins { display: flex; gap: 4px; }
+.task-modal__time-min {
+  flex: 1; height: 28px; border-radius: var(--radius-pill);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: var(--weight-medium);
+  color: var(--color-text-soft); background: transparent; border: 1px solid var(--color-border-strong);
+  cursor: pointer; transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+}
+.task-modal__time-min:hover { background: var(--color-surface-sunken); }
+.task-modal__time-min.is-on { border-color: var(--color-accent); background: var(--color-accent-soft); color: var(--color-accent); }
+
 /* ---------- Drawer lateral ---------- */
 .cal-drawer {
   position: fixed; top: 0; right: 0; bottom: 0;

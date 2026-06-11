@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="styles/components/button.css">
 <link rel="stylesheet" href="styles/components/badge.css">
 <link rel="stylesheet" href="styles/components/card.css">
-<link rel="stylesheet" href="styles/pages/marketing.css">
+<link rel="stylesheet" href="styles/pages/features/auth/marketing.css">
 <script>
 (function(){
   var t = localStorage.getItem('jdi.tema') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
@@ -37,13 +37,11 @@
 <header class="mkt-nav">
   <div class="mkt__wrap mkt-nav__in">
     <a class="mkt-brand" href="#">
-      <span class="mkt-brand__mark"><svg width="22" height="22"><use href="#mmark"/></svg></span>
       <span class="mkt-brand__word">JustDoIt</span>
     </a>
     <nav class="mkt-nav__links">
-      <a class="mkt-nav__link" href="#">Recursos</a>
-      <a class="mkt-nav__link" href="#">Preços</a>
-      <a class="mkt-nav__link" href="#">Sobre</a>
+      <a class="mkt-nav__link" href="#" id="recursosBtn">Recursos</a>
+      <a class="mkt-nav__link" href="#" id="sobreBtn">Sobre</a>
     </nav>
     <div class="mkt-nav__cta">
       <button class="mkt-theme" id="themeToggle" aria-label="Alternar tema">
@@ -62,18 +60,14 @@
     </span>
     <h1>Concentre-se no <em>que importa.</em></h1>
     <p class="mkt-hero__sub">
-      O JustDoIt deixa o seu dia leve: uma lista clara, lembretes na hora certa
-      e a calma de saber exatamente o próximo passo.
+      O JustDoIt deixa o seu dia leve: uma lista clara e a calma de saber exatamente o próximo passo.
     </p>
     <div class="mkt-hero__actions">
       <button class="btn btn--primary btn--lg" onclick="location.href='pages/signup.html'">
         Começar de graça <i data-lucide="arrow-up"></i>
       </button>
-      <button class="btn btn--secondary btn--lg">
-        <i data-lucide="play"></i> Ver demo
-      </button>
+
     </div>
-    <div class="mkt-hero__note"><i data-lucide="check"></i> Sem cartão de crédito · Em português</div>
   </div>
 
   <!-- Mock do produto -->
@@ -119,20 +113,16 @@
 
 <!-- Features -->
 <section class="mkt__wrap mkt-features">
-  <div class="mkt-sec-head">
-    <h2>Menos ruído. Mais feito.</h2>
-    <p>Ferramentas calmas para um dia produtivo — sem a ansiedade das listas intermináveis.</p>
-  </div>
   <div class="mkt-grid3">
     <article class="mkt-feat">
       <div class="mkt-feat__ic"><i data-lucide="sun"></i></div>
-      <h3>Comece pelo hoje</h3>
-      <p>Só o que precisa da sua atenção agora. O resto espera, sem ruído.</p>
+      <h3>Comece pelo que importa</h3>
+      <p>Filtre suas tarefas que são priorioridade e foque no essencial.</p>
     </article>
     <article class="mkt-feat">
-      <div class="mkt-feat__ic"><i data-lucide="bell"></i></div>
-      <h3>Lembretes na hora</h3>
-      <p>Prazos que chegam no momento certo — nunca cedo demais, nunca tarde.</p>
+      <div class="mkt-feat__ic"><i data-lucide="clock"></i></div>
+      <h3>Períodos de Foco</h3>
+      <p>Acompanhe o seu ritmo ou controle suas pausas através do cronômetro.</p>
     </article>
     <article class="mkt-feat">
       <div class="mkt-feat__ic"><i data-lucide="folder-tree"></i></div>
@@ -142,17 +132,131 @@
   </div>
 </section>
 
-<!-- CTA Band -->
-<section class="mkt-band">
-  <div class="mkt-band__in">
-    <div class="mkt-band__mark"><svg width="40" height="40"><use href="#mmark"/></svg></div>
-    <h2>Seu dia, tranquilo. Sua lista, feita.</h2>
-    <p>Junte-se a quem trocou o caos das tarefas pela calma de uma lista bem cuidada.</p>
-    <button class="btn btn--primary btn--lg" onclick="location.href='pages/signup.html'">
-      Começar agora <i data-lucide="arrow-up"></i>
-    </button>
+<!-- Recursos overlay -->
+<div id="recursosOverlay" class="recursos-overlay" aria-modal="true" aria-hidden="true" role="dialog">
+  <div class="recursos-panel">
+    <div class="recursos-head">
+      <h2>Funcionalidades de uma tarefa</h2>
+      <p>Tudo que você pode configurar ao criar ou editar uma tarefa no JustDoIt.</p>
+      <button class="recursos-close" id="recursosClose" aria-label="Fechar">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="recursos-divider"></div>
+    <div class="recursos-grid">
+
+      <div class="recursos-item">
+        <div class="recursos-item__ic"><i data-lucide="flag"></i></div>
+        <div class="recursos-item__body">
+          <strong>Prioridade</strong>
+          <p>Classifique a urgência de cada tarefa para saber exatamente no que focar primeiro.</p>
+          <div class="recursos-item__tags">
+            <span class="recursos-tag">Urgente</span>
+            <span class="recursos-tag">Importante</span>
+            <span class="recursos-tag">Normal</span>
+            <span class="recursos-tag">Baixa</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="recursos-item">
+        <div class="recursos-item__ic"><i data-lucide="layers"></i></div>
+        <div class="recursos-item__body">
+          <strong>Categoria</strong>
+          <p>Agrupe tarefas por contexto com categorias coloridas. O painel lateral mostra o progresso de cada grupo de um jeito claro.</p>
+          <div class="recursos-item__tags">
+            <span class="recursos-tag">Estudos</span>
+            <span class="recursos-tag">Casa</span>
+            <span class="recursos-tag">Genérico</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="recursos-item">
+        <div class="recursos-item__ic"><i data-lucide="file-text"></i></div>
+        <div class="recursos-item__body">
+          <strong>Notas</strong>
+          <p>Escreva detalhes, contexto ou lembretes diretamente na tarefa. As notas ficam sempre visíveis na tela de detalhe.</p>
+        </div>
+      </div>
+
+      <div class="recursos-item">
+        <div class="recursos-item__ic"><i data-lucide="timer"></i></div>
+        <div class="recursos-item__body">
+          <strong>Cronômetro de foco</strong>
+          <p>Inicie uma sessão de foco diretamente da tarefa. Acompanhe quanto tempo você dedicou a cada atividade ao longo do dia.</p>
+        </div>
+      </div>
+
+      <div class="recursos-item">
+        <div class="recursos-item__ic"><i data-lucide="refresh-cw"></i></div>
+        <div class="recursos-item__body">
+          <strong>Ciclos de repetição</strong>
+          <p>Ative o ciclo para que a tarefa se redefina automaticamente em um intervalo que você mesmo define.</p>
+        </div>
+      </div>
+
+      <div class="recursos-item">
+        <div class="recursos-item__ic"><i data-lucide="calendar-days"></i></div>
+        <div class="recursos-item__body">
+          <strong>Visualização semanal</strong>
+          <p>Veja todas as suas tarefas distribuídas ao longo da semana no Calendário para planejar com mais visibilidade.</p>
+        </div>
+      </div>
+
+      <div class="recursos-item">
+        <div class="recursos-item__ic"><i data-lucide="bar-chart-2"></i></div>
+        <div class="recursos-item__body">
+          <strong>Análise de produtividade (feature)</strong>
+          <p>Acompanhe métricas de tarefas concluídas, tempo de foco e tendências semanais no painel de analytics.</p>
+        </div>
+      </div>
+
+    </div>
   </div>
-</section>
+</div>
+
+<!-- Sobre overlay -->
+<div id="sobreOverlay" class="recursos-overlay" aria-modal="true" aria-hidden="true" role="dialog">
+  <div class="recursos-panel sobre-panel">
+    <div class="recursos-head">
+      <h2>Sobre o JustDoIt</h2>
+      <p>Um projeto criado com cuidado por três desenvolvedoras apaixonadas por produtividade.</p>
+      <button class="recursos-close" id="sobreClose" aria-label="Fechar">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="recursos-divider"></div>
+    <div class="sobre-team">
+
+      <div class="sobre-card">
+        <div class="sobre-card__avatar">SC</div>
+        <div class="sobre-card__body">
+          <strong>Sonally Cecília</strong>
+          <span class="sobre-card__role">Desenvolvedora</span>
+        </div>
+      </div>
+
+      <div class="sobre-card">
+        <div class="sobre-card__avatar">JP</div>
+        <div class="sobre-card__body">
+          <strong>Julia Pamplona</strong>
+          <span class="sobre-card__role">Desenvolvedora</span>
+        </div>
+      </div>
+
+      <div class="sobre-card">
+        <div class="sobre-card__avatar">LC</div>
+        <div class="sobre-card__body">
+          <strong>Laryssa Costa</strong>
+          <span class="sobre-card__role">Desenvolvedora</span>
+        </div>
+      </div>
+
+    </div>
+    <p class="sobre-note">Feito com foco, café e muita vontade de simplificar o dia a dia.</p>
+  </div>
+</div>
 
 <!-- Footer -->
 <footer class="mkt-foot">
@@ -165,27 +269,13 @@
       </div>
     </div>
     <nav class="mkt-foot__links">
-      <a href="#">Recursos</a>
-      <a href="#">Preços</a>
+      <a href="#">Termos</a>
       <a href="#">Privacidade</a>
-      <a href="#">Contato</a>
     </nav>
   </div>
 </footer>
 
 <script src="https://unpkg.com/lucide@latest"></script>
-<script>
-(function () {
-  'use strict';
-  lucide.createIcons();
-  document.getElementById('themeToggle').addEventListener('click', function () {
-    var r = document.documentElement;
-    var dark = r.getAttribute('data-theme') === 'dark';
-    r.setAttribute('data-theme', dark ? 'light' : 'dark');
-    localStorage.setItem('jdi.tema', dark ? 'light' : 'dark');
-    lucide.createIcons();
-  });
-})();
-</script>
+<script src="scripts/features/auth/marketing.js"></script>
 </body>
 </html>

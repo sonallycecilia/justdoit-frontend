@@ -1,30 +1,19 @@
 /* ============================================================
-   JustDoIt — task-detail.js
+   JustDoIt — pages/task-detail.js
    Especificações de uma tarefa: carrega por ?id=, permite editar,
    iniciar foco, configurar módulos, subtarefas e notas.
    Modo "nova tarefa" quando nenhum id é passado na URL.
+   Depende de: core/storage.js, core/utils.js, modules/tarefas.js,
+   modules/categorias.js, components/date-picker.js.
    ============================================================ */
 (function () {
   'use strict';
-
-  /* ── Semente (espelha todo.js para fallback offline) ──── */
-  const SEMENTE = [
-    { id: 'a1', titulo: 'Revisar Cálculo II — capítulo 4',       cat: 'Estudos',  prioridade: 'urgent',    quando: 'today', data: 'Hoje',        done: false },
-    { id: 'a2', titulo: 'Entregar relatório do projeto',           cat: 'Genérico', prioridade: 'urgent',    quando: 'today', data: 'Hoje',        done: false },
-    { id: 'a3', titulo: 'Pagar conta de luz',                      cat: 'Casa',     prioridade: 'important', quando: 'today', data: 'Hoje',        done: false },
-    { id: 'a4', titulo: 'Responder e-mail do cliente',             cat: 'Genérico', prioridade: 'important', quando: 'week',  data: 'Amanhã',      done: false },
-    { id: 'a5', titulo: 'Ler artigo de Sistemas Distribuídos',     cat: 'Estudos',  prioridade: 'normal',    quando: 'week',  data: 'Qua, 10 jun', done: false },
-    { id: 'a6', titulo: 'Trocar o filtro de água',                 cat: 'Casa',     prioridade: 'normal',    quando: 'past',  data: 'Atrasada',    done: false },
-    { id: 'a7', titulo: 'Planejar a próxima semana',               cat: 'Genérico', prioridade: 'low',       quando: 'week',  data: 'Dom, 14 jun', done: false },
-    { id: 'a8', titulo: 'Organizar fotos do celular',              cat: 'Casa',     prioridade: 'low',       quando: 'all',   data: 'Sem data',    done: false },
-    { id: 'a9', titulo: 'Caminhada de 30 minutos',                 cat: 'Casa',     prioridade: 'normal',    quando: 'today', data: 'Hoje',        done: true  },
-  ];
 
   /* ── URL param / modo ─────────────────────────────────── */
   const params = new URLSearchParams(window.location.search);
   const taskId = params.get('id');
 
-  const tarefas = Storage.ler('todo-tarefas', SEMENTE);
+  const tarefas = Tarefas.listar();
   const tarefa  = taskId ? tarefas.find(t => t.id === taskId) : null;
 
   // Storage keys — por tarefa quando editando, genérico para nova
@@ -38,11 +27,7 @@
   const detail = document.getElementById('detail');
 
   /* ── Categoria ────────────────────────────────────────── */
-  const CATS = [
-    { nome: 'Estudos',  cor: 'var(--color-cat-estudos)'  },
-    { nome: 'Casa',     cor: 'var(--color-cat-casa)'     },
-    { nome: 'Genérico', cor: 'var(--color-cat-generico)' },
-  ];
+  const CATS = Categorias.TODAS;
   const catChip  = document.getElementById('catChip');
   const catDot   = document.getElementById('catDot');
   const catLabel = document.getElementById('catLabel');
@@ -64,166 +49,162 @@
   });
 
   /* ── Seletor de data ─────────────────────────────────────── */
-  const datePick = document.getElementById('datePick');
-  const dateBtn  = document.getElementById('dateBtn');
-
-  const _hoje = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
-
-  const _MESES_PT    = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  const _MESES_ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  const _DIAS_ABREV  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-
-  function _fmtData(d) {
-    const amanha = new Date(_hoje); amanha.setDate(_hoje.getDate() + 1);
-    if (d.toDateString() === _hoje.toDateString())  return 'Hoje';
-    if (d.toDateString() === amanha.toDateString()) return 'Amanhã';
-    return `${_DIAS_ABREV[d.getDay()]}, ${d.getDate()} ${_MESES_ABREV[d.getMonth()]}`;
-  }
-
-  function _calcQuando(d) {
-    const fim = new Date(_hoje); fim.setDate(_hoje.getDate() + 7);
-    if (d < _hoje) return 'past';
-    if (d.toDateString() === _hoje.toDateString()) return 'today';
-    if (d <= fim) return 'week';
-    return 'all';
-  }
-
-  function _isoDate(d) {
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  }
-
-  function _parseDataStr(str) {
-    if (!str || str === 'Sem data') return null;
-    if (str === 'Hoje')     return new Date(_hoje);
-    if (str === 'Atrasada') { const d = new Date(_hoje); d.setDate(_hoje.getDate() - 1); return d; }
-    if (str === 'Amanhã')   { const d = new Date(_hoje); d.setDate(_hoje.getDate() + 1); return d; }
-    const match = str.match(/(\d+)\s+(\w{3})/);
-    if (match) {
-      const dia = parseInt(match[1]);
-      const m   = _MESES_ABREV.indexOf(match[2].toLowerCase());
-      if (m !== -1) {
-        const d = new Date(_hoje.getFullYear(), m, dia);
-        if (d < _hoje) d.setFullYear(_hoje.getFullYear() + 1);
-        return d;
-      }
-    }
-    return null;
-  }
-
   let selectedDate = (() => {
     if (tarefa && tarefa.dataIso) {
       const [y, mo, d] = tarefa.dataIso.split('-').map(Number);
       return new Date(y, mo - 1, d);
     }
     if (tarefa && tarefa.data) {
-      const parsed = _parseDataStr(tarefa.data);
+      const parsed = Utils.parseData(tarefa.data);
       if (parsed) return parsed;
     }
-    return new Date(_hoje);
+    return Utils.hoje();
   })();
 
-  let _pickerOpen = false;
-  let _pickerView = { year: selectedDate.getFullYear(), month: selectedDate.getMonth() };
+  DatePicker.criar({
+    container:   document.getElementById('datePick'),
+    botao:       document.getElementById('dateBtn'),
+    selecionada: selectedDate,
+    onSelect: (d) => {
+      selectedDate = d;
+      document.getElementById('dataChip').textContent = Utils.dataRelativa(d);
+    },
+  });
 
-  function _fecharPicker() {
-    _pickerOpen = false;
-    dateBtn.classList.remove('is-open');
-    datePick.querySelectorAll('.date-pick__overlay, .date-pick__menu').forEach(el => el.remove());
+  /* ── Seletor de hora ─────────────────────────────────── */
+  let selectedHour = null;
+  let selectedMin  = 0;
+
+  if (tarefa && tarefa.hora) {
+    const parts = tarefa.hora.split(':').map(Number);
+    selectedHour = parts[0];
+    selectedMin  = parts[1] || 0;
   }
 
-  function _renderPicker() {
-    datePick.querySelectorAll('.date-pick__overlay, .date-pick__menu').forEach(el => el.remove());
+  const timePick = document.getElementById('timePick');
+  const timeBtn  = document.getElementById('timeBtn');
+  const horaChip = document.getElementById('horaChip');
 
-    const overlay = document.createElement('div');
-    overlay.className = 'date-pick__overlay';
-    overlay.addEventListener('click', _fecharPicker);
-    datePick.appendChild(overlay);
+  function formatHora(h, m) {
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  }
 
-    const { year, month } = _pickerView;
-    const firstDow  = new Date(year, month, 1).getDay();
-    const totalDias = new Date(year, month + 1, 0).getDate();
-
-    const menu = document.createElement('div');
-    menu.className = 'date-pick__menu';
-
-    const head = document.createElement('div');
-    head.className = 'date-pick__head';
-
-    const btnPrev = document.createElement('button');
-    btnPrev.type = 'button';
-    btnPrev.className = 'date-pick__nav';
-    btnPrev.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
-    btnPrev.addEventListener('click', e => {
-      e.stopPropagation();
-      _pickerView = month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 };
-      _renderPicker();
-    });
-
-    const btnNext = document.createElement('button');
-    btnNext.type = 'button';
-    btnNext.className = 'date-pick__nav';
-    btnNext.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
-    btnNext.addEventListener('click', e => {
-      e.stopPropagation();
-      _pickerView = month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 };
-      _renderPicker();
-    });
-
-    const monthLabel = document.createElement('span');
-    monthLabel.className = 'date-pick__month';
-    monthLabel.textContent = _MESES_PT[month] + ' ' + year;
-
-    head.appendChild(btnPrev);
-    head.appendChild(monthLabel);
-    head.appendChild(btnNext);
-    menu.appendChild(head);
-
-    const grid = document.createElement('div');
-    grid.className = 'date-pick__grid';
-
-    ['D','S','T','Q','Q','S','S'].forEach(l => {
-      const el = document.createElement('div');
-      el.className = 'date-pick__dow';
-      el.textContent = l;
-      grid.appendChild(el);
-    });
-
-    for (let i = 0; i < firstDow; i++) grid.appendChild(document.createElement('div'));
-
-    for (let d = 1; d <= totalDias; d++) {
-      const date    = new Date(year, month, d);
-      const isToday = date.toDateString() === _hoje.toDateString();
-      const isOn    = date.toDateString() === selectedDate.toDateString();
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'date-pick__day' + (isToday ? ' is-today' : '') + (isOn ? ' is-on' : '');
-      btn.textContent = d;
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        selectedDate = new Date(year, month, d);
-        document.getElementById('dataChip').textContent = _fmtData(selectedDate);
-        _fecharPicker();
-      });
-      grid.appendChild(btn);
+  function atualizarHoraChip() {
+    if (selectedHour !== null) {
+      horaChip.textContent = formatHora(selectedHour, selectedMin);
+      timeBtn.removeAttribute('data-empty');
+    } else {
+      horaChip.textContent = 'Hora';
+      timeBtn.setAttribute('data-empty', '');
     }
 
-    menu.appendChild(grid);
-    datePick.appendChild(menu);
+    // Auto-salva no objeto da tarefa imediatamente
+    if (tarefa) {
+      if (selectedHour !== null) tarefa.hora = formatHora(selectedHour, selectedMin);
+      else delete tarefa.hora;
+      Tarefas.salvar(tarefas);
+    }
+
+    // Notifica o calendário pai (quando aberto em drawer/iframe)
+    if (taskId && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'jdi-hora-update',
+        taskId,
+        hora: selectedHour !== null ? formatHora(selectedHour, selectedMin) : null,
+      }, '*');
+    }
   }
 
-  dateBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    if (_pickerOpen) { _fecharPicker(); return; }
-    _pickerOpen = true;
-    _pickerView = { year: selectedDate.getFullYear(), month: selectedDate.getMonth() };
-    dateBtn.classList.add('is-open');
-    _renderPicker();
-  });
+  function fecharTimePick() {
+    timeBtn.classList.remove('is-open');
+    timePick.querySelector('.time-pick__overlay')?.remove();
+    timePick.querySelector('.time-pick__menu')?.remove();
+  }
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && _pickerOpen) _fecharPicker();
-  });
+  function abrirTimePick() {
+    if (timeBtn.classList.contains('is-open')) { fecharTimePick(); return; }
+    timeBtn.classList.add('is-open');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'time-pick__overlay';
+    overlay.addEventListener('click', fecharTimePick);
+
+    const menu = document.createElement('div');
+    menu.className = 'time-pick__menu';
+
+    const hoursLabel = document.createElement('div');
+    hoursLabel.className = 'time-pick__section-label';
+    hoursLabel.textContent = 'Hora';
+
+    const hoursGrid = document.createElement('div');
+    hoursGrid.className = 'time-pick__hours';
+
+    for (let h = 0; h < 24; h++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'time-pick__hour' + (h === selectedHour ? ' is-on' : '');
+      btn.textContent = String(h).padStart(2, '0');
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectedHour = h;
+        hoursGrid.querySelectorAll('.time-pick__hour').forEach(b => b.classList.remove('is-on'));
+        btn.classList.add('is-on');
+        atualizarHoraChip();
+      });
+      hoursGrid.appendChild(btn);
+    }
+
+    const minsLabel = document.createElement('div');
+    minsLabel.className = 'time-pick__section-label';
+    minsLabel.style.marginTop = '4px';
+    minsLabel.textContent = 'Minuto';
+
+    const minsRow = document.createElement('div');
+    minsRow.className = 'time-pick__mins';
+
+    [0, 15, 30, 45].forEach(m => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'time-pick__min' + (m === selectedMin ? ' is-on' : '');
+      btn.textContent = ':' + String(m).padStart(2, '0');
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectedMin = m;
+        minsRow.querySelectorAll('.time-pick__min').forEach(b => b.classList.remove('is-on'));
+        btn.classList.add('is-on');
+        atualizarHoraChip();
+      });
+      minsRow.appendChild(btn);
+    });
+
+    const divider = document.createElement('hr');
+    divider.className = 'time-pick__divider';
+
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'time-pick__clear';
+    clearBtn.textContent = 'Remover hora';
+    clearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedHour = null;
+      selectedMin  = 0;
+      atualizarHoraChip();
+      fecharTimePick();
+    });
+
+    menu.appendChild(hoursLabel);
+    menu.appendChild(hoursGrid);
+    menu.appendChild(minsLabel);
+    menu.appendChild(minsRow);
+    menu.appendChild(divider);
+    menu.appendChild(clearBtn);
+
+    timePick.appendChild(overlay);
+    timePick.appendChild(menu);
+  }
+
+  timeBtn.addEventListener('click', abrirTimePick);
+  atualizarHoraChip();
 
   /* ── Módulos ativáveis ────────────────────────────────── */
   const grid   = document.getElementById('moduleGrid');
@@ -495,11 +476,6 @@
     // Mostra painel de especificações
     document.getElementById('specPanel').classList.remove('hidden');
     atualizarSpec();
-    // Pomodoro ring inicial
-    pintarPomo(25 * 60, 25 * 60, 'foco');
-  } else {
-    // Modo nova tarefa: inicializa ring
-    pintarPomo(25 * 60, 25 * 60, 'foco');
   }
 
   // Persiste descrição ao editar
@@ -519,27 +495,27 @@
       tarefa.prioridade  = prioridadeAtual;
       tarefa.done        = detail.classList.contains('is-done');
       tarefa.data        = document.getElementById('dataChip').textContent;
-      tarefa.quando      = _calcQuando(selectedDate);
-      tarefa.dataIso     = _isoDate(selectedDate);
+      tarefa.quando      = Utils.calcQuando(selectedDate);
+      tarefa.dataIso     = Utils.dataIso(selectedDate);
+      if (selectedHour !== null) tarefa.hora = formatHora(selectedHour, selectedMin);
+      else delete tarefa.hora;
       if (cicloAtual !== 'none') tarefa.recorrencia = cicloAtual;
-      Storage.gravar('todo-tarefas', tarefas);
+      Tarefas.salvar(tarefas);
       // Feedback visual
       const btn = document.getElementById('saveBtn');
       btn.textContent = 'Salvo ✓';
       setTimeout(() => { btn.textContent = 'Salvar alterações'; }, 1800);
     } else {
       // Cria nova tarefa
-      tarefas.unshift({
-        id:         't' + Date.now(),
+      Tarefas.criar({
         titulo,
         cat:        CATS[catIdx].nome,
         prioridade: prioridadeAtual,
-        quando:     _calcQuando(selectedDate),
+        quando:     Utils.calcQuando(selectedDate),
         data:       document.getElementById('dataChip').textContent,
-        dataIso:    _isoDate(selectedDate),
-        done:       false,
+        dataIso:    Utils.dataIso(selectedDate),
+        hora:       selectedHour !== null ? formatHora(selectedHour, selectedMin) : undefined,
       });
-      Storage.gravar('todo-tarefas', tarefas);
       Storage.remover(KEY_SUBS);
       Storage.remover(KEY_NOTAS);
       Storage.remover(KEY_DESC);
@@ -547,6 +523,6 @@
     }
   });
 
-  // Inicializa o ring do Pomodoro (necessário mesmo sem task)
+  // Inicializa o ring do Pomodoro
   pintarPomo(25 * 60, 25 * 60, 'foco');
 })();

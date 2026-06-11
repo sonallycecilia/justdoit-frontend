@@ -129,14 +129,14 @@
   --color-accent-hover:  #6aa9a4;
   --color-accent-active: #a3cac6;
   --color-accent-soft:   #0e2624;
-  --color-surface: #06100f;
+  --color-surface: #06100f; /*fundo*/
   --color-surface-sunken: #040b0a;
   --color-card:    #0c1817;
   --color-inverse: #f2f2f0;
   --color-border:  #162725;
   --color-border-strong: #1f312f;
 
-  --color-text:        #eef5f4;
+  --color-text:        #ffffff;
   --color-text-soft:   #a3cac6;
   --color-text-muted:  #6aa9a4;
   --color-text-faint:  #5a6b69;

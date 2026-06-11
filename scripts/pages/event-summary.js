@@ -1,5 +1,5 @@
 /* ============================================================
-   JustDoIt — event-summary.js
+   JustDoIt — pages/event-summary.js
    Resumo compacto de um evento do calendário.
    Lê URL params (evId, taskId, ini, fim, dow, dateNum, titulo,
    cat, prio) e — quando taskId existe — vincula ao objeto de
@@ -7,24 +7,6 @@
    ============================================================ */
 (function () {
   'use strict';
-
-  // Mesma semente de todo.js / task-detail.js
-  const SEMENTE = [
-    { id: 'a1', titulo: 'Revisar Cálculo II — capítulo 4',      cat: 'Estudos',  prioridade: 'urgent',    quando: 'today', data: 'Hoje',         done: false },
-    { id: 'a2', titulo: 'Entregar relatório do projeto',          cat: 'Genérico', prioridade: 'urgent',    quando: 'today', data: 'Hoje',         done: false },
-    { id: 'a3', titulo: 'Pagar conta de luz',                     cat: 'Casa',     prioridade: 'important', quando: 'today', data: 'Hoje',         done: false },
-    { id: 'a4', titulo: 'Responder e-mail do cliente',            cat: 'Genérico', prioridade: 'important', quando: 'week',  data: 'Amanhã',       done: false },
-    { id: 'a5', titulo: 'Ler artigo de Sistemas Distribuídos',    cat: 'Estudos',  prioridade: 'normal',    quando: 'week',  data: 'Qua, 10 jun',  done: false },
-    { id: 'a6', titulo: 'Trocar o filtro de água',                cat: 'Casa',     prioridade: 'normal',    quando: 'past',  data: 'Atrasada',     overdue: true, done: false },
-    { id: 'a7', titulo: 'Planejar a próxima semana',              cat: 'Genérico', prioridade: 'low',       quando: 'week',  data: 'Dom, 14 jun',  done: false },
-    { id: 'a8', titulo: 'Organizar fotos do celular',             cat: 'Casa',     prioridade: 'low',       quando: 'all',   data: 'Sem data',     done: false },
-    { id: 'a9', titulo: 'Caminhada de 30 minutos',                cat: 'Casa',     prioridade: 'normal',    quando: 'today', data: 'Hoje',         done: true  },
-  ];
-
-  // cat key → label (URL params usam a chave lowercase do calendário)
-  const CAT_FROM_KEY = { estudos: 'Estudos', casa: 'Casa', generico: 'Genérico' };
-  // label → cat key (para persistir de volta no objeto task)
-  const CAT_TO_KEY   = { 'Estudos': 'estudos', 'Casa': 'casa', 'Genérico': 'generico' };
 
   function fmtHora(x) {
     const h = Math.floor(x);
@@ -45,14 +27,14 @@
   const prioEv   = p.get('prio')  || 'normal';
 
   // Carrega tarefas do storage
-  const tarefas = Storage.ler('todo-tarefas', SEMENTE);
+  const tarefas = Tarefas.listar();
   const tarefa  = taskId ? tarefas.find(t => t.id === taskId) : null;
 
   // Estado mutável — começa com valores do evento; se tarefa existir usa dela
   let estado = {
     done:      tarefa ? tarefa.done      : false,
     prioridade: tarefa ? tarefa.prioridade : prioEv,
-    cat:       tarefa ? tarefa.cat        : (CAT_FROM_KEY[catKey] || 'Genérico'),
+    cat:       tarefa ? tarefa.cat        : Categorias.porId(catKey).nome,
   };
 
   // Elementos
@@ -109,17 +91,11 @@
   }
 
   // Renderiza picker de categoria
-  const CATS = [
-    { key: 'estudos', label: 'Estudos' },
-    { key: 'casa',    label: 'Casa'    },
-    { key: 'generico', label: 'Genérico' },
-  ];
-
   function renderCat() {
-    catPicker.innerHTML = CATS.map(c => `
-      <button class="evsum__cat-opt ${estado.cat === c.label ? 'is-on' : ''}" data-cat="${c.label}" type="button">
-        <span class="evsum__cat-dot" style="background:var(--color-cat-${c.key})"></span>
-        ${c.label}
+    catPicker.innerHTML = Categorias.TODAS.map(c => `
+      <button class="evsum__cat-opt ${estado.cat === c.nome ? 'is-on' : ''}" data-cat="${c.nome}" type="button">
+        <span class="evsum__cat-dot" style="background:${c.cor}"></span>
+        ${c.nome}
       </button>`).join('');
 
     catPicker.querySelectorAll('.evsum__cat-opt').forEach(btn => {
@@ -143,7 +119,7 @@
       tarefa.done       = estado.done;
       tarefa.prioridade = estado.prioridade;
       tarefa.cat        = estado.cat;
-      Storage.gravar('todo-tarefas', tarefas);
+      Tarefas.salvar(tarefas);
     }
     savedHint.classList.add('is-visible');
     clearTimeout(savedTimer);

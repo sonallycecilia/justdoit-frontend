@@ -51,7 +51,6 @@
   box-shadow: var(--shadow-card);
   transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
 }
-.field__control:focus-within { border-color: var(--color-accent); box-shadow: var(--focus-ring); }
 .field__control svg { width: 18px; height: 18px; color: var(--color-text-muted); flex: none; }
 .field__control input { flex: 1; border: 0; outline: 0; background: transparent; font-size: var(--font-size-md); color: var(--color-text); }
 .field__control input::placeholder { color: var(--color-text-faint); }

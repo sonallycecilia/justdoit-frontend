@@ -105,11 +105,8 @@
     </div>
   </div>
 
-  <script src="../scripts/storage.js"></script>
-  <script>
-    // tema salvo
-    (function(){ var s = window.Storage && Storage.lerTema(); var d = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches; if (s==='dark'||(!s&&d)) document.documentElement.setAttribute('data-theme','dark'); })();
-  </script>
-  <script src="../scripts/onboarding.js"></script>
+  <script src="../scripts/core/storage.js"></script>
+  <script src="../scripts/features/auth/auth.js"></script>
+  <script src="../scripts/features/auth/onboarding.js"></script>
 </body>
 </html>

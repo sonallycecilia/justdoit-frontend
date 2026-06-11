@@ -1,5 +1,5 @@
 /* ============================================================
-   JustDoIt — storage.js
+   JustDoIt — core/storage.js
    Abstração simples do LocalStorage. Todo estado temporário
    (tarefas, configurações, sessão) deve passar por aqui.
    ============================================================ */

@@ -72,3 +72,11 @@ table { border-collapse: collapse; border-spacing: 0; }
   box-shadow: var(--focus-ring, 0 0 0 3px rgba(26,107,104,.35));
   border-radius: var(--radius-sm, 6px);
 }
+
+/* Inputs e textareas usam border-color para indicar foco — sem anel interno */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  box-shadow: none;
+  border-color: var(--brand-sage);
+}

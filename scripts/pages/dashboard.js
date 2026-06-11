@@ -1,5 +1,5 @@
 /* ============================================================
-   JustDoIt — dashboard.js
+   JustDoIt — pages/dashboard.js
    Saudação dinâmica + render das tarefas do dia priorizadas.
    ============================================================ */
 (function () {

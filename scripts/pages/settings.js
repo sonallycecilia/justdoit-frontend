@@ -1,5 +1,5 @@
 /* ============================================================
-   JustDoIt — settings.js
+   JustDoIt — pages/settings.js
    Preferências (tema), gestão de categorias (criar/excluir).
    ============================================================ */
 (function () {

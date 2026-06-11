@@ -56,6 +56,13 @@
               <svg class="date-pick__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px"><path d="m6 9 6 6 6-6"/></svg>
             </button>
           </div>
+          <div class="time-pick" id="timePick">
+            <button class="badge badge--info time-pick__btn" id="timeBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span id="horaChip">Hora</span>
+              <svg class="time-pick__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
           <button class="chip chip--pick" id="catChip" data-cat="Estudos">
             <span class="chip__dot" id="catDot" style="background:var(--color-cat-estudos)"></span>
             <span id="catLabel">Estudos</span>
@@ -247,13 +254,16 @@
     </main>
   </div>
 
-  <script src="../scripts/storage.js"></script>
-  <script src="../scripts/utils.js"></script>
-  <script src="../scripts/sidebar.js"></script>
+  <script src="../scripts/core/storage.js"></script>
+  <script src="../scripts/core/utils.js"></script>
+  <script src="../scripts/modules/categorias.js"></script>
+  <script src="../scripts/modules/tarefas.js"></script>
+  <script src="../scripts/components/sidebar.js"></script>
   <script src="../scripts/modules/priority.js"></script>
   <script src="../scripts/modules/timer.js"></script>
   <script src="../scripts/modules/focus.js"></script>
   <script src="../scripts/modules/cycle.js"></script>
-  <script src="../scripts/task-detail.js"></script>
+  <script src="../scripts/components/date-picker.js"></script>
+  <script src="../scripts/pages/task-detail.js"></script>
 </body>
 </html>

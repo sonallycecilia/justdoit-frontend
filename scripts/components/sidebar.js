@@ -1,5 +1,5 @@
 /* ============================================================
-   JustDoIt — sidebar.js
+   JustDoIt — components/sidebar.js
    Renderiza a navegação lateral compartilhada e cuida do tema.
    Use: <aside data-sidebar data-active="dashboard"></aside>
    ============================================================ */
@@ -31,30 +31,13 @@
     { id: 'analytics', label: 'Análise',      href: 'analytics.html' },
   ];
 
-  const CATS = [
-    { nome: 'Estudos',  cor: 'var(--color-cat-estudos)',  id: 'estudos'  },
-    { nome: 'Casa',     cor: 'var(--color-cat-casa)',     id: 'casa'     },
-    { nome: 'Genérico', cor: 'var(--color-cat-generico)', id: 'generico' },
-  ];
-
-  // Seed mirrors todo.js — real data comes from Storage
-  const SEMENTE_TAREFAS = [
-    { id: 'a1', titulo: 'Revisar Cálculo II — capítulo 4',        cat: 'Estudos',  prioridade: 'urgent',    quando: 'today', data: 'Hoje',           done: false },
-    { id: 'a2', titulo: 'Entregar relatório do projeto',           cat: 'Genérico', prioridade: 'urgent',    quando: 'today', data: 'Hoje',           done: false },
-    { id: 'a3', titulo: 'Pagar conta de luz',                      cat: 'Casa',     prioridade: 'important', quando: 'today', data: 'Hoje',           done: false },
-    { id: 'a4', titulo: 'Responder e-mail do cliente',             cat: 'Genérico', prioridade: 'important', quando: 'week',  data: 'Amanhã',         done: false },
-    { id: 'a5', titulo: 'Ler artigo de Sistemas Distribuídos',     cat: 'Estudos',  prioridade: 'normal',    quando: 'week',  data: 'Qua, 10 jun',    done: false },
-    { id: 'a6', titulo: 'Trocar o filtro de água',                 cat: 'Casa',     prioridade: 'normal',    quando: 'past',  data: 'Atrasada',       done: false },
-    { id: 'a7', titulo: 'Planejar a próxima semana',               cat: 'Genérico', prioridade: 'low',       quando: 'week',  data: 'Dom, 14 jun',    done: false },
-    { id: 'a8', titulo: 'Organizar fotos do celular',              cat: 'Casa',     prioridade: 'low',       quando: 'all',   data: 'Sem data',       done: false },
-    { id: 'a9', titulo: 'Pomodoro — Algoritmos e estruturas',      cat: 'Estudos',  prioridade: 'normal',    quando: 'week',  data: 'Qui, 11 jun',    done: false },
-  ];
+  const CATS = Categorias.TODAS;
 
   // Registry allows drag handlers to access full task objects by id
   const taskRegistry = new Map();
 
   function carregarTarefas() {
-    return (window.Storage && Storage.ler('todo-tarefas')) || SEMENTE_TAREFAS;
+    return window.Tarefas ? Tarefas.listar() : [];
   }
 
   function renderCatTarefas(catNome, busca) {

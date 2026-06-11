@@ -1,31 +1,12 @@
 /* ============================================================
-   JustDoIt — todo.js
+   JustDoIt — pages/todo.js
    Lista priorizada: filtros (categoria/status/data), ação rápida
    de concluir, agrupamento por prioridade (RF10/RF11).
    ============================================================ */
 (function () {
   'use strict';
 
-  const COR_CAT = {
-    'Estudos': 'var(--color-cat-estudos)',
-    'Casa': 'var(--color-cat-casa)',
-    'Genérico': 'var(--color-cat-generico)',
-  };
-
-  // Semente — em produção viria da API/Storage
-  const SEMENTE = [
-    { id: 'a1', titulo: 'Revisar Cálculo II — capítulo 4', cat: 'Estudos', prioridade: 'urgent', quando: 'today', data: 'Hoje', done: false },
-    { id: 'a2', titulo: 'Entregar relatório do projeto', cat: 'Genérico', prioridade: 'urgent', quando: 'today', data: 'Hoje', overdue: false, done: false },
-    { id: 'a3', titulo: 'Pagar conta de luz', cat: 'Casa', prioridade: 'important', quando: 'today', data: 'Hoje', done: false },
-    { id: 'a4', titulo: 'Responder e-mail do cliente', cat: 'Genérico', prioridade: 'important', quando: 'week', data: 'Amanhã', done: false },
-    { id: 'a5', titulo: 'Ler artigo de Sistemas Distribuídos', cat: 'Estudos', prioridade: 'normal', quando: 'week', data: 'Qua, 10 jun', done: false },
-    { id: 'a6', titulo: 'Trocar o filtro de água', cat: 'Casa', prioridade: 'normal', quando: 'past', data: 'Atrasada', overdue: true, done: false },
-    { id: 'a7', titulo: 'Planejar a próxima semana', cat: 'Genérico', prioridade: 'low', quando: 'week', data: 'Dom, 14 jun', done: false },
-    { id: 'a8', titulo: 'Organizar fotos do celular', cat: 'Casa', prioridade: 'low', quando: 'all', data: 'Sem data', done: false },
-    { id: 'a9', titulo: 'Caminhada de 30 minutos', cat: 'Casa', prioridade: 'normal', quando: 'today', data: 'Hoje', done: true },
-  ];
-
-  const tarefas = Storage.ler('todo-tarefas', SEMENTE);
+  const tarefas = Tarefas.listar();
 
   // Estado dos filtros
   const filtros = { cat: 'all', status: 'open', date: 'all' };
@@ -67,8 +48,9 @@
               <div class="todo-main" data-open>
                 <div class="todo-title">${t.titulo}</div>
                 <div class="todo-meta">
-                  <span class="todo-cat"><span class="todo-cat__dot" style="background:${COR_CAT[t.cat]}"></span>${t.cat}</span>
+                  <span class="todo-cat"><span class="todo-cat__dot" style="background:${Categorias.cor(t.cat)}"></span>${t.cat}</span>
                   <span class="todo-date ${t.overdue ? 'is-overdue' : ''}">${ico('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')}${t.data}</span>
+                  ${t.hora ? `<span class="todo-time">${ico('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>')}${t.hora}</span>` : ''}
                 </div>
               </div>
               <div class="todo-right">
@@ -84,7 +66,7 @@
         const id = btn.closest('.todo-item').getAttribute('data-id');
         const t = tarefas.find(x => x.id === id);
         t.done = !t.done;
-        Storage.gravar('todo-tarefas', tarefas);
+        Tarefas.salvar(tarefas);
         pintar();
       });
     });
