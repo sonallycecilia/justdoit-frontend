@@ -1,5 +1,5 @@
 /* ============================================================
-   JustDoIt — pages/event-summary.js
+   JustDoIt — features/tasks/event-summary.js
    Resumo compacto de um evento do calendário.
    Lê URL params (evId, taskId, ini, fim, dow, dateNum, titulo,
    cat, prio) e — quando taskId existe — vincula ao objeto de

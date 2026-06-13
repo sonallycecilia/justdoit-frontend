@@ -20,12 +20,13 @@
 }
 .auth__brand { display: flex; align-items: center; gap: 10px; position: relative; z-index: 2; }
 .auth__mark { color: #6aa9a4; display: flex; }
-.auth__word { font-family: var(--font-display); font-size: var(--font-size-xl); font-weight: var(--weight-medium); letter-spacing: -0.01em; }
+.auth__word { font-family: var(--font-display); font-size: var(--font-size-xl); font-weight: var(--weight-medium); letter-spacing: -0.01em; color: var(--brand-paper); }
 .auth__quote { position: relative; z-index: 2; max-width: 30ch; }
-.auth__quote h2 { color: var(--color-text-on-dark); font-size: var(--font-size-2xl); line-height: 1.18; margin-bottom: var(--space-md); }
+.auth__quote h2 { color: var(--brand-paper); font-size: var(--font-size-2xl); line-height: 1.18; margin-bottom: var(--space-md); }
 .auth__quote h2 em { font-style: italic; color: #6aa9a4; }
 .auth__quote p { color: #a3cac6; line-height: var(--leading-relaxed); }
-.auth__foot { position: relative; z-index: 2; font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: 0.14em; text-transform: uppercase; color: #6aa9a4; }
+.auth__bottom { display: flex; align-items: flex-end; justify-content: space-between; position: relative; z-index: 2; }
+.auth__foot { font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: 0.14em; text-transform: uppercase; color: #6aa9a4; }
 
 /* ---------- Painel do formulário (direita) ---------- */
 .auth__main { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--space-xl) var(--space-lg); }
@@ -51,6 +52,7 @@
   box-shadow: var(--shadow-card);
   transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
 }
+.field__control:hover { border-color: var(--color-accent); }
 .field__control svg { width: 18px; height: 18px; color: var(--color-text-muted); flex: none; }
 .field__control input { flex: 1; border: 0; outline: 0; background: transparent; font-size: var(--font-size-md); color: var(--color-text); }
 .field__control input::placeholder { color: var(--color-text-faint); }

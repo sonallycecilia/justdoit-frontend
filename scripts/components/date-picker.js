@@ -46,25 +46,23 @@ const DatePicker = (function () {
       const head = document.createElement('div');
       head.className = 'date-pick__head';
 
-      const btnPrev = document.createElement('button');
-      btnPrev.type = 'button';
-      btnPrev.className = 'date-pick__nav';
-      btnPrev.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
-      btnPrev.addEventListener('click', e => {
-        e.stopPropagation();
-        view = month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 };
-        render();
-      });
+      function criarNavBtn(svg, calcView) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'date-pick__nav';
+        btn.innerHTML = svg;
+        btn.addEventListener('click', e => { e.stopPropagation(); view = calcView(); render(); });
+        return btn;
+      }
 
-      const btnNext = document.createElement('button');
-      btnNext.type = 'button';
-      btnNext.className = 'date-pick__nav';
-      btnNext.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
-      btnNext.addEventListener('click', e => {
-        e.stopPropagation();
-        view = month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 };
-        render();
-      });
+      const btnPrev = criarNavBtn(
+        '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+        () => month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 }
+      );
+      const btnNext = criarNavBtn(
+        '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
+        () => month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 }
+      );
 
       const monthLabel = document.createElement('span');
       monthLabel.className = 'date-pick__month';

@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JustDoIt — Criar conta</title>
-<link rel="stylesheet" href="../styles/tokens.css">
-<link rel="stylesheet" href="../styles/reset.css">
-<link rel="stylesheet" href="../styles/global.css">
-<link rel="stylesheet" href="../styles/components/button.css">
-<link rel="stylesheet" href="../styles/components/auth.css">
+<link rel="stylesheet" href="../../styles/tokens.css">
+<link rel="stylesheet" href="../../styles/reset.css">
+<link rel="stylesheet" href="../../styles/global.css">
+<link rel="stylesheet" href="../../styles/components/button.css">
+<link rel="stylesheet" href="../../styles/components/date-picker.css">
+<link rel="stylesheet" href="../../styles/components/auth.css">
 </head>
 <body>
   <button class="btn-icon auth__theme" id="themeToggle" aria-label="Alternar tema">
@@ -18,15 +19,13 @@
   <div class="auth auth--signup">
     <!-- Painel da marca -->
     <aside class="auth__aside">
-      <div class="auth__rings"></div>
       <div class="auth__brand">
         <span class="auth__mark">
-          <svg width="26" height="26" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M33 7 L46.5 21 L39.6 21 L39.6 36.4 C39.6 44.2 34.6 48.9 27 48.3 C19.8 47.7 15.3 42.6 15.9 37.5 C16.3 33.9 18.9 31.9 21.9 32.5 C24.4 33 25.6 35.4 24.2 37.4 C23.2 38.8 21.4 38.7 20.6 37.6 M33 7 L19.5 21 L26.4 21 L26.4 36.4 C26.4 40 28.8 42.3 32.2 42.3"/></svg>
+          <svg width="60" height="60" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M33 7 L46.5 21 L39.6 21 L39.6 36.4 C39.6 44.2 34.6 48.9 27 48.3 C19.8 47.7 15.3 42.6 15.9 37.5 C16.3 33.9 18.9 31.9 21.9 32.5 C24.4 33 25.6 35.4 24.2 37.4 C23.2 38.8 21.4 38.7 20.6 37.6 M33 7 L19.5 21 L26.4 21 L26.4 36.4 C26.4 40 28.8 42.3 32.2 42.3"/></svg>
         </span>
-        <span class="auth__word">JustDoIt</span>
       </div>
       <div class="auth__quote">
-        <h2>Comece <em>agora.</em> Leva menos de um minuto.</h2>
+        <h2>Comece <em>agora.</em></h2>
         <p>Crie sua conta gratuitamente e descubra como um dia organizado pode ser leve.</p>
       </div>
       <ul class="auth__checklist">
@@ -36,14 +35,15 @@
         </li>
         <li>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-          Plano gratuito para sempre
-        </li>
-        <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
           Configuração em 2 minutos
         </li>
       </ul>
-      <div class="auth__foot">Gerenciador de Tarefas</div>
+         <div class="auth__bottom">
+        <div class="auth__foot">Gerenciador de Tarefas</div>
+          <div class="auth__brand">
+            <span class="auth__word">JustDoIt</span>
+          </div>
+      </div>
     </aside>
 
     <!-- Formulário -->
@@ -79,10 +79,14 @@
 
             <!-- Data de nascimento -->
             <div class="field">
-              <label class="field__label" for="nascimento">Data de nascimento</label>
-              <div class="field__control">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                <input id="nascimento" name="nascimento" type="date" autocomplete="bday" required>
+              <label class="field__label">Data de nascimento</label>
+              <div class="date-pick" id="nascimentoPick">
+                <button class="field__control field__date-btn" id="nascimentoBtn" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex:none;color:var(--color-text-muted)"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  <span id="nascimentoLabel" class="field__date-val">Selecionar data…</span>
+                  <svg class="date-pick__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <input type="hidden" id="nascimento" name="nascimento">
               </div>
             </div>
 
@@ -106,37 +110,6 @@
                 <input id="confirmar" name="confirmar" type="password" placeholder="Repita a senha" autocomplete="new-password" required>
               </div>
               <span class="field__error hidden" id="erroSenha">As senhas não coincidem.</span>
-            </div>
-
-            <!-- Perfil de uso -->
-            <div class="field">
-              <label class="field__label">Perfil de uso</label>
-              <div class="profile-cards">
-                <label class="profile-card">
-                  <input type="radio" name="perfil" value="pessoal" checked>
-                  <span class="profile-card__ic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                  </span>
-                  <span class="profile-card__label">Pessoal</span>
-                  <span class="profile-card__desc">Tarefas do dia a dia</span>
-                </label>
-                <label class="profile-card">
-                  <input type="radio" name="perfil" value="estudante">
-                  <span class="profile-card__ic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                  </span>
-                  <span class="profile-card__label">Estudante</span>
-                  <span class="profile-card__desc">Estudos e projetos</span>
-                </label>
-                <label class="profile-card">
-                  <input type="radio" name="perfil" value="profissional">
-                  <span class="profile-card__ic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                  </span>
-                  <span class="profile-card__label">Profissional</span>
-                  <span class="profile-card__desc">Trabalho e carreira</span>
-                </label>
-              </div>
             </div>
 
             <!-- Termos -->
@@ -168,8 +141,10 @@
     </main>
   </div>
 
-  <script src="../scripts/core/storage.js"></script>
-  <script src="../scripts/features/auth/auth.js"></script>
-  <script src="../scripts/features/auth/signup.js"></script>
+  <script src="../../scripts/core/storage.js"></script>
+  <script src="../../scripts/core/utils.js"></script>
+  <script src="../../scripts/components/date-picker.js"></script>
+  <script src="../../scripts/features/auth/auth.js"></script>
+  <script src="../../scripts/features/auth/signup.js"></script>
 </body>
 </html>

@@ -40,8 +40,8 @@
     return window.Tarefas ? Tarefas.listar() : [];
   }
 
-  function renderCatTarefas(catNome, busca) {
-    const todas = carregarTarefas().filter(t => !t.done && t.cat === catNome);
+  function renderCatTarefas(catNome, busca, allTarefas) {
+    const todas = (allTarefas || carregarTarefas()).filter(t => !t.done && t.cat === catNome);
     const lista = busca
       ? todas.filter(t => t.titulo.toLowerCase().includes(busca.toLowerCase()))
       : todas;
@@ -88,8 +88,11 @@
         ${n.count != null ? `<span class="nav-item__count">${n.count}</span>` : ''}
       </a>`).join('');
 
+    const allTarefas = carregarTarefas();
+    taskRegistry.clear();
+
     const catHtml = CATS.map(c => {
-      const pendentes = carregarTarefas().filter(t => !t.done && t.cat === c.nome);
+      const pendentes = allTarefas.filter(t => !t.done && t.cat === c.nome);
       return `
         <div class="sidebar-cat" data-cat="${c.nome}">
           <button class="sidebar-cat__header" aria-expanded="false" aria-label="Expandir ${c.nome}">
@@ -99,7 +102,7 @@
             <span class="sidebar-cat__chevron">${ICONS.chevron}</span>
           </button>
           <div class="sidebar-cat__tasks hidden" data-cat-tasks="${c.nome}">
-            ${renderCatTarefas(c.nome, '')}
+            ${renderCatTarefas(c.nome, '', allTarefas)}
           </div>
         </div>`;
     }).join('');

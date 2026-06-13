@@ -25,7 +25,8 @@ const Utils = (function () {
 
   // "Qui, 7 jun"
   function dataCurta(data = new Date()) {
-    return `${DIAS_CURTOS[data.getDay()].slice(0, 1) + DIAS_CURTOS[data.getDay()].slice(1).toLowerCase()}, ${data.getDate()} ${MESES[data.getMonth()]}`;
+    const dia = DIAS_CURTOS[data.getDay()];
+    return `${dia[0] + dia.slice(1).toLowerCase()}, ${data.getDate()} ${MESES[data.getMonth()]}`;
   }
 
   // Intervalo da semana atual: "8 – 14 jun"

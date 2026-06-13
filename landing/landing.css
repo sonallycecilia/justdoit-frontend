@@ -25,8 +25,6 @@
 .mkt-hero h1 em { font-style:italic; color:var(--brand-teal); }
 .mkt-hero__sub { font-size:var(--font-size-lg); line-height:1.6; color:var(--color-text-soft); max-width:46ch; margin:0 0 30px; }
 .mkt-hero__actions { display:flex; align-items:center; gap:14px; }
-.mkt-hero__note { font-size:var(--font-size-sm); color:var(--color-text-muted); margin-top:16px; display:flex; align-items:center; gap:7px; }
-.mkt-hero__note i, .mkt-hero__note svg { width:15px; height:15px; }
 
 /* Hero product mock */
 .mkt-mock { background:var(--color-card); border:1px solid var(--color-border); border-radius:var(--radius-xl); box-shadow:var(--shadow-raised); overflow:hidden; }
@@ -43,9 +41,6 @@
 
 /* Features */
 .mkt-features { padding:40px 0 84px; }
-.mkt-sec-head { text-align:center; max-width:620px; margin:0 auto 48px; }
-.mkt-sec-head h2 { font-family:var(--font-display); font-weight:500; font-size:var(--font-size-4xl); letter-spacing:-0.02em; margin:0 0 14px; }
-.mkt-sec-head p { font-size:var(--font-size-lg); color:var(--color-text-soft); line-height:1.6; margin:0; }
 .mkt-grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
 .mkt-feat { background:var(--color-card); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:28px; }
 .mkt-feat__ic { width:44px; height:44px; border-radius:var(--radius-md); background:var(--color-accent-soft); color:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:18px; }
@@ -96,8 +91,7 @@
 .mkt-foot { border-top:1px solid var(--color-border); }
 .mkt-foot__in { display:flex; align-items:center; justify-content:space-between; padding:28px 0; flex-wrap:wrap; gap:16px; }
 .mkt-foot__brand { display:flex; align-items:center; gap:9px; color:var(--color-text); }
-.mkt-foot__brand .mkt-brand__mark { color:var(--color-accent); }
-.mkt-foot__brand .mkt-brand__mark svg { color:var(--color-accent); stroke:var(--color-accent); }
+.mkt-brand__word--foot { font-size:1.125rem; }
 .mkt-foot__tag { font-size:var(--font-size-xs); letter-spacing:0.07em; text-transform:uppercase; color:var(--brand-sage); }
 .mkt-foot__links { display:flex; gap:22px; }
 .mkt-foot__links a { font-size:var(--font-size-sm); color:var(--color-text-muted); text-decoration:none; }

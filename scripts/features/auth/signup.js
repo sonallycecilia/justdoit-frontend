@@ -8,6 +8,27 @@
 
   Auth.iniciarTema();
 
+  /* ---------- Date picker de nascimento ---------- */
+  var nascimentoPick  = document.getElementById('nascimentoPick');
+  var nascimentoBtn   = document.getElementById('nascimentoBtn');
+  var nascimentoLabel = document.getElementById('nascimentoLabel');
+  var nascimentoInput = document.getElementById('nascimento');
+
+  if (nascimentoPick && nascimentoBtn) {
+    DatePicker.criar({
+      container: nascimentoPick,
+      botao:     nascimentoBtn,
+      onSelect:  function (d) {
+        var dia = String(d.getDate()).padStart(2, '0');
+        var mes = String(d.getMonth() + 1).padStart(2, '0');
+        var ano = d.getFullYear();
+        nascimentoInput.value      = ano + '-' + mes + '-' + dia;
+        nascimentoLabel.textContent = dia + '/' + mes + '/' + ano;
+        nascimentoLabel.classList.add('is-set');
+      }
+    });
+  }
+
   /* ---------- Mostrar / ocultar senha ---------- */
   const inputSenha  = document.getElementById('senha');
   const toggleSenha = document.getElementById('toggleSenha');
@@ -39,6 +60,11 @@
 
     const senha    = inputSenha.value;
     const confirma = inputConf.value;
+
+    if (!nascimentoInput.value) {
+      nascimentoBtn.focus();
+      return;
+    }
 
     if (senha !== confirma) {
       erroSenha.classList.remove('hidden');

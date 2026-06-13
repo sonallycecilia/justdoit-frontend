@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JustDoIt — Concentre-se no que importa</title>
+<title>JustDoIt - Concentre-se no que importa</title>
 <meta name="description" content="JustDoIt — planejamento semanal, foco e clareza. Comece de graça.">
 <link rel="stylesheet" href="styles/tokens.css">
 <link rel="stylesheet" href="styles/reset.css">
@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="styles/components/button.css">
 <link rel="stylesheet" href="styles/components/badge.css">
 <link rel="stylesheet" href="styles/components/card.css">
-<link rel="stylesheet" href="styles/pages/features/auth/marketing.css">
+<link rel="stylesheet" href="landing/landing.css">
 <script>
 (function(){
   var t = localStorage.getItem('jdi.tema') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
@@ -47,7 +47,7 @@
       <button class="mkt-theme" id="themeToggle" aria-label="Alternar tema">
         <i data-lucide="moon-star"></i>
       </button>
-      <button class="btn btn--primary btn--sm" onclick="location.href='pages/login.html'">Entrar</button>
+      <button class="btn btn--primary btn--sm" id="loginBtn">Entrar</button>
     </div>
   </div>
 </header>
@@ -63,7 +63,7 @@
       O JustDoIt deixa o seu dia leve: uma lista clara e a calma de saber exatamente o próximo passo.
     </p>
     <div class="mkt-hero__actions">
-      <button class="btn btn--primary btn--lg" onclick="location.href='pages/signup.html'">
+      <button class="btn btn--primary btn--lg" id="signupBtn">
         Começar de graça <i data-lucide="arrow-up"></i>
       </button>
 
@@ -264,7 +264,7 @@
     <div class="mkt-foot__brand">
       <span class="mkt-brand__mark"><svg width="20" height="20"><use href="#mmark"/></svg></span>
       <div>
-        <div class="mkt-brand__word" style="font-size:18px">JustDoIt</div>
+        <div class="mkt-brand__word mkt-brand__word--foot">JustDoIt</div>
         <div class="mkt-foot__tag">Gerenciador de Tarefas</div>
       </div>
     </div>
@@ -276,6 +276,6 @@
 </footer>
 
 <script src="https://unpkg.com/lucide@latest"></script>
-<script src="scripts/features/auth/marketing.js"></script>
+<script src="landing/landing.js"></script>
 </body>
 </html>

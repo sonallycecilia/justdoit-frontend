@@ -7,7 +7,6 @@
     var dark = r.getAttribute('data-theme') === 'dark';
     r.setAttribute('data-theme', dark ? 'light' : 'dark');
     localStorage.setItem('jdi.tema', dark ? 'light' : 'dark');
-    lucide.createIcons();
   });
 
   var overlay = document.getElementById('recursosOverlay');
@@ -17,7 +16,6 @@
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    lucide.createIcons();
   }
 
   function closeRecursos() {
@@ -40,7 +38,6 @@
     sobreOverlay.classList.add('is-open');
     sobreOverlay.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    lucide.createIcons();
   }
 
   function closeSobre() {
@@ -56,19 +53,28 @@
     if (e.target === sobreOverlay) closeSobre();
   });
 
+  document.getElementById('loginBtn').addEventListener('click', function () {
+    location.href = 'pages/auth/login.html';
+  });
+
+  document.getElementById('signupBtn').addEventListener('click', function () {
+    location.href = 'pages/auth/signup.html';
+  });
+
   var mockChecks = document.querySelectorAll('.mkt-mock__check');
   var progressFill = document.querySelector('.progress__fill');
   var progressValue = document.querySelector('.progress__value');
 
   function updateMockProgress() {
     var total = mockChecks.length;
-    var done = Array.prototype.filter.call(mockChecks, function (c) { return c.checked; }).length;
+    var done = 0;
+    for (var i = 0; i < mockChecks.length; i++) { if (mockChecks[i].checked) done++; }
     var pct = Math.round((done / total) * 100);
     progressFill.style.width = pct + '%';
     progressValue.textContent = pct + '%';
   }
 
-  Array.prototype.forEach.call(mockChecks, function (check) {
+  mockChecks.forEach(function (check) {
     check.addEventListener('change', function () {
       var label = this.closest('.mkt-mock__row').querySelector('.mkt-mock__t');
       label.classList.toggle('mkt-mock__t--done', this.checked);

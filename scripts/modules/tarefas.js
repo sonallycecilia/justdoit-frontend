@@ -6,7 +6,7 @@
 const Tarefas = (function () {
   'use strict';
 
-  const KEY = 'todo-tarefas';
+  const KEY = Storage.KEYS.TAREFAS;
 
   // Semente — em produção viria da API/Storage
   const SEMENTE = [
@@ -54,7 +54,13 @@ const Tarefas = (function () {
     return nova;
   }
 
-  return { listar, buscar, salvar, criar };
+  function toggleDone(id) {
+    const lista = listar();
+    const t = lista.find(x => x.id === id);
+    if (t) { t.done = !t.done; salvar(lista); }
+  }
+
+  return { listar, buscar, salvar, criar, toggleDone };
 })();
 
 window.Tarefas = Tarefas;

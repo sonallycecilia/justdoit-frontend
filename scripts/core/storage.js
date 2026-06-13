@@ -6,6 +6,21 @@
 const Storage = (function () {
   const PREFIX = 'jdi.';
 
+  const KEYS = {
+    TAREFAS:      'todo-tarefas',
+    TAREFAS_HOJE: 'tarefas-hoje',
+    NOTAS:        'todo-notas',
+    TEMA:         'tema',
+    // chaves por tarefa — passam taskId (string) ou null para nova tarefa
+    detalheNotas:  (id) => id ? 'detalhe-notas-'  + id : 'detalhe-notas',
+    detalheSubs:   (id) => id ? 'detalhe-subs-'   + id : 'detalhe-subs',
+    detalheDesc:   (id) => id ? 'detalhe-desc-'   + id : 'detalhe-desc',
+    detalheMods:   (id) => 'detalhe-mods-'  + id,
+    detalheCiclo:  (id) => 'detalhe-ciclo-' + id,
+    detalheTimer:  (id) => 'detalhe-pomos-' + id + '-timer',
+    detalheCiclos: (id) => 'detalhe-pomos-' + id + '-ciclos',
+  };
+
   function ler(chave, padrao = null) {
     try {
       const bruto = localStorage.getItem(PREFIX + chave);
@@ -32,7 +47,7 @@ const Storage = (function () {
   function lerTema() { return ler('tema', null); }
   function gravarTema(tema) { gravar('tema', tema); }
 
-  return { ler, gravar, remover, lerTema, gravarTema };
+  return { KEYS, ler, gravar, remover, lerTema, gravarTema };
 })();
 
 // Disponível globalmente para os outros scripts

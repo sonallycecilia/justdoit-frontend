@@ -1,12 +1,10 @@
 /* ============================================================
-   JustDoIt — pages/todo.js
+   JustDoIt — features/tasks/todo.js
    Lista priorizada: filtros (categoria/status/data), ação rápida
    de concluir, agrupamento por prioridade (RF10/RF11).
    ============================================================ */
 (function () {
   'use strict';
-
-  const tarefas = Tarefas.listar();
 
   // Estado dos filtros
   const filtros = { cat: 'all', status: 'open', date: 'all' };
@@ -16,7 +14,7 @@
     if (filtros.status === 'open' && t.done) return false;
     if (filtros.status === 'done' && !t.done) return false;
     if (filtros.date === 'today' && t.quando !== 'today') return false;
-    if (filtros.date === 'week' && !(t.quando === 'today' || t.quando === 'week')) return false;
+    if (filtros.date === 'week' && !['today', 'week'].includes(t.quando)) return false;
     return true;
   }
 
@@ -26,7 +24,7 @@
   function ico(p) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; }
 
   function pintar() {
-    const visiveis = tarefas.filter(passaFiltro).sort(Priority.comparar);
+    const visiveis = Tarefas.listar().filter(passaFiltro).sort(Priority.comparar);
     count.textContent = `${visiveis.length} ${visiveis.length === 1 ? 'tarefa' : 'tarefas'}`;
 
     if (!visiveis.length) {
@@ -63,10 +61,7 @@
     // Ação rápida: concluir
     groups.querySelectorAll('.todo-check').forEach(btn => {
       btn.addEventListener('click', () => {
-        const id = btn.closest('.todo-item').getAttribute('data-id');
-        const t = tarefas.find(x => x.id === id);
-        t.done = !t.done;
-        Tarefas.salvar(tarefas);
+        Tarefas.toggleDone(btn.closest('.todo-item').getAttribute('data-id'));
         pintar();
       });
     });
@@ -97,10 +92,10 @@
   // Bloco de anotações — persiste via Storage
   const notepadArea = document.getElementById('notepadArea');
   const notepadHint = document.getElementById('notepadHint');
-  notepadArea.value = Storage.ler('todo-notas', '');
+  notepadArea.value = Storage.ler(Storage.KEYS.NOTAS, '');
   let hintTimer;
   notepadArea.addEventListener('input', () => {
-    Storage.gravar('todo-notas', notepadArea.value);
+    Storage.gravar(Storage.KEYS.NOTAS, notepadArea.value);
     notepadHint.classList.add('is-visible');
     clearTimeout(hintTimer);
     hintTimer = setTimeout(() => notepadHint.classList.remove('is-visible'), 2000);

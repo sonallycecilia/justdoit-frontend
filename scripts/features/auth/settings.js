@@ -27,8 +27,8 @@
   seg.querySelectorAll('button').forEach(b => {
     b.addEventListener('click', () => {
       const t = b.dataset.theme;
-      Storage.gravarTema(t === 'system' ? null : t);
       if (t === 'system') Storage.remover('tema');
+      else Storage.gravarTema(t);
       aplicar(t);
       marcarSeg();
     });
@@ -36,11 +36,7 @@
   marcarSeg();
 
   /* ---------- Categorias ---------- */
-  let categorias = Storage.ler('categorias', [
-    { id: 'c1', nome: 'Estudos', cor: 'var(--color-cat-estudos)', n: 5 },
-    { id: 'c2', nome: 'Casa', cor: 'var(--color-cat-casa)', n: 4 },
-    { id: 'c3', nome: 'Genérico', cor: 'var(--color-cat-generico)', n: 5 },
-  ]);
+  let categorias = Storage.ler('categorias', Categorias.TODAS.map(c => ({ id: c.id, nome: c.nome, cor: c.cor, n: 0 })));
   let corSel = 'var(--color-cat-estudos)';
 
   const lista = document.getElementById('catList');

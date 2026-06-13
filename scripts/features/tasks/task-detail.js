@@ -1,5 +1,5 @@
 /* ============================================================
-   JustDoIt — pages/task-detail.js
+   JustDoIt — features/tasks/task-detail.js
    Especificações de uma tarefa: carrega por ?id=, permite editar,
    iniciar foco, configurar módulos, subtarefas e notas.
    Modo "nova tarefa" quando nenhum id é passado na URL.
@@ -17,12 +17,11 @@
   const tarefa  = taskId ? tarefas.find(t => t.id === taskId) : null;
 
   // Storage keys — por tarefa quando editando, genérico para nova
-  const KEY_NOTAS = taskId ? 'detalhe-notas-' + taskId : 'detalhe-notas';
-  const KEY_SUBS  = taskId ? 'detalhe-subs-'  + taskId : 'detalhe-subs';
-  const KEY_DESC  = taskId ? 'detalhe-desc-'  + taskId : 'detalhe-desc';
-  const KEY_MODS  = taskId ? 'detalhe-mods-'  + taskId : null;
-  const KEY_CICLO = taskId ? 'detalhe-ciclo-' + taskId : null;
-  const KEY_POMO  = taskId ? 'detalhe-pomos-' + taskId : null;
+  const KEY_NOTAS = Storage.KEYS.detalheNotas(taskId);
+  const KEY_SUBS  = Storage.KEYS.detalheSubs(taskId);
+  const KEY_DESC  = Storage.KEYS.detalheDesc(taskId);
+  const KEY_MODS  = taskId ? Storage.KEYS.detalheMods(taskId)  : null;
+  const KEY_CICLO = taskId ? Storage.KEYS.detalheCiclo(taskId) : null;
 
   const detail = document.getElementById('detail');
 
@@ -49,17 +48,16 @@
   });
 
   /* ── Seletor de data ─────────────────────────────────────── */
-  let selectedDate = (() => {
-    if (tarefa && tarefa.dataIso) {
-      const [y, mo, d] = tarefa.dataIso.split('-').map(Number);
-      return new Date(y, mo - 1, d);
-    }
-    if (tarefa && tarefa.data) {
-      const parsed = Utils.parseData(tarefa.data);
-      if (parsed) return parsed;
-    }
-    return Utils.hoje();
-  })();
+  let selectedDate;
+  if (tarefa && tarefa.dataIso) {
+    const [y, mo, d] = tarefa.dataIso.split('-').map(Number);
+    selectedDate = new Date(y, mo - 1, d);
+  } else if (tarefa && tarefa.data) {
+    const parsed = Utils.parseData(tarefa.data);
+    selectedDate = parsed || Utils.hoje();
+  } else {
+    selectedDate = Utils.hoje();
+  }
 
   DatePicker.criar({
     container:   document.getElementById('datePick'),
@@ -72,139 +70,38 @@
   });
 
   /* ── Seletor de hora ─────────────────────────────────── */
-  let selectedHour = null;
-  let selectedMin  = 0;
-
+  let horaInicial = null, minInicial = 0;
   if (tarefa && tarefa.hora) {
     const parts = tarefa.hora.split(':').map(Number);
-    selectedHour = parts[0];
-    selectedMin  = parts[1] || 0;
+    horaInicial = parts[0];
+    minInicial  = parts[1] || 0;
   }
 
-  const timePick = document.getElementById('timePick');
-  const timeBtn  = document.getElementById('timeBtn');
-  const horaChip = document.getElementById('horaChip');
+  function fmtHora(h, m) { return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); }
 
-  function formatHora(h, m) {
-    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-  }
-
-  function atualizarHoraChip() {
-    if (selectedHour !== null) {
-      horaChip.textContent = formatHora(selectedHour, selectedMin);
-      timeBtn.removeAttribute('data-empty');
-    } else {
-      horaChip.textContent = 'Hora';
-      timeBtn.setAttribute('data-empty', '');
-    }
-
-    // Auto-salva no objeto da tarefa imediatamente
-    if (tarefa) {
-      if (selectedHour !== null) tarefa.hora = formatHora(selectedHour, selectedMin);
-      else delete tarefa.hora;
-      Tarefas.salvar(tarefas);
-    }
-
-    // Notifica o calendário pai (quando aberto em drawer/iframe)
+  function onTimeChange(h, m) {
+    if (tarefa) { tarefa.hora = fmtHora(h, m); Tarefas.salvar(tarefas); }
     if (taskId && window.parent !== window) {
-      window.parent.postMessage({
-        type: 'jdi-hora-update',
-        taskId,
-        hora: selectedHour !== null ? formatHora(selectedHour, selectedMin) : null,
-      }, '*');
+      window.parent.postMessage({ type: 'jdi-hora-update', taskId, hora: fmtHora(h, m) }, '*');
     }
   }
 
-  function fecharTimePick() {
-    timeBtn.classList.remove('is-open');
-    timePick.querySelector('.time-pick__overlay')?.remove();
-    timePick.querySelector('.time-pick__menu')?.remove();
-  }
-
-  function abrirTimePick() {
-    if (timeBtn.classList.contains('is-open')) { fecharTimePick(); return; }
-    timeBtn.classList.add('is-open');
-
-    const overlay = document.createElement('div');
-    overlay.className = 'time-pick__overlay';
-    overlay.addEventListener('click', fecharTimePick);
-
-    const menu = document.createElement('div');
-    menu.className = 'time-pick__menu';
-
-    const hoursLabel = document.createElement('div');
-    hoursLabel.className = 'time-pick__section-label';
-    hoursLabel.textContent = 'Hora';
-
-    const hoursGrid = document.createElement('div');
-    hoursGrid.className = 'time-pick__hours';
-
-    for (let h = 0; h < 24; h++) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'time-pick__hour' + (h === selectedHour ? ' is-on' : '');
-      btn.textContent = String(h).padStart(2, '0');
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectedHour = h;
-        hoursGrid.querySelectorAll('.time-pick__hour').forEach(b => b.classList.remove('is-on'));
-        btn.classList.add('is-on');
-        atualizarHoraChip();
-      });
-      hoursGrid.appendChild(btn);
+  function onTimeClear() {
+    if (tarefa) { delete tarefa.hora; Tarefas.salvar(tarefas); }
+    if (taskId && window.parent !== window) {
+      window.parent.postMessage({ type: 'jdi-hora-update', taskId, hora: null }, '*');
     }
-
-    const minsLabel = document.createElement('div');
-    minsLabel.className = 'time-pick__section-label';
-    minsLabel.style.marginTop = '4px';
-    minsLabel.textContent = 'Minuto';
-
-    const minsRow = document.createElement('div');
-    minsRow.className = 'time-pick__mins';
-
-    [0, 15, 30, 45].forEach(m => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'time-pick__min' + (m === selectedMin ? ' is-on' : '');
-      btn.textContent = ':' + String(m).padStart(2, '0');
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectedMin = m;
-        minsRow.querySelectorAll('.time-pick__min').forEach(b => b.classList.remove('is-on'));
-        btn.classList.add('is-on');
-        atualizarHoraChip();
-      });
-      minsRow.appendChild(btn);
-    });
-
-    const divider = document.createElement('hr');
-    divider.className = 'time-pick__divider';
-
-    const clearBtn = document.createElement('button');
-    clearBtn.type = 'button';
-    clearBtn.className = 'time-pick__clear';
-    clearBtn.textContent = 'Remover hora';
-    clearBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      selectedHour = null;
-      selectedMin  = 0;
-      atualizarHoraChip();
-      fecharTimePick();
-    });
-
-    menu.appendChild(hoursLabel);
-    menu.appendChild(hoursGrid);
-    menu.appendChild(minsLabel);
-    menu.appendChild(minsRow);
-    menu.appendChild(divider);
-    menu.appendChild(clearBtn);
-
-    timePick.appendChild(overlay);
-    timePick.appendChild(menu);
   }
 
-  timeBtn.addEventListener('click', abrirTimePick);
-  atualizarHoraChip();
+  const timePicker = TimePicker.criar({
+    container: document.getElementById('timePick'),
+    botao:     document.getElementById('timeBtn'),
+    chip:      document.getElementById('horaChip'),
+    hora:      horaInicial,
+    min:       minInicial,
+    onSelect:  onTimeChange,
+    onClear:   onTimeClear,
+  });
 
   /* ── Módulos ativáveis ────────────────────────────────── */
   const grid   = document.getElementById('moduleGrid');
@@ -283,18 +180,17 @@
   /* ── Cronômetro de execução (RF13) ───────────────────── */
   const timerDisplay = document.getElementById('timerDisplay');
   const timerToggle  = document.getElementById('timerToggle');
-  const timerInitial = KEY_POMO ? Storage.ler(KEY_POMO + '-timer', 0) : 0;
+  const timerInitial = taskId ? Storage.ler(Storage.KEYS.detalheTimer(taskId), 0) : 0;
 
   const cron = TaskTimer.criar({
     inicial: timerInitial,
     onTick: (s) => {
       timerDisplay.textContent = TaskTimer.formatar(s);
-      if (KEY_POMO) Storage.gravar(KEY_POMO + '-timer', s);
+      if (taskId) Storage.gravar(Storage.KEYS.detalheTimer(taskId), s);
       document.getElementById('specTempo').textContent = TaskTimer.formatar(s);
     },
   });
-  timerDisplay.textContent = TaskTimer.formatar(timerInitial);
-  document.getElementById('specTempo').textContent = TaskTimer.formatar(timerInitial);
+  timerDisplay.textContent = document.getElementById('specTempo').textContent = TaskTimer.formatar(timerInitial);
 
   timerToggle.addEventListener('click', () => {
     const rodando = cron.toggle();
@@ -303,7 +199,7 @@
   document.getElementById('timerReset').addEventListener('click', () => {
     cron.reset();
     timerToggle.textContent = 'Iniciar';
-    if (KEY_POMO) Storage.gravar(KEY_POMO + '-timer', 0);
+    if (taskId) Storage.gravar(Storage.KEYS.detalheTimer(taskId), 0);
   });
 
   /* ── Foco / Pomodoro (RF06) ───────────────────────────── */
@@ -312,7 +208,7 @@
   const pomoPhase  = document.getElementById('pomoPhase');
   const pomoToggle = document.getElementById('pomoToggle');
   const pomoReset  = document.getElementById('pomoReset');
-  let ciclosPomodoro = KEY_POMO ? Storage.ler(KEY_POMO + '-ciclos', 0) : 0;
+  let ciclosPomodoro = taskId ? Storage.ler(Storage.KEYS.detalheCiclos(taskId), 0) : 0;
 
   function pintarPomo(restante, dur, fase) {
     pomoTime.textContent = Focus.formatar(restante);
@@ -330,7 +226,7 @@
       pomoPhase.textContent = `${fase === 'foco' ? 'Foco' : 'Pausa'} · ciclo ${ciclo}/4`;
       if (fase === 'pausa') {
         ciclosPomodoro++;
-        if (KEY_POMO) Storage.gravar(KEY_POMO + '-ciclos', ciclosPomodoro);
+        if (taskId) Storage.gravar(Storage.KEYS.detalheCiclos(taskId), ciclosPomodoro);
         document.getElementById('specPomos').textContent = String(ciclosPomodoro);
       }
     },
@@ -417,6 +313,8 @@
   });
   pintarSubs();
 
+  const LABEL_MOD = { foco: 'Foco', ciclo: 'Ciclo', prioridade: 'Prioridade', tempo: 'Tempo', notas: 'Notas', subtarefas: 'Subtarefas' };
+
   /* ── Painel de especificações ─────────────────────────── */
   function atualizarSpec() {
     if (!tarefa) return;
@@ -429,8 +327,8 @@
     document.getElementById('specSubs').textContent = `${feitas} / ${subs.length}`;
 
     const ativos = [...grid.querySelectorAll('.module-toggle.is-on')].map(b => {
-      const label = { foco: 'Foco', ciclo: 'Ciclo', prioridade: 'Prioridade', tempo: 'Tempo', notas: 'Notas', subtarefas: 'Subtarefas' };
-      return label[b.getAttribute('data-mod')] || b.getAttribute('data-mod');
+      const mod = b.getAttribute('data-mod');
+      return LABEL_MOD[mod] || mod;
     });
     document.getElementById('specMods').textContent = ativos.length ? ativos.join(', ') : '—';
   }
@@ -488,6 +386,9 @@
     const titulo = document.getElementById('title').textContent.trim();
     if (!titulo) { document.getElementById('title').focus(); return; }
 
+    const tv = timePicker.valor();
+    const horaValor = tv.hora !== null ? fmtHora(tv.hora, tv.min) : undefined;
+
     if (tarefa) {
       // Atualiza tarefa existente
       tarefa.titulo      = titulo;
@@ -497,11 +398,9 @@
       tarefa.data        = document.getElementById('dataChip').textContent;
       tarefa.quando      = Utils.calcQuando(selectedDate);
       tarefa.dataIso     = Utils.dataIso(selectedDate);
-      if (selectedHour !== null) tarefa.hora = formatHora(selectedHour, selectedMin);
-      else delete tarefa.hora;
+      if (horaValor) tarefa.hora = horaValor; else delete tarefa.hora;
       if (cicloAtual !== 'none') tarefa.recorrencia = cicloAtual;
       Tarefas.salvar(tarefas);
-      // Feedback visual
       const btn = document.getElementById('saveBtn');
       btn.textContent = 'Salvo ✓';
       setTimeout(() => { btn.textContent = 'Salvar alterações'; }, 1800);
@@ -514,7 +413,7 @@
         quando:     Utils.calcQuando(selectedDate),
         data:       document.getElementById('dataChip').textContent,
         dataIso:    Utils.dataIso(selectedDate),
-        hora:       selectedHour !== null ? formatHora(selectedHour, selectedMin) : undefined,
+        hora:       horaValor,
       });
       Storage.remover(KEY_SUBS);
       Storage.remover(KEY_NOTAS);

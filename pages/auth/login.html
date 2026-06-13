@@ -6,11 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JustDoIt - Entrar</title>
 <meta name="description" content="JustDoIt — planejamento semanal, foco e clareza. Entre na sua conta.">
-<link rel="stylesheet" href="../styles/tokens.css">
-<link rel="stylesheet" href="../styles/reset.css">
-<link rel="stylesheet" href="../styles/global.css">
-<link rel="stylesheet" href="../styles/components/button.css">
-<link rel="stylesheet" href="../styles/components/auth.css">
+<link rel="stylesheet" href="../../styles/tokens.css">
+<link rel="stylesheet" href="../../styles/reset.css">
+<link rel="stylesheet" href="../../styles/global.css">
+<link rel="stylesheet" href="../../styles/components/button.css">
+<link rel="stylesheet" href="../../styles/components/auth.css">
 </head>
 <body>
   <!-- Botão de tema (claro/escuro) -->
@@ -21,14 +21,20 @@
   <div class="auth">
     <!-- Painel da marca -->
     <aside class="auth__aside">
-      <div class="auth__brand">
-        <span class="auth__word">JustDoIt</span>
-      </div>
+      <span class="auth__mark">
+          <svg width="60" height="60" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M33 7 L46.5 21 L39.6 21 L39.6 36.4 C39.6 44.2 34.6 48.9 27 48.3 C19.8 47.7 15.3 42.6 15.9 37.5 C16.3 33.9 18.9 31.9 21.9 32.5 C24.4 33 25.6 35.4 24.2 37.4 C23.2 38.8 21.4 38.7 20.6 37.6 M33 7 L19.5 21 L26.4 21 L26.4 36.4 C26.4 40 28.8 42.3 32.2 42.3"/></svg>
+        </span>
+
       <div class="auth__quote">
-        <h2>Seu dia, <em>leve.</em> Sua semana, no controle.</h2>
-        <p>Planeje, foque e acompanhe o que realmente importa — sem a ansiedade das listas intermináveis.</p>
+        <h2>Seu dia <em>+leve.</em></h2>
+        <p>Planeje, foque e acompanhe o que realmente importa.</p>
       </div>
-      <div class="auth__foot">Gerenciador de Tarefas</div>
+      <div class="auth__bottom">
+        <div class="auth__foot">Gerenciador de Tarefas</div>
+          <div class="auth__brand">
+            <span class="auth__word">JustDoIt</span>
+          </div>
+      </div>
     </aside>
 
     <!-- Formulário -->
@@ -64,7 +70,7 @@
               <a class="auth__forgot">Esqueceu a senha?</a>
             </div>
 
-            <a href="dashboard.html" class="btn btn--primary btn--lg btn--full" id="submitBtn">Entrar</a>
+            <a href="../dashboard/dashboard.html" class="btn btn--primary btn--lg btn--full" id="submitBtn">Entrar</a>
           </form>
 
           <div class="auth__divider">ou continue com</div>
@@ -88,8 +94,8 @@
     </main>
   </div>
 
-  <script src="../scripts/core/storage.js"></script>
-  <script src="../scripts/features/auth/auth.js"></script>
-  <script src="../scripts/features/auth/login.js"></script>
+  <script src="../../scripts/core/storage.js"></script>
+  <script src="../../scripts/features/auth/auth.js"></script>
+  <script src="../../scripts/features/auth/login.js"></script>
 </body>
 </html>
