@@ -24,11 +24,19 @@
     gripDots:    ic('<circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/>'),
   };
 
+  // Compute path prefix based on how deep the current page sits under the project root.
+  // Pages at pages/<feature>/page.html need ../../; pages/settings.html needs ../
+  var BASE = (function () {
+    var p = window.location.pathname.replace(/\\/g, '/');
+    var m = p.match(/\/pages\/([^/]+\/)[^/]+\.html/);
+    return m ? '../../' : '../';
+  })();
+
   const NAV = [
-    { id: 'dashboard', label: 'Visão geral', href: 'dashboard.html' },
-    { id: 'calendar',  label: 'Calendário',  href: 'calendar.html', count: 14 },
-    { id: 'todo',      label: 'To Do',        href: 'todo.html',     count: 9  },
-    { id: 'analytics', label: 'Análise',      href: 'analytics.html' },
+    { id: 'dashboard', label: 'Visão geral', href: BASE + 'pages/dashboard/dashboard.html' },
+    { id: 'calendar',  label: 'Calendário',  href: BASE + 'pages/tasks/calendar.html', count: 14 },
+    { id: 'todo',      label: 'To Do',        href: BASE + 'pages/tasks/todo.html',     count: 9  },
+    { id: 'analytics', label: 'Análise',      href: BASE + 'pages/dashboard/analytics.html' },
   ];
 
   const CATS = Categorias.TODAS;
@@ -54,7 +62,7 @@
       taskRegistry.set(t.id, t);
       const prio = t.prioridade || 'normal';
       return `
-        <a class="sidebar-task" href="task-detail.html?id=${t.id}" draggable="true" data-task-id="${t.id}" title="${t.titulo}">
+        <a class="sidebar-task" href="${BASE}pages/tasks/task-detail.html?id=${t.id}" draggable="true" data-task-id="${t.id}" title="${t.titulo}">
           <span class="sidebar-task__grip">${ICONS.gripDots}</span>
           <span class="sidebar-task__prio sidebar-task__prio--${prio}"></span>
           <span class="sidebar-task__titulo">${t.titulo}</span>
