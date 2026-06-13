@@ -118,7 +118,7 @@
     mount.className = 'sidebar';
     mount.innerHTML = `
       <div class="sidebar__brand">
-        <span class="sidebar__mark">${MARK}</span>
+        <a class="sidebar__mark" href="${BASE}pages/dashboard/dashboard.html" aria-label="Ir para o dashboard">${MARK}</a>
         <span class="sidebar__word">JustDoIt</span>
         <button class="sidebar__collapse" id="sidebarCollapse" aria-label="Recolher menu">${ICONS.chevronLeft}</button>
       </div>
@@ -142,7 +142,10 @@
           <div class="sidebar__name">Sonally Vitorino</div>
           <div class="sidebar__plan">Plano Foco</div>
         </div>
-        <button class="btn-icon" id="themeToggle" aria-label="Alternar tema" style="width:32px;height:32px">${ICONS.moon}</button>
+        <div class="sidebar__actions">
+          <a class="btn-icon" href="${BASE}pages/auth/settings.html" aria-label="Configurações">${ICONS.settings}</a>
+          <button class="btn-icon" id="themeToggle" aria-label="Alternar tema">${ICONS.moon}</button>
+        </div>
       </div>
       <div class="sidebar__resizer" id="sidebarResizer"></div>`;
 

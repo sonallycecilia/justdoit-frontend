@@ -6,7 +6,7 @@
    ============================================================ */
 const { useState, useRef, useEffect } = React;
 
-const START = 7, END = 21;
+const START = 6, END = 23;
 const ROW_H  = 56;
 const CAT_LABEL  = { estudos: 'Estudos', casa: 'Casa', generico: 'Genérico' };
 const CAT_MAP    = { 'Estudos': 'estudos', 'Casa': 'casa', 'Genérico': 'generico' };
@@ -103,7 +103,7 @@ function WeekView({ dias, eventos, mover, adicionar, onOpen, onDrawer }) {
                 onDragEnd={() => { setArrastando(null); setOver(null); }}
                 onOpen={onOpen} onDrawer={onDrawer} />
             ))}
-            {d.hoje && <div className="cal-now" style={{ top: `${(15 + 40/60 - START) * ROW_H}px` }}></div>}
+            {d.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - START) * ROW_H}px` }}></div>}
           </div>
         ))}
       </div>
@@ -133,7 +133,7 @@ function DayView({ dia, eventos, mover, onOpen, onDrawer }) {
           {doDia.map(ev => <TimeBlock key={ev.id} ev={ev} rowH={ROW_H} startHour={START}
             dragging={false} onDragStart={() => {}} onDragEnd={() => {}}
             onOpen={onOpen} onDrawer={onDrawer} />)}
-          {dia.hoje && <div className="cal-now" style={{ top: `${(15 + 40/60 - START) * ROW_H}px` }}></div>}
+          {dia.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - START) * ROW_H}px` }}></div>}
         </div>
       </div>
     </div>
