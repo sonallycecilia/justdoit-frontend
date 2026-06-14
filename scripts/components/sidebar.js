@@ -231,7 +231,7 @@
 
     document.addEventListener('mousemove', e => {
       if (!isResizing) return;
-      const w = Math.min(Math.max(startW + (e.clientX - startX), 170), 480);
+      const w = Math.min(Math.max(startW + (e.clientX - startX), 180), 480);
       mount.style.width = w + 'px';
     });
 
