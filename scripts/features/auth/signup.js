@@ -1,33 +1,15 @@
 /* ============================================================
    JustDoIt — features/auth/signup.js
-   Controller da tela de cadastro.
-   Depende de: core/storage.js, features/auth/auth.js
+   Controller da tela de cadastro integrado com a API.
+   Depende de: features/auth/auth.js
    ============================================================ */
 (function () {
   'use strict';
 
+  // Inicia o tema claro/escuro
   Auth.iniciarTema();
 
-  /* ---------- Date picker de nascimento ---------- */
-  var nascimentoPick  = document.getElementById('nascimentoPick');
-  var nascimentoBtn   = document.getElementById('nascimentoBtn');
-  var nascimentoLabel = document.getElementById('nascimentoLabel');
-  var nascimentoInput = document.getElementById('nascimento');
-
-  if (nascimentoPick && nascimentoBtn) {
-    DatePicker.criar({
-      container: nascimentoPick,
-      botao:     nascimentoBtn,
-      onSelect:  function (d) {
-        var dia = String(d.getDate()).padStart(2, '0');
-        var mes = String(d.getMonth() + 1).padStart(2, '0');
-        var ano = d.getFullYear();
-        nascimentoInput.value      = ano + '-' + mes + '-' + dia;
-        nascimentoLabel.textContent = dia + '/' + mes + '/' + ano;
-        nascimentoLabel.classList.add('is-set');
-      }
-    });
-  }
+  const API_BASE_URL = 'http://localhost:8080'; // URL do backend
 
   /* ---------- Mostrar / ocultar senha ---------- */
   const inputSenha  = document.getElementById('senha');
@@ -40,7 +22,7 @@
     });
   }
 
-  /* ---------- Cadastro ---------- */
+  /* ---------- Cadastro Real via API ---------- */
   const form = document.getElementById('signupForm');
   if (!form) return;
 
@@ -50,22 +32,21 @@
   const inputConf  = document.getElementById('confirmar');
   const erroSenha  = document.getElementById('erroSenha');
 
+  // Limpa a mensagem de erro de senha ao digitar
   inputConf.addEventListener('input', function () {
     erroSenha.classList.add('hidden');
     inputConf.setCustomValidity('');
   });
 
-  form.addEventListener('submit', function (e) {
+  form.addEventListener('submit', async function (e) {
     e.preventDefault();
 
-    const senha    = inputSenha.value;
+    const nome = document.getElementById('nome').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const senha = inputSenha.value;
     const confirma = inputConf.value;
 
-    if (!nascimentoInput.value) {
-      nascimentoBtn.focus();
-      return;
-    }
-
+    // Validação de senhas iguais
     if (senha !== confirma) {
       erroSenha.classList.remove('hidden');
       inputConf.setCustomValidity('As senhas não coincidem');
@@ -73,24 +54,48 @@
       return;
     }
 
-    const perfil = form.querySelector('input[name="perfil"]:checked').value;
-
-    submitBtn.disabled    = true;
+    // Bloqueia o botão para evitar cliques duplos ansiosos
+    submitBtn.disabled = true;
     submitBtn.textContent = 'Criando conta…';
 
-    // TODO: substituir por Api.post(Api.endpoints.auth.register, { nome, email, senha, perfil })
-    setTimeout(function () {
-      Auth.gravarSessao({
-        nome:   document.getElementById('nome').value.trim(),
-        email:  document.getElementById('email').value.trim(),
-        perfil: perfil,
+    try {
+      // Chamada real para o Backend Spring Boot
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        // Enviando os dados exatamente como o seu UserRegisterRequestDTO espera
+        body: JSON.stringify({ 
+          name: nome, 
+          email: email, 
+          password: senha 
+        })
       });
-      signupView.classList.add('hidden');
-      doneView.classList.remove('hidden');
 
-      setTimeout(function () {
-        window.location.href = 'onboarding.html';
-      }, 1200);
-    }, 900);
+      if (response.ok) {
+        // Sucesso (201 Created) - Mostra a tela de sucesso
+        signupView.classList.add('hidden');
+        doneView.classList.remove('hidden');
+
+        // Aguarda 2 segundos para o utilizador ler a mensagem e manda para a tela de login
+        setTimeout(function () {
+          window.location.href = 'login.html';
+        }, 2000);
+      } else {
+        // Trata erro (ex: 409 Conflict - E-mail já existe, ou 400 Bad Request)
+        const erroMsg = await response.text();
+        alert('Falha ao cadastrar: ' + (erroMsg || 'Verifique os dados inseridos.'));
+        
+        // Liberta o botão para o utilizador tentar de novo
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Criar conta';
+      }
+    } catch (error) {
+      console.error("Erro na comunicação:", error);
+      alert('Erro de conexão com o servidor. O backend está a correr na porta 8080?');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Criar conta';
+    }
   });
 })();
