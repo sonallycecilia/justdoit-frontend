@@ -27,14 +27,8 @@ const Tarefas = (function () {
     { id: 'a15', titulo: 'Faxina da semana',                      cat: 'Casa',     prioridade: 'normal',    quando: 'week',  data: 'Sáb, 13 jun', done: false },
   ];
 
-  // Lista completa (Storage ou semente). Garante que tarefas seed
-  // nunca sumam do storage — reintegra as que estiverem faltando.
   function listar() {
-    const salvas = Storage.ler(KEY, null);
-    if (!salvas) return SEMENTE;
-    const ids = new Set(salvas.map(t => t.id));
-    const faltando = SEMENTE.filter(s => !ids.has(s.id));
-    return faltando.length ? salvas.concat(faltando) : salvas;
+    return Storage.ler(KEY, []);
   }
 
   function buscar(id) {

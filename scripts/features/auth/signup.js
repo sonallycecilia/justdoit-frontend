@@ -45,8 +45,6 @@
   if (!form) return;
 
   const submitBtn  = document.getElementById('submitBtn');
-  const signupView = document.getElementById('signupView');
-  const doneView   = document.getElementById('doneView');
   const inputConf  = document.getElementById('confirmar');
   const erroSenha  = document.getElementById('erroSenha');
 
@@ -73,24 +71,25 @@
       return;
     }
 
-    const perfil = form.querySelector('input[name="perfil"]:checked').value;
-
+    var erroApi = document.getElementById('erroApi');
+    erroApi.classList.add('hidden');
     submitBtn.disabled    = true;
     submitBtn.textContent = 'Criando conta…';
 
-    // TODO: substituir por Api.post(Api.endpoints.auth.register, { nome, email, senha, perfil })
-    setTimeout(function () {
-      Auth.gravarSessao({
-        nome:   document.getElementById('nome').value.trim(),
-        email:  document.getElementById('email').value.trim(),
-        perfil: perfil,
-      });
-      signupView.classList.add('hidden');
-      doneView.classList.remove('hidden');
-
-      setTimeout(function () {
-        window.location.href = 'onboarding.html';
-      }, 1200);
-    }, 900);
+    Api.post(Api.endpoints.auth.register, {
+      name:      document.getElementById('nome').value.trim(),
+      email:     document.getElementById('email').value.trim(),
+      password:  senha,
+      birthDate: nascimentoInput.value,
+    }).then(function (res) {
+      Auth.gravarSessao({ token: res.token, name: document.getElementById('nome').value.trim() });
+      Storage.gravar(Storage.KEYS.TAREFAS, []);
+      window.location.href = 'onboarding.html';
+    }).catch(function (err) {
+      submitBtn.disabled    = false;
+      submitBtn.textContent = 'Criar conta';
+      erroApi.textContent   = err.error || 'Erro ao criar conta. Tente novamente.';
+      erroApi.classList.remove('hidden');
+    });
   });
 })();

@@ -1,2 +1,5 @@
 .vscode/
 .claude/
+*.key
+*.pem
+*.ppk

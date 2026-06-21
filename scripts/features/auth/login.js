@@ -12,8 +12,7 @@
   if (!form) return;
 
   const submitBtn = document.getElementById('submitBtn');
-  const loginView = document.getElementById('loginView');
-  const doneView  = document.getElementById('doneView');
+  const erroLogin = document.getElementById('erroLogin');
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -21,18 +20,20 @@
     const senha  = document.getElementById('senha').value;
     if (!email || !senha) return;
 
+    erroLogin.classList.add('hidden');
     submitBtn.disabled    = true;
     submitBtn.textContent = 'Entrando…';
 
-    // TODO: substituir por Api.post(Api.endpoints.auth.login, { email, senha })
-    setTimeout(function () {
-      Auth.gravarSessao({ email: email });
-      loginView.classList.add('hidden');
-      doneView.classList.remove('hidden');
-
-      setTimeout(function () {
-        // window.location.href = 'dashboard.html';
-      }, 1200);
-    }, 900);
+    Api.post(Api.endpoints.auth.login, { email: email, password: senha })
+      .then(function (res) {
+        Auth.gravarSessao({ token: res.token });
+        window.location.href = '../dashboard/dashboard.html';
+      })
+      .catch(function (err) {
+        submitBtn.disabled    = false;
+        submitBtn.textContent = 'Entrar';
+        erroLogin.textContent = err.error || 'E-mail ou senha incorretos.';
+        erroLogin.classList.remove('hidden');
+      });
   });
 })();

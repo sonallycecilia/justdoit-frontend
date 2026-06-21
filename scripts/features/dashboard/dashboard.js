@@ -9,7 +9,9 @@
   const greeting = document.getElementById('greeting');
   const eyebrow = document.getElementById('eyebrow');
   if (greeting && window.Utils) {
-    greeting.innerHTML = `${Utils.saudacao()}, <em>Sonally.</em>`;
+    const sessao = Storage.ler('sessao');
+    const primeiroNome = sessao && sessao.name ? sessao.name.split(' ')[0] : '';
+    greeting.innerHTML = `${Utils.saudacao()}${primeiroNome ? `, <em>${primeiroNome}.</em>` : '.'}`;
   }
   if (eyebrow && window.Utils) {
     eyebrow.textContent = `${Utils.dataCurta()} · semana de ${Utils.intervaloSemana()}`;
@@ -48,7 +50,7 @@
       el.style.cursor = 'pointer';
       el.addEventListener('click', () => {
         const id = el.closest('.task').getAttribute('data-id');
-        window.location.href = 'task-detail.html?id=' + id;
+        window.location.href = '../tasks/task-detail.html?id=' + id;
       });
     });
   }

@@ -118,6 +118,7 @@
               Aceito os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a>
             </label>
 
+            <span class="field__error hidden" id="erroApi"></span>
             <button type="submit" class="btn btn--primary btn--lg btn--full" id="submitBtn">Criar conta</button>
           </form>
 
@@ -128,14 +129,6 @@
           </button>
         </div>
 
-        <!-- Estado de sucesso -->
-        <div id="doneView" class="auth__done hidden">
-          <div class="auth__done-ic">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-          </div>
-          <h2>Conta criada com sucesso!</h2>
-          <p class="text-soft">Preparando o seu espaço…</p>
-        </div>
 
       </div>
     </main>
@@ -143,6 +136,7 @@
 
   <script src="../../scripts/core/storage.js"></script>
   <script src="../../scripts/core/utils.js"></script>
+  <script src="../../scripts/core/api.js"></script>
   <script src="../../scripts/components/date-picker.js"></script>
   <script src="../../scripts/features/auth/auth.js"></script>
   <script src="../../scripts/features/auth/signup.js"></script>

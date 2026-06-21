@@ -70,7 +70,8 @@
               <a class="auth__forgot">Esqueceu a senha?</a>
             </div>
 
-            <a href="../dashboard/dashboard.html" class="btn btn--primary btn--lg btn--full" id="submitBtn">Entrar</a>
+            <span class="field__error hidden" id="erroLogin"></span>
+            <button type="submit" class="btn btn--primary btn--lg btn--full" id="submitBtn">Entrar</button>
           </form>
 
           <div class="auth__divider">ou continue com</div>
@@ -82,19 +83,12 @@
           <p class="auth__legal">Ao entrar, você concorda com os <a>Termos</a> e a <a>Política de Privacidade</a>.</p>
         </div>
 
-        <!-- Estado de sucesso -->
-        <div id="doneView" class="auth__done hidden">
-          <div class="auth__done-ic">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-          </div>
-          <h2>Tudo certo, bem-vindo de volta.</h2>
-          <p class="text-soft">Levando você para o seu dia…</p>
-        </div>
       </div>
     </main>
   </div>
 
   <script src="../../scripts/core/storage.js"></script>
+  <script src="../../scripts/core/api.js"></script>
   <script src="../../scripts/features/auth/auth.js"></script>
   <script src="../../scripts/features/auth/login.js"></script>
 </body>
