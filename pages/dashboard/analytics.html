@@ -83,6 +83,9 @@
   </div>
 
   <script src="../../scripts/core/storage.js"></script>
+  <script src="../../scripts/core/api.js"></script>
+  <script src="../../scripts/features/auth/auth.js"></script>
+  <script src="../../scripts/core/auth-guard.js"></script>
   <script src="../../scripts/core/utils.js"></script>
   <script src="../../scripts/modules/categorias.js"></script>
   <script src="../../scripts/modules/tarefas.js"></script>
@@ -92,22 +95,20 @@
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-  <script src="../../components/Dashboard/analytics-data.js"></script>
   <script type="text/babel" src="../../components/Dashboard/DeviationChart.jsx"></script>
   <script type="text/babel" src="../../components/Dashboard/CategoryChart.jsx"></script>
   <script type="text/babel">
-    const { conclusao } = window.AN_DATA;
-    const pctConcl = Math.round((conclusao.feitas / conclusao.total) * 100);
-
-    function RateRing() {
-      const r = 58, c = 2 * Math.PI * r, dash = (pctConcl / 100) * c;
+    function RateRing({ conclusao }) {
+      if (!conclusao) return <div className="an-rate" style={{ color: 'var(--color-text-subtle)' }}>Sem dados</div>;
+      const pct = conclusao.total ? Math.round((conclusao.feitas / conclusao.total) * 100) : 0;
+      const r = 58, c = 2 * Math.PI * r, dash = (pct / 100) * c;
       return (
         <div className="an-rate">
           <svg className="an-rate__ring" viewBox="0 0 140 140">
             <circle cx="70" cy="70" r={r} fill="none" stroke="var(--color-surface-sunken)" strokeWidth="14" />
             <circle cx="70" cy="70" r={r} fill="none" stroke="var(--color-success)" strokeWidth="14"
               strokeLinecap="round" strokeDasharray={`${dash} ${c - dash}`} transform="rotate(-90 70 70)" />
-            <text x="70" y="76" textAnchor="middle" fontSize="30" fontWeight="600" fill="var(--color-text)" style={{ fontFamily: 'var(--font-display)' }}>{pctConcl}%</text>
+            <text x="70" y="76" textAnchor="middle" fontSize="30" fontWeight="600" fill="var(--color-text)" style={{ fontFamily: 'var(--font-display)' }}>{pct}%</text>
           </svg>
           <div className="an-rate__info">
             <div className="an-rate__sub">tarefas concluídas</div>
@@ -121,9 +122,29 @@
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('deviation')).render(<DeviationChart dados={window.AN_DATA.desvio} />);
-    ReactDOM.createRoot(document.getElementById('category')).render(<CategoryChart dados={window.AN_DATA.categorias} />);
-    ReactDOM.createRoot(document.getElementById('rate')).render(<RateRing />);
+    const devRoot  = ReactDOM.createRoot(document.getElementById('deviation'));
+    const catRoot  = ReactDOM.createRoot(document.getElementById('category'));
+    const rateRoot = ReactDOM.createRoot(document.getElementById('rate'));
+
+    devRoot.render(<div style={{ color: 'var(--color-text-subtle)', padding: 'var(--space-md)' }}>Carregando…</div>);
+    catRoot.render(<div style={{ color: 'var(--color-text-subtle)', padding: 'var(--space-md)' }}>Carregando…</div>);
+    rateRoot.render(<div style={{ color: 'var(--color-text-subtle)', padding: 'var(--space-md)' }}>Carregando…</div>);
+
+    Promise.all([
+      Api.get(Api.endpoints.analytics.weekly),
+      Api.get(Api.endpoints.analytics.categories),
+    ]).then(function (results) {
+      const weekly = results[0];
+      const cats   = results[1];
+      devRoot.render(<DeviationChart dados={weekly.desvio || []} />);
+      catRoot.render(<CategoryChart dados={Array.isArray(cats) ? cats : (weekly.categorias || [])} />);
+      rateRoot.render(<RateRing conclusao={weekly.conclusao} />);
+    }).catch(function () {
+      const erro = <div style={{ color: 'var(--color-text-subtle)', padding: 'var(--space-md)' }}>Erro ao carregar dados.</div>;
+      devRoot.render(erro);
+      catRoot.render(erro);
+      rateRoot.render(erro);
+    });
   </script>
 </body>
 </html>

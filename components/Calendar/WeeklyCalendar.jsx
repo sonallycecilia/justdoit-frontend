@@ -14,23 +14,18 @@ const PRIO_LABEL = { urgent: 'Urgente', important: 'Importante', normal: 'Normal
 const MOD_LABEL  = { foco: 'Foco', ciclo: 'Ciclo', tempo: 'Tempo', notas: 'Notas' };
 const DOW_JUN26  = ['SEG','TER','QUA','QUI','SEX','SÁB','DOM']; // jun-1-2026 = Seg
 
-const SEMENTE = [
-  { id: 'a1', titulo: 'Revisar Cálculo II — capítulo 4',     cat: 'Estudos',  prioridade: 'urgent',    quando: 'today', data: 'Hoje',        done: false },
-  { id: 'a2', titulo: 'Entregar relatório do projeto',         cat: 'Genérico', prioridade: 'urgent',    quando: 'today', data: 'Hoje',        done: false },
-  { id: 'a3', titulo: 'Pagar conta de luz',                    cat: 'Casa',     prioridade: 'important', quando: 'today', data: 'Hoje',        done: false },
-  { id: 'a4', titulo: 'Responder e-mail do cliente',           cat: 'Genérico', prioridade: 'important', quando: 'week',  data: 'Amanhã',      done: false },
-  { id: 'a5', titulo: 'Ler artigo de Sistemas Distribuídos',   cat: 'Estudos',  prioridade: 'normal',    quando: 'week',  data: 'Qua, 10 jun', done: false },
-  { id: 'a6', titulo: 'Trocar o filtro de água',               cat: 'Casa',     prioridade: 'normal',    quando: 'past',  data: 'Atrasada',    done: false },
-  { id: 'a7', titulo: 'Planejar a próxima semana',             cat: 'Genérico', prioridade: 'low',       quando: 'week',  data: 'Dom, 14 jun', done: false },
-  { id: 'a8', titulo: 'Organizar fotos do celular',            cat: 'Casa',     prioridade: 'low',       quando: 'all',   data: 'Sem data',    done: false },
-  { id: 'a9',  titulo: 'Caminhada de 30 minutos',               cat: 'Casa',     prioridade: 'normal',    quando: 'today', data: 'Hoje',        done: true  },
-  { id: 'a10', titulo: 'Academia',                              cat: 'Casa',     prioridade: 'normal',    quando: 'week',  data: 'Amanhã',      done: false },
-  { id: 'a11', titulo: 'Reunião de equipe',                     cat: 'Genérico', prioridade: 'important', quando: 'today', data: 'Hoje',        done: false },
-  { id: 'a12', titulo: 'Mercado',                               cat: 'Casa',     prioridade: 'normal',    quando: 'week',  data: 'Qua, 10 jun', done: false },
-  { id: 'a13', titulo: 'Pomodoro: Algoritmos',                  cat: 'Estudos',  prioridade: 'normal',    quando: 'week',  data: 'Qui, 11 jun', done: false },
-  { id: 'a14', titulo: 'Apresentação ao time',                  cat: 'Genérico', prioridade: 'important', quando: 'today', data: 'Hoje',        done: false },
-  { id: 'a15', titulo: 'Faxina da semana',                      cat: 'Casa',     prioridade: 'normal',    quando: 'week',  data: 'Sáb, 13 jun', done: false },
-];
+function gerarDiasSemana() {
+  const today = new Date();
+  const dow = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  const labels = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+  return labels.map((label, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return { dow: label, num: d.getDate(), hoje: d.toDateString() === today.toDateString() };
+  });
+}
 
 function fmtHora(x) {
   const h = Math.floor(x);
@@ -387,10 +382,17 @@ function PainelDrawer({ ev, dias, onClose }) {
 /* ── WeeklyCalendar (raiz) ────────────────────────────────── */
 function WeeklyCalendar() {
   const [vista,    setVista]   = useState('semana');
-  const [eventos,  setEventos] = useState(window.CAL_DATA.eventos);
+  const [eventos,  setEventos] = useState([]);
   const [modalEv,  setModalEv] = useState(null);
   const [drawerEv, setDrawerEv] = useState(null);
-  const dias = window.CAL_DATA.dias;
+  const dias = React.useMemo(() => gerarDiasSemana(), []);
+
+  useEffect(() => {
+    if (!window.Api) return;
+    Api.get(Api.endpoints.events.list)
+      .then(function (data) { setEventos(Array.isArray(data) ? data : []); })
+      .catch(function () { setEventos([]); });
+  }, []);
 
   // Ouve mensagens do iframe (drawer) para atualizar hora em tempo real
   useEffect(() => {
@@ -431,7 +433,7 @@ function WeeklyCalendar() {
     setEventos(evs => evs.map(e => e.id === modalEv.id ? novo : e));
     setModalEv(novo);
     if (modalEv.taskId && window.Storage) {
-      const lista = window.Storage.ler('todo-tarefas', SEMENTE);
+      const lista = window.Storage.ler('todo-tarefas', []);
       const t = lista.find(x => x.id === modalEv.taskId);
       if (t) {
         if (changes.prio !== undefined) t.prioridade = changes.prio;

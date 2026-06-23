@@ -41,7 +41,7 @@
               <span class="stat__label">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                 Concluídas</span>
-              <span class="stat__value">7 <small>/ 12</small></span>
+              <span class="stat__value" id="statConcl">— <small>/ —</small></span>
               <span class="stat__hint">tarefas desta semana</span>
             </div>
             <div class="stat">
@@ -56,10 +56,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 Planejado vs. executado</span>
               <div class="progress" style="margin-top:6px">
-                <div class="progress__head"><span class="progress__label">18h planejadas · 14h30 executadas</span><span class="progress__value">81%</span></div>
-                <div class="progress__track"><div class="progress__fill" style="width:81%"></div></div>
+                <div class="progress__head"><span class="progress__label" id="statProgressLabel">—</span><span class="progress__value" id="statProgressValue">—</span></div>
+                <div class="progress__track"><div class="progress__fill" id="statProgressFill" style="width:0%"></div></div>
               </div>
-              <span class="stat__hint">desvio de −3h30 — bom ritmo, semana sob controle</span>
+              <span class="stat__hint" id="statProgressHint">carregando…</span>
             </div>
           </div>
         </section>
@@ -102,6 +102,9 @@
   </div>
 
   <script src="../../scripts/core/storage.js"></script>
+  <script src="../../scripts/core/api.js"></script>
+  <script src="../../scripts/features/auth/auth.js"></script>
+  <script src="../../scripts/core/auth-guard.js"></script>
   <script src="../../scripts/core/utils.js"></script>
   <script src="../../scripts/modules/categorias.js"></script>
   <script src="../../scripts/modules/tarefas.js"></script>

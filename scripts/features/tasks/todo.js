@@ -6,7 +6,6 @@
 (function () {
   'use strict';
 
-  // Estado dos filtros
   const filtros = { cat: 'all', status: 'open', date: 'all' };
 
   function passaFiltro(t) {
@@ -58,14 +57,12 @@
         </div>
       </div>`).join('');
 
-    // Ação rápida: concluir
     groups.querySelectorAll('.todo-check').forEach(btn => {
       btn.addEventListener('click', () => {
-        Tarefas.toggleDone(btn.closest('.todo-item').getAttribute('data-id'));
-        pintar();
+        Tarefas.toggleDone(btn.closest('.todo-item').getAttribute('data-id')).then(pintar);
       });
     });
-    // Abrir detalhe
+
     groups.querySelectorAll('[data-open]').forEach(el => {
       el.addEventListener('click', () => {
         const id = el.closest('.todo-item').getAttribute('data-id');
@@ -74,7 +71,6 @@
     });
   }
 
-  // Liga os filtros
   document.querySelectorAll('.filter-group').forEach(group => {
     const tipo = group.getAttribute('data-filter');
     group.querySelectorAll('.filter-chip').forEach(chip => {
@@ -87,7 +83,7 @@
     });
   });
 
-  pintar();
+  Tarefas.carregarDaApi().then(pintar);
 
   // Bloco de anotações — persiste via Storage
   const notepadArea = document.getElementById('notepadArea');
