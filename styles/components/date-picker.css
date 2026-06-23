@@ -88,6 +88,57 @@
 .date-pick__day.is-on    { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); border-radius: 50%; }
 .date-pick__day.is-today.is-on { background: var(--color-accent); color: var(--color-text-on-dark); }
 
+/* ---------- Seleção de ano ---------- */
+.date-pick__years-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.date-pick__year-btn {
+  height: 30px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: var(--weight-medium);
+  color: var(--color-text-soft);
+  background: transparent; border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.date-pick__year-btn:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+.date-pick__year-btn.is-on { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); }
+
+/* ---------- Seleção de mês ---------- */
+.date-pick__months-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.date-pick__month-btn {
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: var(--weight-medium);
+  color: var(--color-text-soft);
+  background: transparent; border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.date-pick__month-btn:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+.date-pick__month-btn.is-on { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); }
+
+/* Rótulo clicável para voltar à vista anterior */
+.date-pick__month--link {
+  cursor: pointer;
+  text-underline-offset: 2px;
+}
+.date-pick__month--link:hover { color: var(--color-accent); }
+
 /* ---------- Date picker em contexto de campo de formulário ---------- */
 .field .date-pick { display: block; }
 

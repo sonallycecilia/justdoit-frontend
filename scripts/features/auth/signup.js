@@ -16,9 +16,10 @@
 
   if (nascimentoPick && nascimentoBtn) {
     DatePicker.criar({
-      container: nascimentoPick,
-      botao:     nascimentoBtn,
-      onSelect:  function (d) {
+      container:      nascimentoPick,
+      botao:          nascimentoBtn,
+      modoNascimento: true,
+      onSelect:       function (d) {
         var dia = String(d.getDate()).padStart(2, '0');
         var mes = String(d.getMonth() + 1).padStart(2, '0');
         var ano = d.getFullYear();
