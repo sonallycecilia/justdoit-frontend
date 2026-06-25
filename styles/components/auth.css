@@ -77,12 +77,6 @@
 /* Botão de tema flutuante */
 .auth__theme { position: fixed; top: var(--space-md); right: var(--space-md); z-index: 10; }
 
-/* Estado de sucesso */
-.auth__done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-md); animation: auth-fadeup .4s var(--ease-out); }
-.auth__done-ic { width: 64px; height: 64px; border-radius: 50%; background: var(--color-priority-normal-soft); color: var(--color-success); display: flex; align-items: center; justify-content: center; }
-.auth__done-ic svg { width: 32px; height: 32px; }
-@keyframes auth-fadeup { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-
 /* ---------- Variante: formulário longo (cadastro) ---------- */
 .auth--signup .auth__aside { position: sticky; top: 0; height: 100vh; }
 .auth--signup .auth__main  { align-items: flex-start; overflow-y: auto; max-height: 100vh; padding-block: var(--space-2xl); }

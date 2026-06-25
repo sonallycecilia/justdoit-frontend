@@ -82,11 +82,6 @@
 /* Rodapé de navegação */
 .onb__nav { display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-xl); }
 
-/* Sucesso final */
-.onb-done { text-align: center; padding: var(--space-lg) 0; }
-.onb-done__ic { width: 72px; height: 72px; margin: 0 auto var(--space-md); border-radius: 50%; background: var(--color-priority-normal-soft); color: var(--color-success); display: grid; place-items: center; }
-.onb-done__ic svg { width: 36px; height: 36px; }
-
 @media (max-width: 560px) {
   .profile-opts { grid-template-columns: 1fr; }
 }

@@ -30,14 +30,34 @@ const Auth = (function () {
   }
 
   function gravarSessao(dados) {
-    if (window.Storage) Storage.gravar('sessao', Object.assign({}, dados, { em: Date.now() }));
+    // mescla com a sessao atual p/ preservar campos (name/em) ao renovar tokens
+    var atual = lerSessao() || {};
+    if (window.Storage) Storage.gravar('sessao', Object.assign({}, atual, dados, { em: Date.now() }));
   }
 
   function lerSessao() {
     return window.Storage ? Storage.ler('sessao') : null;
   }
 
-  return { iniciarTema, gravarSessao, lerSessao };
+  function limparSessao() {
+    if (window.Storage) Storage.remover('sessao');
+  }
+
+  // Faz logout no backend (revoga o refresh token) e limpa a sessao local
+  function logout(redirecionar) {
+    var sessao = lerSessao();
+    function fim() {
+      limparSessao();
+      window.location.href = redirecionar || '../auth/login.html';
+    }
+    if (sessao && sessao.accessToken && window.Api) {
+      Api.post(Api.endpoints.auth.logout).then(fim, fim);
+    } else {
+      fim();
+    }
+  }
+
+  return { iniciarTema, gravarSessao, lerSessao, limparSessao, logout };
 })();
 
 window.Auth = Auth;

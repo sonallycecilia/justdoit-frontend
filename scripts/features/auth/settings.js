@@ -35,6 +35,22 @@
   });
   marcarSeg();
 
+  /* ---------- Início da semana (segmented, persistente) ---------- */
+  const semSeg = document.getElementById('weekStartSeg');
+  if (semSeg) {
+    const marcarSemana = () => {
+      const atual = Storage.ler('inicio-semana', 'seg');
+      semSeg.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b.dataset.start === atual));
+    };
+    semSeg.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        Storage.gravar('inicio-semana', b.dataset.start);
+        marcarSemana();
+      });
+    });
+    marcarSemana();
+  }
+
   /* ---------- Categorias ---------- */
   let categorias = Storage.ler('categorias', Categorias.TODAS.map(c => ({ id: c.id, nome: c.nome, cor: c.cor, n: 0 })));
   let corSel = 'var(--color-cat-estudos)';

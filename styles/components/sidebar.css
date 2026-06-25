@@ -225,7 +225,18 @@ a.sidebar-task { text-decoration: none; }
 }
 .sidebar__user { flex: 1; min-width: 0; }
 .sidebar__name { font-size: var(--font-size-sm); font-weight: var(--weight-semibold); color: var(--color-text); }
-.sidebar__plan { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+.sidebar__logout {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 2px; padding: 0;
+  background: none; border: none; cursor: pointer;
+  font-size: var(--font-size-xs); font-family: inherit;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast, .15s);
+}
+.sidebar__logout:hover { color: var(--color-danger, #d6453c); }
+.sidebar__logout-ic { display: inline-flex; }
+.sidebar__logout-ic svg { width: 13px; height: 13px; }
 
 .sidebar__actions { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
 .sidebar__actions .btn-icon { width: 32px; height: 32px; }
@@ -239,8 +250,11 @@ a.sidebar-task { text-decoration: none; }
 .sidebar--collapsed .nav-item__label,
 .sidebar--collapsed .nav-item__count,
 .sidebar--collapsed .sidebar__section span,
-.sidebar--collapsed .sidebar__user,
+.sidebar--collapsed .sidebar__name,
+.sidebar--collapsed .sidebar__logout-label,
 .sidebar--collapsed .cat-dot { display: none; }
+.sidebar--collapsed .sidebar__user { flex: none; }
+.sidebar--collapsed .sidebar__logout { margin-top: 0; }
 .sidebar--collapsed .sidebar__section { justify-content: center; }
 .sidebar--collapsed .nav-item { justify-content: center; }
 .sidebar--collapsed .sidebar__resizer { display: none; }
@@ -268,7 +282,10 @@ a.sidebar-task { text-decoration: none; }
 @media (max-width: 880px) {
   .sidebar { width: 72px; }
   .sidebar__word, .nav-item__label, .nav-item__count,
-  .sidebar__section span, .sidebar__user, .cat-dot + .nav-item__label { display: none; }
+  .sidebar__section span, .sidebar__name, .sidebar__logout-label,
+  .cat-dot + .nav-item__label { display: none; }
+  .sidebar__user { flex: none; }
+  .sidebar__logout { margin-top: 0; }
   .sidebar__section { justify-content: center; }
   .nav-item { justify-content: center; }
   .sidebar__collapse, .sidebar__resizer { display: none; }

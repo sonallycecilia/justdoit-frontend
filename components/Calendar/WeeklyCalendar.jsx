@@ -14,23 +14,91 @@ const PRIO_LABEL = { urgent: 'Urgente', important: 'Importante', normal: 'Normal
 const MOD_LABEL  = { foco: 'Foco', ciclo: 'Ciclo', tempo: 'Tempo', notas: 'Notas' };
 const DOW_JUN26  = ['SEG','TER','QUA','QUI','SEX','SÁB','DOM']; // jun-1-2026 = Seg
 
-function gerarDiasSemana() {
+// Preferência "Início da semana" (Configurações). 'dom' = domingo, qualquer
+// outro valor = segunda (padrão). Lida a cada render para refletir mudanças.
+const DOW_SEG = ['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+const DOW_DOM = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+function inicioDomingo() {
+  return !!(window.Storage && Storage.ler('inicio-semana', 'seg') === 'dom');
+}
+function rotulosDow() { return inicioDomingo() ? DOW_DOM : DOW_SEG; }
+
+function isoData(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+function gerarDiasSemana(offsetSemanas = 0) {
+  const domingo = inicioDomingo();
   const today = new Date();
-  const dow = today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
-  const labels = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+  const dow = today.getDay(); // 0 = domingo
+  const inicio = new Date(today);
+  // Recua até o primeiro dia da semana conforme a preferência.
+  const recuo = domingo ? dow : (dow === 0 ? 6 : dow - 1);
+  inicio.setDate(today.getDate() - recuo + offsetSemanas * 7);
+  const labels = rotulosDow();
   return labels.map((label, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return { dow: label, num: d.getDate(), hoje: d.toDateString() === today.toDateString() };
+    const d = new Date(inicio);
+    d.setDate(inicio.getDate() + i);
+    return { dow: label, num: d.getDate(), mes: d.getMonth(), iso: isoData(d), hoje: d.toDateString() === today.toDateString() };
   });
+}
+
+// Rótulo do intervalo da semana: "8 – 14 jun" ou "29 jun – 5 jul".
+function rotuloSemana(dias) {
+  const ini = dias[0], fim = dias[6];
+  if (ini.mes === fim.mes) return `${ini.num} – ${fim.num} ${MESES[fim.mes]}`;
+  return `${ini.num} ${MESES[ini.mes]} – ${fim.num} ${MESES[fim.mes]}`;
+}
+
+const MESES_LONGOS = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+// Grade do mês (offset em meses a partir do atual). Segunda-feira como 1ª coluna.
+function gerarMes(offsetMeses = 0) {
+  const today = new Date();
+  const base  = new Date(today.getFullYear(), today.getMonth() + offsetMeses, 1);
+  const ano   = base.getFullYear();
+  const mes   = base.getMonth();
+  const diasNoMes  = new Date(ano, mes + 1, 0).getDate();
+  const dow0 = new Date(ano, mes, 1).getDay(); // 0 = domingo
+  // Colunas vazias antes do dia 1, conforme o primeiro dia da semana.
+  const primeiroDow = inicioDomingo() ? dow0 : (dow0 + 6) % 7;
+
+  const cells = [];
+  for (let i = 0; i < primeiroDow; i++) cells.push({ out: true });
+  for (let n = 1; n <= diasNoMes; n++) {
+    const d = new Date(ano, mes, n);
+    cells.push({ num: n, iso: isoData(d), hoje: d.toDateString() === today.toDateString() });
+  }
+  while (cells.length % 7 !== 0) cells.push({ out: true });
+  return { ano, mes, cells };
 }
 
 function fmtHora(x) {
   const h = Math.floor(x);
   const m = Math.round((x % 1) * 60);
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// Blocos recém-arrastados ganham um id temporário ('ext-…') antes de o POST
+// retornar o id real do backend. Só persistimos update/delete de blocos já salvos.
+function ehPersistido(id) {
+  return typeof id === 'string' && id.indexOf('ext-') !== 0;
+}
+
+// Campos visuais do bloco (título/categoria/prioridade/concluído) não ficam no
+// schedule-service — vêm da tarefa vinculada (taskId).
+function enriquecerComTarefa(b) {
+  const t = (window.Tarefas && b.taskId) ? Tarefas.buscar(b.taskId) : null;
+  return {
+    ...b,
+    titulo: t ? t.titulo : 'Bloco',
+    cat:    t ? (CAT_MAP[t.cat] || 'generico') : 'generico',
+    prio:   t ? t.prioridade : 'normal',
+    done:   t ? t.done : false,
+    mod:    null,
+  };
 }
 
 function Icon({ d, size = 16 }) {
@@ -136,27 +204,26 @@ function DayView({ dia, eventos, mover, onOpen, onDrawer }) {
 }
 
 /* ── MonthView ────────────────────────────────────────────── */
-function MonthView({ eventos }) {
-  const totalDias = 30;
-  const cells = [];
-  for (let n = 1; n <= totalDias; n++) cells.push({ num: n, hoje: n === 11, evs: eventos.filter(ev => ev.num === n) });
-  while (cells.length % 7 !== 0) cells.push({ out: true });
+function MonthView({ mesData, eventos }) {
   return (
     <div className="cal-month">
       <div className="cal-month__grid">
-        {DOW_JUN26.map(d => <div key={d} className="cal-month__dow">{d}</div>)}
-        {cells.map((c, i) => (
-          <div key={i} className={`cal-month__cell ${c.out ? 'is-out' : ''} ${c.hoje ? 'is-today' : ''}`}>
-            {!c.out && <span className="cal-month__num">{c.num}</span>}
-            {!c.out && c.evs.slice(0, 3).map(ev => (
-              <span key={ev.id} className="cal-month__ev">
-                <span className="cal-month__dot" style={{ background: `var(--color-cat-${ev.cat})` }}></span>
-                {ev.titulo}
-              </span>
-            ))}
-            {!c.out && c.evs.length > 3 && <span className="cal-month__ev" style={{ color: 'var(--color-text-muted)' }}>+{c.evs.length - 3} mais</span>}
-          </div>
-        ))}
+        {rotulosDow().map(d => <div key={d} className="cal-month__dow">{d}</div>)}
+        {mesData.cells.map((c, i) => {
+          const evs = c.out ? [] : eventos.filter(ev => ev.iso === c.iso);
+          return (
+            <div key={i} className={`cal-month__cell ${c.out ? 'is-out' : ''} ${c.hoje ? 'is-today' : ''}`}>
+              {!c.out && <span className="cal-month__num">{c.num}</span>}
+              {evs.slice(0, 3).map(ev => (
+                <span key={ev.id} className="cal-month__ev">
+                  <span className="cal-month__dot" style={{ background: `var(--color-cat-${ev.cat})` }}></span>
+                  {ev.titulo}
+                </span>
+              ))}
+              {evs.length > 3 && <span className="cal-month__ev" style={{ color: 'var(--color-text-muted)' }}>+{evs.length - 3} mais</span>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -220,7 +287,7 @@ function TimePickerInline({ ini, fim, onChange }) {
 }
 
 /* ── TaskModal (popup centralizado) ──────────────────────── */
-function TaskModal({ ev, dia, onClose, onUpdate }) {
+function TaskModal({ ev, dia, onClose, onUpdate, onDelete }) {
   const [dateOpen, setDateOpen] = useState(false);
   if (!ev) return null;
 
@@ -321,6 +388,13 @@ function TaskModal({ ev, dia, onClose, onUpdate }) {
               <Icon d="m9 18 6-6-6-6" size={14} />
             </a>
           )}
+
+          {onDelete && (
+            <button className="btn btn--ghost btn--sm" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, color:'var(--color-danger, #d33)' }} onClick={() => onDelete(ev)}>
+              <Icon d="M3 6h18|M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2|M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" size={14} />
+              Remover do calendário
+            </button>
+          )}
         </div>
 
       </div>
@@ -385,14 +459,43 @@ function WeeklyCalendar() {
   const [eventos,  setEventos] = useState([]);
   const [modalEv,  setModalEv] = useState(null);
   const [drawerEv, setDrawerEv] = useState(null);
-  const dias = React.useMemo(() => gerarDiasSemana(), []);
+  const [semana,   setSemana]  = useState(0); // deslocamento em semanas a partir da atual
+  const [mes,      setMes]     = useState(0); // deslocamento em meses a partir do atual
+  const [eventosMes, setEventosMes] = useState([]); // blocos do mês (vista "mês")
+  const [categorias, setCategorias] = useState([]); // categorias reais do usuário (backend)
+  const dias    = React.useMemo(() => gerarDiasSemana(semana), [semana]);
+  const mesData = React.useMemo(() => gerarMes(mes), [mes]);
 
+  // Legenda: só as categorias que o usuário realmente cadastrou.
   useEffect(() => {
     if (!window.Api) return;
-    Api.get(Api.endpoints.events.list)
-      .then(function (data) { setEventos(Array.isArray(data) ? data : []); })
-      .catch(function () { setEventos([]); });
+    Api.get(Api.endpoints.categories.list)
+      .then(function (data) { setCategorias(Array.isArray(data) ? data : []); })
+      .catch(function () { setCategorias([]); });
   }, []);
+
+  // Carrega os blocos da semana visível (vistas dia/semana).
+  useEffect(() => {
+    if (!window.Blocos) return;
+    // Garante o cache de tarefas antes de enriquecer os blocos.
+    const pronto = window.Tarefas ? Tarefas.carregarDaApi().catch(function () {}) : Promise.resolve();
+    pronto
+      .then(function () { return Blocos.carregarSemana(dias); })
+      .then(function (blocos) { setEventos(blocos.map(enriquecerComTarefa)); })
+      .catch(function () { setEventos([]); });
+  }, [dias]);
+
+  // Carrega os blocos do mês visível (só quando a vista "mês" está ativa).
+  useEffect(() => {
+    if (vista !== 'mes' || !window.Blocos) return;
+    const reais = mesData.cells.filter(c => !c.out);
+    const from = reais[0].iso, to = reais[reais.length - 1].iso;
+    const pronto = window.Tarefas ? Tarefas.carregarDaApi().catch(function () {}) : Promise.resolve();
+    pronto
+      .then(function () { return Blocos.carregarIntervalo(from, to); })
+      .then(function (blocos) { setEventosMes(blocos.map(enriquecerComTarefa)); })
+      .catch(function () { setEventosMes([]); });
+  }, [vista, mesData]);
 
   // Ouve mensagens do iframe (drawer) para atualizar hora em tempo real
   useEffect(() => {
@@ -412,17 +515,39 @@ function WeeklyCalendar() {
     return () => window.removeEventListener('message', onMsg);
   }, []);
 
-  const eventosComNum = eventos.map(ev => ({ ...ev, num: dias[ev.d] ? dias[ev.d].num : 0 }));
+  // Navegação adapta-se à vista: "mês" passa meses; demais passam semanas.
+  const emMes = vista === 'mes';
+  const rotuloNav = emMes ? `${MESES_LONGOS[mesData.mes]} ${mesData.ano}` : rotuloSemana(dias);
+  const navNoInicio = emMes ? mes === 0 : semana === 0;
+  function navAnterior() { emMes ? setMes(m => m - 1) : setSemana(s => s - 1); }
+  function navProximo()  { emMes ? setMes(m => m + 1) : setSemana(s => s + 1); }
+  function irHoje() { setSemana(0); setMes(0); }
 
   function mover(id, novoDia, novaIni) {
-    setEventos(evs => evs.map(ev => {
-      if (ev.id !== id) return ev;
-      const dur = ev.fim - ev.ini;
-      return { ...ev, d: novoDia, ini: novaIni, fim: novaIni + dur };
-    }));
+    const atual = eventos.find(e => e.id === id);
+    if (!atual) return;
+    const dur = atual.fim - atual.ini;
+    const novo = { ...atual, d: novoDia, ini: novaIni, fim: novaIni + dur };
+    setEventos(evs => evs.map(ev => ev.id === id ? novo : ev));
+    if (window.Blocos && ehPersistido(id)) Blocos.atualizar(novo, dias).catch(() => {});
   }
 
-  function adicionar(novoEv) { setEventos(evs => [...evs, novoEv]); }
+  function adicionar(novoEv) {
+    setEventos(evs => [...evs, novoEv]);
+    if (!window.Blocos) return;
+    Blocos.criar(novoEv, dias).then(salvo => {
+      // Substitui o id temporário pelo id real devolvido pelo backend.
+      if (salvo && salvo.id && salvo.id !== novoEv.id) {
+        setEventos(evs => evs.map(e => e.id === novoEv.id ? { ...e, id: salvo.id } : e));
+      }
+    }).catch(() => {});
+  }
+
+  function removerEvento(ev) {
+    setEventos(evs => evs.filter(e => e.id !== ev.id));
+    setModalEv(null);
+    if (window.Blocos && ehPersistido(ev.id)) Blocos.remover(ev.id).catch(() => {});
+  }
 
   function openModal(ev) { setDrawerEv(null); setModalEv(ev); }
   function openDrawer(ev) { setModalEv(null); setDrawerEv(ev); }
@@ -443,6 +568,10 @@ function WeeklyCalendar() {
         window.Storage.gravar('todo-tarefas', lista);
       }
     }
+    // Mudança de horário do bloco → persiste no schedule-service.
+    if ((changes.ini !== undefined || changes.fim !== undefined) && window.Blocos && ehPersistido(novo.id)) {
+      Blocos.atualizar(novo, dias).catch(() => {});
+    }
   }
 
   function onEvUpdate(id, changes) {
@@ -459,11 +588,11 @@ function WeeklyCalendar() {
           <div className="cal-top__left">
             <h1 className="cal-top__title">Calendário</h1>
             <div className="cal-top__nav">
-              <button className="btn-icon" aria-label="Anterior"><Icon d="m15 18-6-6 6-6" /></button>
-              <span className="cal-top__range">8 – 14 jun</span>
-              <button className="btn-icon" aria-label="Próximo"><Icon d="m9 18 6-6-6-6" /></button>
+              <button className="btn-icon" aria-label="Anterior" onClick={navAnterior}><Icon d="m15 18-6-6 6-6" /></button>
+              <span className="cal-top__range">{rotuloNav}</span>
+              <button className="btn-icon" aria-label="Próximo" onClick={navProximo}><Icon d="m9 18 6-6-6-6" /></button>
             </div>
-            <button className="btn btn--secondary btn--sm">Hoje</button>
+            <button className="btn btn--secondary btn--sm" onClick={irHoje} disabled={navNoInicio}>Hoje</button>
           </div>
           <div className="cal-top__right">
             <div className="cal-seg">
@@ -478,13 +607,13 @@ function WeeklyCalendar() {
         <div className="cal-scroll">
           {vista === 'semana' && <WeekView dias={dias} eventos={eventos} mover={mover} adicionar={adicionar} onOpen={openModal} onDrawer={openDrawer} />}
           {vista === 'dia'    && <DayView dia={diaAtual} eventos={eventos} mover={mover} onOpen={openModal} onDrawer={openDrawer} />}
-          {vista === 'mes'    && <MonthView eventos={eventosComNum} />}
+          {vista === 'mes'    && <MonthView mesData={mesData} eventos={eventosMes} />}
         </div>
 
         <div className="cal-legend">
-          {Object.entries(CAT_LABEL).map(([c, l]) => (
-            <span key={c} className="cal-legend__item">
-              <span className="cal-legend__dot" style={{ background: `var(--color-cat-${c})` }}></span>{l}
+          {categorias.map(c => (
+            <span key={c.id} className="cal-legend__item">
+              <span className="cal-legend__dot" style={{ background: c.color }}></span>{c.name}
             </span>
           ))}
           <span style={{ flex: 1 }}></span>
@@ -494,7 +623,7 @@ function WeeklyCalendar() {
         </div>
       </div>
 
-      <TaskModal ev={modalEv} dia={modalEv ? dias[modalEv.d] : null} onClose={() => setModalEv(null)} onUpdate={handleUpdate} />
+      <TaskModal ev={modalEv} dia={modalEv ? dias[modalEv.d] : null} onClose={() => setModalEv(null)} onUpdate={handleUpdate} onDelete={removerEvento} />
       {drawerEv && <PainelDrawer key={drawerEv.id} ev={drawerEv} dias={dias} onClose={() => setDrawerEv(null)} />}
     </>
   );

@@ -51,7 +51,7 @@
                 </div>
               </div>
               <div class="todo-right">
-                <span class="badge badge--${t.prioridade}">${Priority.ROTULO[t.prioridade]}</span>
+                <span class="badge badge--${Priority.normalizar(t.prioridade)}">${Priority.ROTULO[Priority.normalizar(t.prioridade)]}</span>
               </div>
             </div>`).join('')}
         </div>

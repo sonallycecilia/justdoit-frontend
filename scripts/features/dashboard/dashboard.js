@@ -96,7 +96,10 @@
     Tarefas.carregarDaApi().then(pintar);
   }
 
-  Api.get(Api.endpoints.analytics.weekly)
-    .then(atualizarStats)
-    .catch(function () {});
+  // TODO(analytics): reativar quando os endpoints de analytics existirem no backend.
+  // Hoje /analytics/weekly não está implementado (retorna 403); a função
+  // atualizarStats() já está pronta para quando a feature entrar.
+  // Api.get(Api.endpoints.analytics.weekly)
+  //   .then(atualizarStats)
+  //   .catch(function () {});
 })();

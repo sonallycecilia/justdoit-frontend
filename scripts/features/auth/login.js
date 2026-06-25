@@ -14,6 +14,17 @@
   const submitBtn = document.getElementById('submitBtn');
   const erroLogin = document.getElementById('erroLogin');
 
+  /* ---------- Mostrar / ocultar senha ---------- */
+  const inputSenha  = document.getElementById('senha');
+  const toggleSenha = document.getElementById('toggleSenha');
+  if (toggleSenha && inputSenha) {
+    toggleSenha.addEventListener('click', function () {
+      const visivel = inputSenha.type === 'text';
+      inputSenha.type = visivel ? 'password' : 'text';
+      toggleSenha.setAttribute('aria-label', visivel ? 'Mostrar senha' : 'Ocultar senha');
+    });
+  }
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     const email = document.getElementById('email').value.trim();
@@ -26,7 +37,7 @@
 
     Api.post(Api.endpoints.auth.login, { email: email, password: senha })
       .then(function (res) {
-        Auth.gravarSessao({ token: res.token });
+        Auth.gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken });
         window.location.href = '../dashboard/dashboard.html';
       })
       .catch(function (err) {

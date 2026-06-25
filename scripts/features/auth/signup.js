@@ -83,7 +83,7 @@
       password:  senha,
       birthDate: nascimentoInput.value,
     }).then(function (res) {
-      Auth.gravarSessao({ token: res.token, name: document.getElementById('nome').value.trim() });
+      Auth.gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken, name: document.getElementById('nome').value.trim() });
       Storage.gravar(Storage.KEYS.TAREFAS, []);
       window.location.href = 'onboarding.html';
     }).catch(function (err) {

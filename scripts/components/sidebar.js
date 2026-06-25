@@ -22,6 +22,7 @@
     chevronLeft: ic('<path d="m15 6-6 6 6 6"/>'),
     search:      ic('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>'),
     gripDots:    ic('<circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/>'),
+    logout:      ic('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>'),
   };
 
   // Compute path prefix based on how deep the current page sits under the project root.
@@ -39,13 +40,62 @@
     { id: 'analytics', label: 'Análise',      href: BASE + 'pages/dashboard/analytics.html' },
   ];
 
-  const CATS = Categorias.TODAS;
-
   // Registry allows drag handlers to access full task objects by id
   const taskRegistry = new Map();
 
   function carregarTarefas() {
     return window.Tarefas ? Tarefas.listar() : [];
+  }
+
+  // Busca as categorias REAIS do usuário no backend (task-service: GET /categories).
+  // Sem categorias cadastradas → lista vazia (não existem mais categorias fixas).
+  function carregarCategorias() {
+    if (!(window.Api && Api.endpoints.categories)) return Promise.resolve([]);
+    return Api.get(Api.endpoints.categories.list).then(function (cats) {
+      if (!Array.isArray(cats)) return [];
+      return cats.map(function (c) {
+        return {
+          id:   c.id,
+          nome: c.name,
+          cor:  c.color || 'var(--color-cat-generico)',
+        };
+      });
+    }).catch(function () { return []; });
+  }
+
+  // Iniciais a partir do nome completo (ex.: "Ana Silva" → "AS")
+  function iniciais(nome) {
+    if (!nome) return '–';
+    var partes = nome.trim().split(/\s+/);
+    var ini = partes[0].charAt(0) + (partes.length > 1 ? partes[partes.length - 1].charAt(0) : '');
+    return ini.toUpperCase();
+  }
+
+  // Preenche nome + avatar com os dados da sessão e, se possível, busca os
+  // dados atualizados do usuário no backend (auth/me).
+  function preencherUsuario(mount) {
+    const nameEl   = mount.querySelector('#userName');
+    const avatarEl = mount.querySelector('#userAvatar');
+    if (!nameEl || !avatarEl) return;
+
+    function aplicar(dados) {
+      const nome = (dados && dados.name) || '';
+      nameEl.textContent   = nome || 'Usuário';
+      avatarEl.textContent = iniciais(nome);
+    }
+
+    // Render imediato com o que já temos em sessão
+    const sessao = window.Auth && Auth.lerSessao();
+    aplicar(sessao);
+
+    // Atualiza com os dados reais do backend (e salva na sessão)
+    if (window.Api && sessao && sessao.accessToken) {
+      Api.get(Api.endpoints.auth.me).then(function (user) {
+        if (!user) return;
+        if (window.Auth) Auth.gravarSessao({ name: user.name, email: user.email });
+        aplicar(user);
+      }).catch(function () { /* mantém o que já está na tela */ });
+    }
   }
 
   function renderCatTarefas(catNome, busca, allTarefas) {
@@ -69,6 +119,34 @@
           <span class="sidebar-task__data">${t.data || ''}</span>
         </a>`;
     }).join('');
+  }
+
+  // HTML de uma categoria (cabeçalho + lista de tarefas pendentes).
+  function catHtml(c, allTarefas) {
+    const pendentes = allTarefas.filter(t => !t.done && t.cat === c.nome);
+    return `
+      <div class="sidebar-cat" data-cat="${c.nome}">
+        <button class="sidebar-cat__header" aria-expanded="false" aria-label="Expandir ${c.nome}">
+          <span class="cat-dot" style="background:${c.cor}"></span>
+          <span class="nav-item__label">${c.nome}</span>
+          <span class="nav-item__count">${pendentes.length}</span>
+          <span class="sidebar-cat__chevron">${ICONS.chevron}</span>
+        </button>
+        <div class="sidebar-cat__tasks hidden" data-cat-tasks="${c.nome}">
+          ${renderCatTarefas(c.nome, '', allTarefas)}
+        </div>
+      </div>`;
+  }
+
+  // Liga o expandir/recolher de uma categoria.
+  function wireCatExpand(catEl) {
+    const header  = catEl.querySelector('.sidebar-cat__header');
+    const tasksEl = catEl.querySelector('.sidebar-cat__tasks');
+    header.addEventListener('click', () => {
+      const expanded = header.getAttribute('aria-expanded') === 'true';
+      header.setAttribute('aria-expanded', String(!expanded));
+      tasksEl.classList.toggle('hidden', expanded);
+    });
   }
 
   function wireTaskDrag(container) {
@@ -96,24 +174,7 @@
         ${n.count != null ? `<span class="nav-item__count">${n.count}</span>` : ''}
       </a>`).join('');
 
-    const allTarefas = carregarTarefas();
     taskRegistry.clear();
-
-    const catHtml = CATS.map(c => {
-      const pendentes = allTarefas.filter(t => !t.done && t.cat === c.nome);
-      return `
-        <div class="sidebar-cat" data-cat="${c.nome}">
-          <button class="sidebar-cat__header" aria-expanded="false" aria-label="Expandir ${c.nome}">
-            <span class="cat-dot" style="background:${c.cor}"></span>
-            <span class="nav-item__label">${c.nome}</span>
-            <span class="nav-item__count">${pendentes.length}</span>
-            <span class="sidebar-cat__chevron">${ICONS.chevron}</span>
-          </button>
-          <div class="sidebar-cat__tasks hidden" data-cat-tasks="${c.nome}">
-            ${renderCatTarefas(c.nome, '', allTarefas)}
-          </div>
-        </div>`;
-    }).join('');
 
     mount.className = 'sidebar';
     mount.innerHTML = `
@@ -133,14 +194,17 @@
             <span class="sidebar__search-ic">${ICONS.search}</span>
             <input class="sidebar__search-input" id="taskSearch" type="text" placeholder="Buscar tarefas…" aria-label="Buscar tarefas" autocomplete="off">
           </div>
-          <nav class="sidebar__nav sidebar__nav--cats" id="catNav">${catHtml}</nav>
+          <nav class="sidebar__nav sidebar__nav--cats" id="catNav"><div class="sidebar-cat__empty">Carregando categorias…</div></nav>
         </div>
       </div>
       <div class="sidebar__foot">
-        <span class="sidebar__avatar">SV</span>
+        <span class="sidebar__avatar" id="userAvatar">–</span>
         <div class="sidebar__user">
-          <div class="sidebar__name">Sonally Vitorino</div>
-          <div class="sidebar__plan">Plano Foco</div>
+          <div class="sidebar__name" id="userName">Carregando…</div>
+          <button class="sidebar__logout" id="logoutBtn" type="button" aria-label="Sair">
+            <span class="sidebar__logout-ic">${ICONS.logout}</span>
+            <span class="sidebar__logout-label">Sair</span>
+          </button>
         </div>
         <div class="sidebar__actions">
           <a class="btn-icon" href="${BASE}pages/auth/settings.html" aria-label="Configurações">${ICONS.settings}</a>
@@ -149,15 +213,18 @@
       </div>
       <div class="sidebar__resizer" id="sidebarResizer"></div>`;
 
-    // ── Category expand / collapse ──────────────────────────────
-    mount.querySelectorAll('.sidebar-cat').forEach(catEl => {
-      const header  = catEl.querySelector('.sidebar-cat__header');
-      const tasksEl = catEl.querySelector('.sidebar-cat__tasks');
-      header.addEventListener('click', () => {
-        const expanded = header.getAttribute('aria-expanded') === 'true';
-        header.setAttribute('aria-expanded', String(!expanded));
-        tasksEl.classList.toggle('hidden', expanded);
-      });
+    // ── Categorias (carregadas do backend) ──────────────────────
+    const catNav = mount.querySelector('#catNav');
+    carregarCategorias().then(cats => {
+      const allTarefas = carregarTarefas();
+      taskRegistry.clear();
+      if (!cats.length) {
+        catNav.innerHTML = '<div class="sidebar-cat__empty">Nenhuma categoria ainda</div>';
+        return;
+      }
+      catNav.innerHTML = cats.map(c => catHtml(c, allTarefas)).join('');
+      catNav.querySelectorAll('.sidebar-cat').forEach(wireCatExpand);
+      catNav.querySelectorAll('.sidebar-cat__tasks').forEach(wireTaskDrag);
     });
 
     // ── Task search ─────────────────────────────────────────────
@@ -175,9 +242,6 @@
         }
       });
     });
-
-    // Wire drag for initial task render
-    mount.querySelectorAll('.sidebar-cat__tasks').forEach(wireTaskDrag);
 
     // ── Hide / show full categories section ─────────────────────
     const catSection = mount.querySelector('#catSection');
@@ -197,6 +261,16 @@
       else raiz.removeAttribute('data-theme');
       if (window.Storage) Storage.gravarTema(novo);
     });
+
+    // ── Logout ──────────────────────────────────────────────────
+    const btnSair = mount.querySelector('#logoutBtn');
+    btnSair.addEventListener('click', () => {
+      if (window.Auth && Auth.logout) Auth.logout(BASE + 'pages/auth/login.html');
+      else window.location.href = BASE + 'pages/auth/login.html';
+    });
+
+    // ── Dados do usuário (nome + avatar) ────────────────────────
+    preencherUsuario(mount);
 
     // ── Restore saved sidebar width ─────────────────────────────
     const larguraSalva = localStorage.getItem('jdi-sidebar-width');

@@ -23,19 +23,25 @@ const Priority = (function () {
 
   const ORDEM = NIVEIS.reduce((acc, n, i) => (acc[n] = i, acc), {});
 
+  // Normaliza prioridade desconhecida/ausente para 'normal', evitando que uma
+  // tarefa seja contada mas some da lista (cache antigo, meta perdida, etc.).
+  function normalizar(p) {
+    return ORDEM.hasOwnProperty(p) ? p : 'normal';
+  }
+
   // Compara duas tarefas: concluídas ao fim, depois por prioridade
   function comparar(a, b) {
-    return (a.done - b.done) || (ORDEM[a.prioridade] - ORDEM[b.prioridade]);
+    return (a.done - b.done) || (ORDEM[normalizar(a.prioridade)] - ORDEM[normalizar(b.prioridade)]);
   }
 
   // Agrupa tarefas por nível de prioridade (mantendo a ordem canônica)
   function agrupar(tarefas) {
     return NIVEIS
-      .map(nivel => ({ nivel, rotulo: ROTULO[nivel], cor: COR[nivel], itens: tarefas.filter(t => t.prioridade === nivel) }))
+      .map(nivel => ({ nivel, rotulo: ROTULO[nivel], cor: COR[nivel], itens: tarefas.filter(t => normalizar(t.prioridade) === nivel) }))
       .filter(g => g.itens.length);
   }
 
-  return { NIVEIS, ROTULO, COR, ORDEM, comparar, agrupar };
+  return { NIVEIS, ROTULO, COR, ORDEM, normalizar, comparar, agrupar };
 })();
 
 window.Priority = Priority;
