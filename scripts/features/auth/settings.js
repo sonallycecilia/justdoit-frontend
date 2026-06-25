@@ -331,6 +331,12 @@
 
   function temApi() { return !!(window.Api && Api.endpoints && Api.endpoints.categories); }
 
+  // Avisa a sidebar (mesma página) que a lista de categorias mudou, para que ela
+  // rebusque no backend e repinte — sem precisar recarregar a página.
+  function notificarCategorias() {
+    if (window.dispatchEvent) window.dispatchEvent(new CustomEvent('categorias:atualizadas'));
+  }
+
   // Conta tarefas por nome de categoria (mesma associação por nome da sidebar).
   function contarTarefas() {
     const tarefas = window.Tarefas ? Tarefas.listar() : [];
@@ -348,7 +354,7 @@
       ? `<button class="cat-row__del" aria-label="Excluir categoria">${DEL_ICON}</button>`
       : `<span class="cat-row__tag">padrão</span>`;
     return `
-      <div class="cat-row"${opts.id ? ` data-id="${opts.id}"` : ''}>
+      <div class="cat-row"${opts.id ? ` data-id="${opts.id}"` : ''} data-count="${count}">
         <span class="cat-row__dot" style="background:${cor}"></span>
         <span class="cat-row__name">${nome}</span>
         <span class="cat-row__count">${count} ${count === 1 ? 'tarefa' : 'tarefas'}</span>
@@ -365,7 +371,12 @@
       .join('');
     lista.innerHTML = html;
     lista.querySelectorAll('.cat-row__del').forEach(btn => {
-      btn.addEventListener('click', () => excluir(btn.closest('.cat-row').dataset.id));
+      const row = btn.closest('.cat-row');
+      btn.addEventListener('click', () => excluir(
+        row.dataset.id,
+        row.querySelector('.cat-row__name').textContent,
+        Number(row.dataset.count) || 0
+      ));
     });
   }
 
@@ -388,17 +399,69 @@
     addBtn.disabled = true;
     aviso('');
     Api.post(Api.endpoints.categories.create, { name: nome, color: corSel })
-      .then(() => { input.value = ''; return carregar(); })
+      .then(() => { input.value = ''; notificarCategorias(); return carregar(); })
       .catch(err => aviso((err && (err.message || err.error)) || 'Não foi possível criar a categoria.', true))
       .then(() => { addBtn.disabled = false; });
   }
 
-  function excluir(id) {
+  // Confirma antes de excluir, avisando quantas tarefas serão movidas para
+  // "Genérico". Só então chama o backend (DELETE /categories/{id}), que zera o
+  // category_id dessas tarefas; o cache local é espelhado por moverParaGenerico.
+  function excluir(id, nome, count) {
     if (!id || !temApi()) return;
-    aviso('');
-    Api.remove(Api.endpoints.categories.remove(id))
-      .then(() => carregar())
-      .catch(err => aviso((err && (err.message || err.error)) || 'Não foi possível excluir a categoria.', true));
+    confirmarExclusao(nome, count, function () {
+      aviso('');
+      Api.remove(Api.endpoints.categories.remove(id))
+        .then(() => {
+          if (window.Tarefas && Tarefas.moverParaGenerico) Tarefas.moverParaGenerico(nome);
+          notificarCategorias();
+          return carregar();
+        })
+        .catch(err => aviso((err && (err.message || err.error)) || 'Não foi possível excluir a categoria.', true));
+    });
+  }
+
+  // Modal de confirmação (reaproveita os estilos .cat-modal da sidebar).
+  let onConfirmar = null;
+  function confirmarExclusao(nome, count, onSim) {
+    let modal = document.getElementById('catDelModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'cat-modal';
+      modal.id = 'catDelModal';
+      modal.hidden = true;
+      modal.innerHTML = `
+        <div class="cat-modal__backdrop" data-close></div>
+        <div class="cat-modal__card" role="dialog" aria-modal="true" aria-label="Excluir categoria">
+          <div class="cat-modal__head">
+            <h3 class="cat-modal__title">Excluir categoria</h3>
+          </div>
+          <p class="cat-del__text" id="catDelText"></p>
+          <div class="cat-modal__actions">
+            <button class="btn btn--secondary btn--sm" type="button" data-close>Cancelar</button>
+            <button class="btn btn--danger btn--sm" type="button" id="catDelConfirm">Excluir</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+      const fechar = () => { modal.hidden = true; onConfirmar = null; };
+      modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', fechar));
+      modal.querySelector('#catDelConfirm').addEventListener('click', () => {
+        const cb = onConfirmar; fechar(); if (cb) cb();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.hidden) fechar();
+      });
+    }
+
+    const n = Number(count) || 0;
+    modal.querySelector('#catDelText').innerHTML = n > 0
+      ? `A categoria <strong>${nome}</strong> possui <strong>${n} ${n === 1 ? 'tarefa' : 'tarefas'}</strong>. ` +
+        `Ao excluir, ${n === 1 ? 'ela será movida' : 'elas serão movidas'} para <strong>Genérico</strong>. Deseja excluir mesmo assim?`
+      : `Deseja excluir a categoria <strong>${nome}</strong>?`;
+
+    onConfirmar = onSim;
+    modal.hidden = false;
+    modal.querySelector('#catDelConfirm').focus();
   }
 
   document.getElementById('catColors').querySelectorAll('.cat-add__swatch').forEach(sw => {

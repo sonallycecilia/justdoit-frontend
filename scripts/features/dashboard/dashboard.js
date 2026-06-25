@@ -93,7 +93,8 @@
   }
 
   if (lista) {
-    Tarefas.carregarDaApi().then(pintar);
+    // Categorias do usuário junto das tarefas → pontos com as cores reais.
+    Promise.all([Tarefas.carregarDaApi(), Categorias.carregar()]).then(pintar);
   }
 
   // TODO(analytics): reativar quando os endpoints de analytics existirem no backend.

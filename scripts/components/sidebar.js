@@ -203,11 +203,15 @@
     if (!abrir) return;
 
     const CORES = [
-      'var(--color-cat-estudos)',
-      'var(--color-cat-casa)',
-      'var(--color-priority-urgent)',
-      'var(--color-priority-normal)',
-      'var(--brand-sage)',
+      'var(--color-cat-teal)',
+      'var(--color-cat-rust)',
+      'var(--color-cat-green)',
+      'var(--color-cat-sage)',
+      'var(--color-cat-purple)',
+      'var(--color-cat-pink)',
+      'var(--color-cat-blue)',
+      'var(--color-cat-terracotta)',
+      'var(--color-cat-plum)',
     ];
 
     let modal = document.getElementById('catModal');
@@ -367,6 +371,32 @@
     Promise.all([carregarCategorias(), tarefasPromise]).then(([cats, allTarefas]) => {
       atualizarNavCounts(mount, allTarefas);
       pintarCategorias(cats);
+    });
+
+    // Outra parte da UI mudou a lista (Tarefas.toggleDone) → atualiza badges e
+    // tarefas pendentes nas categorias JÁ renderizadas, lendo o cache local.
+    // Não repintamos a lista de categorias (isso apagaria "Genérico" enquanto
+    // elas ainda não foram buscadas); só atualizamos o conteúdo de cada uma.
+    window.addEventListener('tarefas:atualizadas', () => {
+      const allTarefas = carregarTarefas();
+      atualizarNavCounts(mount, allTarefas);
+      const busca = searchInput ? searchInput.value.trim() : '';
+      mount.querySelectorAll('.sidebar-cat').forEach(catEl => {
+        const catNome = catEl.getAttribute('data-cat');
+        const countEl = catEl.querySelector('.sidebar-cat__header .nav-item__count');
+        const tasksEl = catEl.querySelector('.sidebar-cat__tasks');
+        if (countEl) countEl.textContent = allTarefas.filter(t => !t.done && t.cat === catNome).length;
+        tasksEl.innerHTML = renderCatTarefas(catNome, busca, allTarefas);
+        wireTaskDrag(tasksEl);
+      });
+    });
+
+    // A lista de categorias mudou em outra parte da UI (ex.: settings.html criou
+    // ou excluiu uma categoria). Aqui SIM repintamos a lista inteira, buscando de
+    // novo no backend — ao contrário de 'tarefas:atualizadas', que só atualiza
+    // contadores/tarefas das categorias já renderizadas.
+    window.addEventListener('categorias:atualizadas', () => {
+      carregarCategorias().then(pintarCategorias);
     });
 
     // ── Modal "Nova categoria" ──────────────────────────────────

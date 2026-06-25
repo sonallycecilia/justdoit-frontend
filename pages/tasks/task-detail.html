@@ -64,7 +64,7 @@
             <span class="chip__dot" id="catDot" style="background:var(--color-cat-estudos)"></span>
             <span id="catLabel">Estudos</span>
           </button>
-          <span class="badge badge--urgent" id="prioBadge">Urgente</span>
+          <span class="badge badge--normal" id="prioBadge">Normal</span>
           <div class="chips-progress hidden" id="chipsProgress">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;flex:none"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
             <div class="chips-progress__bar"><div class="chips-progress__fill" id="chipsSubFill" style="width:0%"></div></div>
@@ -134,7 +134,7 @@
         <div class="modules">
           <div class="modules__title">Módulos</div>
           <div class="modules__grid" id="moduleGrid">
-            <button class="module-toggle is-on" data-mod="foco">
+            <button class="module-toggle" data-mod="foco">
               <span class="module-toggle__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
               <span class="module-toggle__name">Foco</span>
             </button>
@@ -142,11 +142,11 @@
               <span class="module-toggle__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg></span>
               <span class="module-toggle__name">Ciclo</span>
             </button>
-            <button class="module-toggle is-on" data-mod="prioridade">
+            <button class="module-toggle" data-mod="prioridade">
               <span class="module-toggle__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg></span>
               <span class="module-toggle__name">Prioridade</span>
             </button>
-            <button class="module-toggle is-on" data-mod="tempo">
+            <button class="module-toggle" data-mod="tempo">
               <span class="module-toggle__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
               <span class="module-toggle__name">Tempo</span>
             </button>
@@ -154,7 +154,7 @@
               <span class="module-toggle__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg></span>
               <span class="module-toggle__name">Notas</span>
             </button>
-            <button class="module-toggle is-on" data-mod="subtarefas">
+            <button class="module-toggle" data-mod="subtarefas">
               <span class="module-toggle__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
               <span class="module-toggle__name">Subtarefas</span>
             </button>
@@ -252,13 +252,13 @@
   </div>
 
   <script src="../../scripts/core/storage.js?v=2"></script>
-  <script src="../../scripts/core/api.js?v=2"></script>
+  <script src="../../scripts/core/api.js?v=5"></script>
   <script src="../../scripts/features/auth/auth.js?v=2"></script>
   <script src="../../scripts/core/auth-guard.js?v=2"></script>
   <script src="../../scripts/core/utils.js?v=2"></script>
-  <script src="../../scripts/modules/categorias.js?v=3"></script>
-  <script src="../../scripts/modules/tarefas.js?v=2"></script>
-  <script src="../../scripts/components/sidebar.js?v=6"></script>
+  <script src="../../scripts/modules/categorias.js?v=4"></script>
+  <script src="../../scripts/modules/tarefas.js?v=4"></script>
+  <script src="../../scripts/components/sidebar.js?v=7"></script>
   <script src="../../scripts/modules/priority.js?v=2"></script>
   <script src="../../scripts/modules/timer.js?v=2"></script>
   <script src="../../scripts/modules/focus.js?v=2"></script>
@@ -266,6 +266,6 @@
   <script src="../../scripts/components/date-picker.js?v=2"></script>
   <script src="../../scripts/components/time-picker.js?v=2"></script>
   <script src="../../scripts/features/tasks/tasks.js?v=2"></script>
-  <script src="../../scripts/features/tasks/task-detail.js?v=2"></script>
+  <script src="../../scripts/features/tasks/task-detail.js?v=14"></script>
 </body>
 </html>

@@ -47,9 +47,13 @@
 .cat-msg { padding: 0 var(--space-lg) var(--space-md); font-size: var(--font-size-sm); color: var(--color-text-muted); }
 .cat-msg--error { color: var(--color-danger); }
 
+/* Texto do modal de confirmação de exclusão */
+.cat-del__text { font-size: var(--font-size-sm); line-height: 1.5; color: var(--color-text-muted); }
+.cat-del__text strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+
 /* Adicionar categoria */
 .cat-add { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-md) var(--space-lg); }
-.cat-add__colors { display: flex; gap: 6px; }
+.cat-add__colors { display: flex; flex-wrap: wrap; gap: 6px; }
 .cat-add__swatch { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform var(--duration-fast); }
 .cat-add__swatch:hover { transform: scale(1.12); }
 .cat-add__swatch.is-sel { border-color: var(--color-text); }

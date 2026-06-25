@@ -27,6 +27,15 @@ function isoData(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Cor real da categoria de um evento. Procura nas categorias do usuário pelo
+// nome (catNome); cai para a variável de token do slug builtin quando a lista
+// ainda não carregou ou a categoria não é encontrada.
+function corCategoria(categorias, ev) {
+  const nome = ev.catNome || CAT_LABEL[ev.cat] || 'Genérico';
+  const c = (categorias || []).find(x => x.nome === nome);
+  return c ? c.cor : `var(--color-cat-${ev.cat})`;
+}
+
 const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
 function gerarDiasSemana(offsetSemanas = 0) {
@@ -82,9 +91,36 @@ function fmtHora(x) {
 }
 
 // Blocos recém-arrastados ganham um id temporário ('ext-…') antes de o POST
-// retornar o id real do backend. Só persistimos update/delete de blocos já salvos.
+// retornar o id real do backend. Eventos derivados de uma tarefa agendada
+// (id 'task-…') são virtuais e não existem no schedule-service. Só persistimos
+// update/delete de blocos já salvos (id real do backend).
 function ehPersistido(id) {
-  return typeof id === 'string' && id.indexOf('ext-') !== 0;
+  return typeof id === 'string' && id.indexOf('ext-') !== 0 && id.indexOf('task-') !== 0;
+}
+
+// Tarefas com data viram eventos "virtuais" no calendário, para que uma tarefa
+// agendada apareça no dia mesmo sem ter um bloco de tempo criado. Tarefas sem
+// hora caem no início da grade (START); no mês a hora é irrelevante (lista por
+// data). Deduplica contra os blocos reais (por taskId) para não desenhar duas
+// vezes. `posicionar` mapeia a tarefa → posição no modelo da UI (semana usa
+// índice de dia `d`; mês usa data ISO). Retorna null para descartar a tarefa.
+function tarefasComoEventos(blocosExistentes, posicionar) {
+  if (!window.Tarefas) return [];
+  const comBloco = new Set((blocosExistentes || []).map(b => b.taskId).filter(Boolean));
+  return Tarefas.listar().reduce(function (acc, t) {
+    if (!t.dataIso || comBloco.has(t.id)) return acc;
+    const pos = posicionar(t);
+    if (!pos) return acc;
+    const [hh, mm] = t.hora ? String(t.hora).split(':').map(Number) : [START, 0];
+    const ini = (hh || 0) + (mm || 0) / 60;
+    acc.push({
+      id: 'task-' + t.id, taskId: t.id, ini, fim: ini + 1, semHora: !t.hora,
+      titulo: t.titulo, cat: CAT_MAP[t.cat] || 'generico', catNome: t.cat,
+      prio: t.prioridade || 'normal', done: t.done, mod: null,
+      ...pos,
+    });
+    return acc;
+  }, []);
 }
 
 // Campos visuais do bloco (título/categoria/prioridade/concluído) não ficam no
@@ -93,11 +129,12 @@ function enriquecerComTarefa(b) {
   const t = (window.Tarefas && b.taskId) ? Tarefas.buscar(b.taskId) : null;
   return {
     ...b,
-    titulo: t ? t.titulo : 'Bloco',
-    cat:    t ? (CAT_MAP[t.cat] || 'generico') : 'generico',
-    prio:   t ? t.prioridade : 'normal',
-    done:   t ? t.done : false,
-    mod:    null,
+    titulo:  t ? t.titulo : 'Bloco',
+    cat:     t ? (CAT_MAP[t.cat] || 'generico') : 'generico',
+    catNome: t ? t.cat : 'Genérico',
+    prio:    t ? t.prioridade : 'normal',
+    done:    t ? t.done : false,
+    mod:     null,
   };
 }
 
@@ -110,7 +147,7 @@ function Icon({ d, size = 16 }) {
 }
 
 /* ── WeekView ─────────────────────────────────────────────── */
-function WeekView({ dias, eventos, mover, adicionar, onOpen, onDrawer }) {
+function WeekView({ dias, eventos, categorias, mover, adicionar, onOpen, onDrawer, onDelete }) {
   const [arrastando, setArrastando] = useState(null);
   const [over, setOver]             = useState(null);
   const horas = [];
@@ -161,10 +198,11 @@ function WeekView({ dias, eventos, mover, adicionar, onOpen, onDrawer }) {
           >
             {eventos.filter(ev => ev.d === di).map(ev => (
               <TimeBlock key={ev.id} ev={ev} rowH={ROW_H} startHour={START}
+                catCor={corCategoria(categorias, ev)}
                 dragging={arrastando && arrastando.id === ev.id}
                 onDragStart={setArrastando}
                 onDragEnd={() => { setArrastando(null); setOver(null); }}
-                onOpen={onOpen} onDrawer={onDrawer} />
+                onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
             ))}
             {d.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - START) * ROW_H}px` }}></div>}
           </div>
@@ -175,7 +213,7 @@ function WeekView({ dias, eventos, mover, adicionar, onOpen, onDrawer }) {
 }
 
 /* ── DayView ──────────────────────────────────────────────── */
-function DayView({ dia, eventos, mover, onOpen, onDrawer }) {
+function DayView({ dia, eventos, categorias, mover, onOpen, onDrawer, onDelete }) {
   const horas = [];
   for (let h = START; h <= END; h++) horas.push(h);
   const doDia = eventos.filter(ev => ev.d === dia.idx);
@@ -194,8 +232,9 @@ function DayView({ dia, eventos, mover, onOpen, onDrawer }) {
         </div>
         <div className={`cal-col ${dia.hoje ? 'is-today' : ''}`} style={{ height: `${(END - START) * ROW_H}px` }}>
           {doDia.map(ev => <TimeBlock key={ev.id} ev={ev} rowH={ROW_H} startHour={START}
+            catCor={corCategoria(categorias, ev)}
             dragging={false} onDragStart={() => {}} onDragEnd={() => {}}
-            onOpen={onOpen} onDrawer={onDrawer} />)}
+            onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />)}
           {dia.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - START) * ROW_H}px` }}></div>}
         </div>
       </div>
@@ -204,7 +243,7 @@ function DayView({ dia, eventos, mover, onOpen, onDrawer }) {
 }
 
 /* ── MonthView ────────────────────────────────────────────── */
-function MonthView({ mesData, eventos }) {
+function MonthView({ mesData, eventos, categorias }) {
   return (
     <div className="cal-month">
       <div className="cal-month__grid">
@@ -216,7 +255,7 @@ function MonthView({ mesData, eventos }) {
               {!c.out && <span className="cal-month__num">{c.num}</span>}
               {evs.slice(0, 3).map(ev => (
                 <span key={ev.id} className="cal-month__ev">
-                  <span className="cal-month__dot" style={{ background: `var(--color-cat-${ev.cat})` }}></span>
+                  <span className="cal-month__dot" style={{ background: corCategoria(categorias, ev) }}></span>
                   {ev.titulo}
                 </span>
               ))}
@@ -287,9 +326,14 @@ function TimePickerInline({ ini, fim, onChange }) {
 }
 
 /* ── TaskModal (popup centralizado) ──────────────────────── */
-function TaskModal({ ev, dia, onClose, onUpdate, onDelete }) {
+function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
   const [dateOpen, setDateOpen] = useState(false);
   if (!ev) return null;
+
+  // Categoria atual do evento, por nome (cai para o rótulo do slug em blocos
+  // sem tarefa vinculada). Lista de opções vem das categorias reais do usuário.
+  const cats = (categorias && categorias.length) ? categorias : [{ id: 'generico', nome: 'Genérico', cor: 'var(--color-cat-generico)' }];
+  const catAtual = ev.catNome || CAT_LABEL[ev.cat] || 'Genérico';
 
   const TODAY_NUM = 11;
   const WEEK_NUMS = [8,9,10,11,12,13,14];
@@ -302,7 +346,7 @@ function TaskModal({ ev, dia, onClose, onUpdate, onDelete }) {
 
         {/* Cabeçalho */}
         <div className="task-modal__head">
-          <span className="task-modal__head-cat" style={{ background: `var(--color-cat-${ev.cat})` }}></span>
+          <span className="task-modal__head-cat" style={{ background: corCategoria(categorias, ev) }}></span>
           <span className={`task-modal__title${ev.done ? ' is-done' : ''}`}>{ev.titulo}</span>
           <button className="btn-icon task-modal__close" onClick={onClose} aria-label="Fechar">
             <Icon d="M18 6 6 18|M6 6l12 12" />
@@ -373,10 +417,11 @@ function TaskModal({ ev, dia, onClose, onUpdate, onDelete }) {
           <div className="task-modal__ctrl-group">
             <div className="task-modal__ctrl-label">Categoria</div>
             <div className="task-modal__cat-row">
-              {Object.entries(CAT_LABEL).map(([key, label]) => (
-                <button key={key} className={`task-modal__cat-opt${ev.cat === key ? ' is-on' : ''}`} onClick={() => onUpdate({ cat: key })}>
-                  <span className="task-modal__cat-dot" style={{ background: `var(--color-cat-${key})` }}></span>
-                  {label}
+              {cats.map(c => (
+                <button key={c.id} className={`task-modal__cat-opt${catAtual === c.nome ? ' is-on' : ''}`}
+                  onClick={() => onUpdate({ catNome: c.nome, categoriaId: c.id, cat: CAT_MAP[c.nome] || ev.cat })}>
+                  <span className="task-modal__cat-dot" style={{ background: c.cor }}></span>
+                  {c.nome}
                 </button>
               ))}
             </div>
@@ -392,7 +437,7 @@ function TaskModal({ ev, dia, onClose, onUpdate, onDelete }) {
           {onDelete && (
             <button className="btn btn--ghost btn--sm" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, color:'var(--color-danger, #d33)' }} onClick={() => onDelete(ev)}>
               <Icon d="M3 6h18|M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2|M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" size={14} />
-              Remover do calendário
+              Excluir tarefa
             </button>
           )}
         </div>
@@ -422,10 +467,17 @@ function PainelDrawer({ ev, dias, onClose }) {
     return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
   }, []);
 
-  // Constrói URL do iframe
+  // Constrói URL do iframe. Tarefa vinculada → página de detalhe completa
+  // (subtarefas, notas, foco, ciclo…), embedada. Passa a data e a hora do
+  // bloco (posição no calendário) para o detalhe refletir o dia/horário da
+  // grade. Bloco sem tarefa → resumo simples do evento.
   let src;
   if (ev.taskId) {
-    src = `task-detail.html?id=${ev.taskId}&embed=1`;
+    const p = new URLSearchParams({ id: ev.taskId, embed: '1' });
+    if (ev.ini != null) p.set('hora', fmtHora(ev.ini));
+    const diaEv = dias[ev.d];
+    if (diaEv) p.set('data', diaEv.iso);
+    src = `task-detail.html?${p.toString()}`;
   } else {
     const dia = dias[ev.d];
     const p = new URLSearchParams({
@@ -453,12 +505,35 @@ function PainelDrawer({ ev, dias, onClose }) {
   );
 }
 
+/* ── ConfirmDialog (confirmação estilizada) ───────────────── */
+const TRASH_PATH = 'M3 6h18|M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2|M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6';
+function ConfirmDialog({ titulo, confirmar, onConfirm, onCancel, children }) {
+  return (
+    <div className="task-modal__backdrop" onClick={onCancel}>
+      <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+        <div className="confirm-dialog__title">
+          <span className="confirm-dialog__ic"><Icon d={TRASH_PATH} size={17} /></span>
+          {titulo}
+        </div>
+        <div className="confirm-dialog__msg">{children}</div>
+        <div className="confirm-dialog__actions">
+          <button className="btn btn--ghost btn--sm" onClick={onCancel}>Cancelar</button>
+          <button className="confirm-dialog__danger" onClick={onConfirm}>
+            <Icon d={TRASH_PATH} size={14} />{confirmar || 'Excluir'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── WeeklyCalendar (raiz) ────────────────────────────────── */
 function WeeklyCalendar() {
   const [vista,    setVista]   = useState('semana');
   const [eventos,  setEventos] = useState([]);
   const [modalEv,  setModalEv] = useState(null);
   const [drawerEv, setDrawerEv] = useState(null);
+  const [confirmarEv, setConfirmarEv] = useState(null); // evento aguardando confirmação de exclusão
   const [semana,   setSemana]  = useState(0); // deslocamento em semanas a partir da atual
   const [mes,      setMes]     = useState(0); // deslocamento em meses a partir do atual
   const [eventosMes, setEventosMes] = useState([]); // blocos do mês (vista "mês")
@@ -466,11 +541,12 @@ function WeeklyCalendar() {
   const dias    = React.useMemo(() => gerarDiasSemana(semana), [semana]);
   const mesData = React.useMemo(() => gerarMes(mes), [mes]);
 
-  // Legenda: só as categorias que o usuário realmente cadastrou.
+  // Categorias reais do usuário (Genérico + cadastradas no task-service).
+  // Usadas tanto na legenda quanto no seletor de categoria do modal.
   useEffect(() => {
-    if (!window.Api) return;
-    Api.get(Api.endpoints.categories.list)
-      .then(function (data) { setCategorias(Array.isArray(data) ? data : []); })
+    if (!window.Categorias) return;
+    Categorias.carregar()
+      .then(function (cats) { setCategorias(cats.slice()); })
       .catch(function () { setCategorias([]); });
   }, []);
 
@@ -481,7 +557,14 @@ function WeeklyCalendar() {
     const pronto = window.Tarefas ? Tarefas.carregarDaApi().catch(function () {}) : Promise.resolve();
     pronto
       .then(function () { return Blocos.carregarSemana(dias); })
-      .then(function (blocos) { setEventos(blocos.map(enriquecerComTarefa)); })
+      .then(function (blocos) {
+        const reais = blocos.map(enriquecerComTarefa);
+        const virtuais = tarefasComoEventos(reais, function (t) {
+          const d = dias.findIndex(x => x.iso === t.dataIso);
+          return d >= 0 ? { d } : null;
+        });
+        setEventos(reais.concat(virtuais));
+      })
       .catch(function () { setEventos([]); });
   }, [dias]);
 
@@ -493,7 +576,13 @@ function WeeklyCalendar() {
     const pronto = window.Tarefas ? Tarefas.carregarDaApi().catch(function () {}) : Promise.resolve();
     pronto
       .then(function () { return Blocos.carregarIntervalo(from, to); })
-      .then(function (blocos) { setEventosMes(blocos.map(enriquecerComTarefa)); })
+      .then(function (blocos) {
+        const reais = blocos.map(enriquecerComTarefa);
+        const virtuais = tarefasComoEventos(reais, function (t) {
+          return (t.dataIso >= from && t.dataIso <= to) ? { iso: t.dataIso } : null;
+        });
+        setEventosMes(reais.concat(virtuais));
+      })
       .catch(function () { setEventosMes([]); });
   }, [vista, mesData]);
 
@@ -523,6 +612,29 @@ function WeeklyCalendar() {
   function navProximo()  { emMes ? setMes(m => m + 1) : setSemana(s => s + 1); }
   function irHoje() { setSemana(0); setMes(0); }
 
+  // Mantém o dueDate/dueTime da tarefa em sincronia com a posição do bloco no
+  // calendário (PUT /tasks no task-service). Chamado ao arrastar do sidebar
+  // (cria bloco) e ao mover um bloco já existente.
+  function sincronizarAgendaTarefa(taskId, d, ini) {
+    if (!taskId || !window.Tarefas) return;
+    const tarefa = Tarefas.buscar(taskId);
+    const dia = dias[d];
+    if (!tarefa || !dia) return;
+    const hora = fmtHora(ini);
+    // Atualiza o cache local na hora (otimista): abrir o detalhe logo após
+    // arrastar já mostra a nova data/hora, sem esperar o PUT responder.
+    const lista = Tarefas.listar();
+    const i = lista.findIndex(x => x.id === taskId);
+    if (i >= 0) {
+      const dataObj = new Date(dia.iso + 'T00:00:00');
+      lista[i] = { ...lista[i], dataIso: dia.iso, hora,
+        data:   window.Utils ? Utils.dataRelativa(dataObj) : lista[i].data,
+        quando: window.Utils ? Utils.calcQuando(dataObj)  : lista[i].quando };
+      Tarefas.salvar(lista);
+    }
+    Tarefas.atualizar(taskId, { ...tarefa, dataIso: dia.iso, hora }).catch(() => {});
+  }
+
   function mover(id, novoDia, novaIni) {
     const atual = eventos.find(e => e.id === id);
     if (!atual) return;
@@ -530,16 +642,47 @@ function WeeklyCalendar() {
     const novo = { ...atual, d: novoDia, ini: novaIni, fim: novaIni + dur };
     setEventos(evs => evs.map(ev => ev.id === id ? novo : ev));
     if (window.Blocos && ehPersistido(id)) Blocos.atualizar(novo, dias).catch(() => {});
+    sincronizarAgendaTarefa(atual.taskId, novoDia, novaIni);
+  }
+
+  // Cria o bloco no schedule-service para um evento já vinculado a uma tarefa.
+  function criarBlocoDoEvento(ev) {
+    if (!window.Blocos) return;
+    Blocos.criar(ev, dias).then(salvo => {
+      // Substitui o id temporário ('ext-…') pelo id real devolvido pelo backend.
+      if (salvo && salvo.id && salvo.id !== ev.id) {
+        setEventos(evs => evs.map(e => e.id === ev.id ? { ...ev, id: salvo.id } : e));
+      }
+    }).catch(() => {});
   }
 
   function adicionar(novoEv) {
-    setEventos(evs => [...evs, novoEv]);
-    if (!window.Blocos) return;
-    Blocos.criar(novoEv, dias).then(salvo => {
-      // Substitui o id temporário pelo id real devolvido pelo backend.
-      if (salvo && salvo.id && salvo.id !== novoEv.id) {
-        setEventos(evs => evs.map(e => e.id === novoEv.id ? { ...e, id: salvo.id } : e));
-      }
+    // Arrastar uma tarefa da sidebar cria uma NOVA tarefa independente no banco
+    // (cópia da tarefa de origem, agendada na posição onde foi solta). Cada
+    // arraste gera sua própria tarefa + bloco — duplicatas são permitidas.
+    setEventos(evs => [...evs, novoEv]); // mostra na hora (otimista)
+
+    const dia  = dias[novoEv.d];
+    const orig = window.Tarefas ? Tarefas.buscar(novoEv.taskId) : null;
+
+    // Sem módulo de tarefas: cria só o bloco ligado à tarefa de origem (fallback).
+    if (!window.Tarefas) { criarBlocoDoEvento(novoEv); return; }
+
+    Tarefas.criar({
+      titulo:      orig ? orig.titulo : novoEv.titulo,
+      descricao:   orig ? orig.descricao : '',
+      cat:         orig ? orig.cat : (CAT_LABEL[novoEv.cat] || 'Genérico'),
+      categoriaId: orig ? orig.categoriaId : 'generico',
+      prioridade:  orig ? orig.prioridade : (novoEv.prio || 'normal'),
+      dataIso:     dia ? dia.iso : null,
+      hora:        fmtHora(novoEv.ini),
+    }).then(nova => {
+      // Liga o evento/bloco à nova tarefa criada e persiste o bloco.
+      const evNovo = { ...novoEv, taskId: nova.id };
+      setEventos(evs => evs.map(e => e.id === novoEv.id ? evNovo : e));
+      criarBlocoDoEvento(evNovo);
+      // Avisa a sidebar (e demais ouvintes) para refletir a nova tarefa.
+      window.dispatchEvent(new CustomEvent('tarefas:atualizadas'));
     }).catch(() => {});
   }
 
@@ -547,7 +690,14 @@ function WeeklyCalendar() {
     setEventos(evs => evs.filter(e => e.id !== ev.id));
     setModalEv(null);
     if (window.Blocos && ehPersistido(ev.id)) Blocos.remover(ev.id).catch(() => {});
+    // Remover o bloco do calendário também exclui a tarefa vinculada no banco
+    // (Tarefas.remover já avisa a sidebar via 'tarefas:atualizadas').
+    if (ev.taskId && window.Tarefas) Tarefas.remover(ev.taskId).catch(() => {});
   }
+
+  // Pede confirmação (caixa estilizada) antes de excluir de fato.
+  function pedirRemover(ev) { setModalEv(null); setConfirmarEv(ev); }
+  function confirmarRemocao() { if (confirmarEv) removerEvento(confirmarEv); setConfirmarEv(null); }
 
   function openModal(ev) { setDrawerEv(null); setModalEv(ev); }
   function openDrawer(ev) { setModalEv(null); setDrawerEv(ev); }
@@ -563,7 +713,9 @@ function WeeklyCalendar() {
       if (t) {
         if (changes.prio !== undefined) t.prioridade = changes.prio;
         if (changes.done !== undefined) t.done = changes.done;
-        if (changes.cat  !== undefined) t.cat = CAT_LABEL[changes.cat] || changes.cat;
+        if (changes.catNome     !== undefined) t.cat = changes.catNome;
+        else if (changes.cat    !== undefined) t.cat = CAT_LABEL[changes.cat] || changes.cat;
+        if (changes.categoriaId !== undefined) t.categoriaId = changes.categoriaId;
         if (changes.ini  !== undefined) t.hora = fmtHora(changes.ini);
         window.Storage.gravar('todo-tarefas', lista);
       }
@@ -600,20 +752,20 @@ function WeeklyCalendar() {
               <button className={vista === 'semana' ? 'is-active' : ''} onClick={() => setVista('semana')}>Semana</button>
               <button className={vista === 'mes'    ? 'is-active' : ''} onClick={() => setVista('mes')}>Mês</button>
             </div>
-            <button className="btn btn--primary btn--md">+ Nova tarefa</button>
+            <a href="task-detail.html" className="btn btn--primary btn--md" style={{ textDecoration:'none' }}>+ Nova tarefa</a>
           </div>
         </div>
 
         <div className="cal-scroll">
-          {vista === 'semana' && <WeekView dias={dias} eventos={eventos} mover={mover} adicionar={adicionar} onOpen={openModal} onDrawer={openDrawer} />}
-          {vista === 'dia'    && <DayView dia={diaAtual} eventos={eventos} mover={mover} onOpen={openModal} onDrawer={openDrawer} />}
-          {vista === 'mes'    && <MonthView mesData={mesData} eventos={eventosMes} />}
+          {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} adicionar={adicionar} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} />}
+          {vista === 'dia'    && <DayView dia={diaAtual} eventos={eventos} categorias={categorias} mover={mover} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} />}
+          {vista === 'mes'    && <MonthView mesData={mesData} eventos={eventosMes} categorias={categorias} />}
         </div>
 
         <div className="cal-legend">
-          {categorias.map(c => (
+          {categorias.filter(c => c.id !== 'generico').map(c => (
             <span key={c.id} className="cal-legend__item">
-              <span className="cal-legend__dot" style={{ background: c.color }}></span>{c.name}
+              <span className="cal-legend__dot" style={{ background: c.cor }}></span>{c.nome}
             </span>
           ))}
           <span style={{ flex: 1 }}></span>
@@ -623,8 +775,14 @@ function WeeklyCalendar() {
         </div>
       </div>
 
-      <TaskModal ev={modalEv} dia={modalEv ? dias[modalEv.d] : null} onClose={() => setModalEv(null)} onUpdate={handleUpdate} onDelete={removerEvento} />
+      <TaskModal ev={modalEv} dia={modalEv ? dias[modalEv.d] : null} categorias={categorias} onClose={() => setModalEv(null)} onUpdate={handleUpdate} onDelete={pedirRemover} />
       {drawerEv && <PainelDrawer key={drawerEv.id} ev={drawerEv} dias={dias} onClose={() => setDrawerEv(null)} />}
+      {confirmarEv && (
+        <ConfirmDialog titulo="Excluir tarefa" confirmar="Excluir"
+          onConfirm={confirmarRemocao} onCancel={() => setConfirmarEv(null)}>
+          Tem certeza que deseja excluir <strong>{confirmarEv.titulo}</strong>? Essa ação não pode ser desfeita.
+        </ConfirmDialog>
+      )}
     </>
   );
 }

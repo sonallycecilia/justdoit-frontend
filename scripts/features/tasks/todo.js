@@ -83,7 +83,9 @@
     });
   });
 
-  Tarefas.carregarDaApi().then(pintar);
+  // Carrega tarefas e categorias do usuário (para as cores reais dos pontos)
+  // antes do primeiro render. As cores ficam cacheadas em Categorias.TODAS.
+  Promise.all([Tarefas.carregarDaApi(), Categorias.carregar()]).then(pintar);
 
   // Bloco de anotações — persiste via Storage
   const notepadArea = document.getElementById('notepadArea');

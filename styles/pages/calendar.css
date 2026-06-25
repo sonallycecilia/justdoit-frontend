@@ -65,6 +65,18 @@
 .timeblock:hover .timeblock__arrow { opacity: .65; }
 .timeblock__arrow:hover { opacity: 1 !important; background: rgba(255,255,255,.25); }
 
+.timeblock__trash {
+  position: absolute; bottom: 4px; right: 5px;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius-sm);
+  background: transparent; color: currentColor;
+  opacity: 0; cursor: pointer; padding: 0;
+  transition: opacity var(--duration-fast), background var(--duration-fast), color var(--duration-fast);
+}
+.timeblock:hover .timeblock__trash { opacity: .6; }
+.timeblock__trash:hover { opacity: 1 !important; background: rgba(255,255,255,.3); color: var(--color-danger, #d33); }
+
 /* Linha do "agora" */
 .cal-now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--color-danger); z-index: 4; }
 .cal-now::before { content: ''; position: absolute; left: -4px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-danger); }
@@ -112,6 +124,42 @@
   from { transform: translateY(14px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
 }
+
+/* ---------- Diálogo de confirmação ---------- */
+.confirm-dialog {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  width: 100%; max-width: 340px;
+  padding: var(--space-lg);
+  animation: modal-slide-in var(--duration-fast) var(--ease-out);
+}
+.confirm-dialog__title {
+  display: flex; align-items: center; gap: var(--space-sm);
+  font-family: var(--font-display); font-size: var(--font-size-md);
+  font-weight: var(--weight-semibold);
+}
+.confirm-dialog__ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; flex: none; border-radius: 50%;
+  background: color-mix(in srgb, var(--color-danger, #d33) 13%, transparent);
+  color: var(--color-danger, #d33);
+}
+.confirm-dialog__msg {
+  font-size: var(--font-size-sm); color: var(--color-text-soft);
+  line-height: 1.45; margin: var(--space-md) 0 var(--space-lg);
+}
+.confirm-dialog__msg strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+.confirm-dialog__actions { display: flex; justify-content: flex-end; gap: var(--space-sm); }
+.confirm-dialog__danger {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border: none; border-radius: var(--radius-md);
+  background: var(--color-danger, #d33); color: #fff;
+  font-size: var(--font-size-sm); font-weight: var(--weight-semibold);
+  cursor: pointer; transition: filter var(--duration-fast);
+}
+.confirm-dialog__danger:hover { filter: brightness(.93); }
 
 .task-modal__head { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-lg) var(--space-lg) var(--space-md); border-bottom: 1px solid var(--color-border); }
 .task-modal__head-cat { width: 10px; height: 10px; border-radius: 3px; flex: none; }

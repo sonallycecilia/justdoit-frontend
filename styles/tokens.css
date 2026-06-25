@@ -54,6 +54,18 @@
   --color-cat-casa:     #b07b2e;           /* Casa — recorrência      */
   --color-cat-generico: var(--brand-sage); /* Genérico — trava 24h    */
 
+  /* Paleta de cores para categorias criadas pelo usuário (10 tons
+     harmonizados à identidade terrosa — usados no modal "Nova categoria"). */
+  --color-cat-teal:       #014040;  /* teal     */
+  --color-cat-rust:       #b5543f;  /* ferrugem */
+  --color-cat-green:      #3a9469;  /* verde    */
+  --color-cat-sage:       #778c8a;  /* sage     */
+  --color-cat-purple:     #6b5b95;  /* roxo     */
+  --color-cat-pink:       #c2799a;  /* rosa     */
+  --color-cat-blue:       #4a7a9b;  /* azul     */
+  --color-cat-terracotta: #c2784a;  /* terracota*/
+  --color-cat-plum:       #834c5e;  /* vinho    */
+
   /* ---------- Status ---------- */
   --color-success: #3a9469;
   --color-warning: #c08a2e;

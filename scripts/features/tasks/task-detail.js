@@ -13,6 +13,17 @@
   const params = new URLSearchParams(window.location.search);
   const taskId = params.get('id');
 
+  // Se a tarefa já está no cache local, monta a tela na hora (caso comum, ex.:
+  // vindo do TODO). Se NÃO está (aberto por link direto, cache vazio, iframe do
+  // drawer do calendário…), busca do backend e só então monta — evitando o
+  // formulário vazio, sem travar o caso comum esperando a rede.
+  if (taskId && !Tarefas.buscar(taskId) && window.Api) {
+    Tarefas.carregarDaApi().then(iniciar, iniciar);
+  } else {
+    iniciar();
+  }
+
+  function iniciar() {
   const tarefas = Tarefas.listar();
   const tarefa  = taskId ? tarefas.find(t => t.id === taskId) : null;
 
@@ -23,9 +34,16 @@
   const KEY_MODS  = taskId ? Storage.KEYS.detalheMods(taskId)  : null;
   const KEY_CICLO = taskId ? Storage.KEYS.detalheCiclo(taskId) : null;
 
+  // atualizarSpec() usa variáveis declaradas mais abaixo (cicloAtual, subs,
+  // LABEL_MOD). Como sincronizarPaineis() o chama cedo, este flag evita rodá-lo
+  // antes de tudo estar inicializado (senão dá TDZ e a tela não monta).
+  let specPronto = false;
+
   const detail = document.getElementById('detail');
 
   /* ── Categoria ────────────────────────────────────────── */
+  // CATS aponta para a lista viva do módulo (Genérico + categorias do usuário).
+  // Categorias.carregar() a preenche com os dados do backend mais abaixo.
   const CATS = Categorias.TODAS;
   const catChip  = document.getElementById('catChip');
   const catDot   = document.getElementById('catDot');
@@ -41,6 +59,12 @@
   }
   catChip.addEventListener('click', () => setCat(catIdx + 1));
 
+  // Carrega as categorias do usuário e seleciona a da tarefa (ou Genérico).
+  Categorias.carregar().then(() => {
+    const ci = tarefa ? CATS.findIndex(c => c.nome === tarefa.cat) : -1;
+    setCat(ci >= 0 ? ci : 0);
+  });
+
   /* ── Concluir tarefa ──────────────────────────────────── */
   document.getElementById('taskCheck').addEventListener('click', () => {
     detail.classList.toggle('is-done');
@@ -48,8 +72,14 @@
   });
 
   /* ── Seletor de data ─────────────────────────────────────── */
+  // Data vinda do calendário (?data=YYYY-MM-DD) tem prioridade: ao abrir pela
+  // seta, o detalhe deve refletir o dia mostrado no bloco da grade.
+  const dataParam = params.get('data');
   let selectedDate;
-  if (tarefa && tarefa.dataIso) {
+  if (dataParam) {
+    const [y, mo, d] = dataParam.split('-').map(Number);
+    selectedDate = new Date(y, mo - 1, d);
+  } else if (tarefa && tarefa.dataIso) {
     const [y, mo, d] = tarefa.dataIso.split('-').map(Number);
     selectedDate = new Date(y, mo - 1, d);
   } else if (tarefa && tarefa.data) {
@@ -70,9 +100,13 @@
   });
 
   /* ── Seletor de hora ─────────────────────────────────── */
+  // Hora vinda do calendário (?hora=HH:mm) tem prioridade: ao abrir pela seta,
+  // o detalhe deve refletir o horário mostrado no bloco da grade.
+  const horaParam = params.get('hora');
+  const horaFonte = horaParam || (tarefa && tarefa.hora);
   let horaInicial = null, minInicial = 0;
-  if (tarefa && tarefa.hora) {
-    const parts = tarefa.hora.split(':').map(Number);
+  if (horaFonte) {
+    const parts = horaFonte.split(':').map(Number);
     horaInicial = parts[0];
     minInicial  = parts[1] || 0;
   }
@@ -139,7 +173,7 @@
   /* ── Prioridade (RF10/RF11) ───────────────────────────── */
   const prioPicker  = document.getElementById('prioPicker');
   const prioBadge   = document.getElementById('prioBadge');
-  let prioridadeAtual = tarefa ? tarefa.prioridade : 'urgent';
+  let prioridadeAtual = tarefa ? tarefa.prioridade : 'normal';
 
   prioPicker.innerHTML = Priority.NIVEIS.map(n => `
     <button class="prio-opt ${n === prioridadeAtual ? 'is-on' : ''}" data-prio="${n}" style="color:${Priority.COR[n]}">
@@ -315,9 +349,12 @@
 
   const LABEL_MOD = { foco: 'Foco', ciclo: 'Ciclo', prioridade: 'Prioridade', tempo: 'Tempo', notas: 'Notas', subtarefas: 'Subtarefas' };
 
+  // A partir daqui todas as dependências de atualizarSpec já existem.
+  specPronto = true;
+
   /* ── Painel de especificações ─────────────────────────── */
   function atualizarSpec() {
-    if (!tarefa) return;
+    if (!tarefa || !specPronto) return;
     const isDone = detail.classList.contains('is-done');
     document.getElementById('specStatus').textContent   = isDone ? 'Concluída' : 'Aberta';
     document.getElementById('specStatus').style.color   = isDone ? 'var(--color-success)' : '';
@@ -333,25 +370,27 @@
     document.getElementById('specMods').textContent = ativos.length ? ativos.join(', ') : '—';
   }
 
-  /* ── Botão "Iniciar foco" ─────────────────────────────── */
+  /* ── Botão "Iniciar foco" (opcional — pode não existir no HTML) ── */
   const focoBtn = document.getElementById('focoBtn');
-  focoBtn.addEventListener('click', () => {
-    // Ativa o módulo Foco se estiver desligado
-    const focoToggle = grid.querySelector('[data-mod="foco"]');
-    if (!focoToggle.classList.contains('is-on')) {
-      focoToggle.classList.add('is-on');
-      sincronizarPaineis();
-    }
-    // Inicia o Pomodoro
-    if (!pomo.estado().rodando) {
-      pomo.play();
-      pomoToggle.textContent = 'Pausar';
-      focoBtn.textContent = 'Em foco…';
-      focoBtn.disabled = true;
-    }
-    // Rola até o painel
-    panels.querySelector('[data-panel="foco"]').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+  if (focoBtn) {
+    focoBtn.addEventListener('click', () => {
+      // Ativa o módulo Foco se estiver desligado
+      const focoToggle = grid.querySelector('[data-mod="foco"]');
+      if (!focoToggle.classList.contains('is-on')) {
+        focoToggle.classList.add('is-on');
+        sincronizarPaineis();
+      }
+      // Inicia o Pomodoro
+      if (!pomo.estado().rodando) {
+        pomo.play();
+        pomoToggle.textContent = 'Pausar';
+        focoBtn.textContent = 'Em foco…';
+        focoBtn.disabled = true;
+      }
+      // Rola até o painel
+      panels.querySelector('[data-panel="foco"]').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 
   /* ── Pré-popular campos da tarefa existente ──────────────*/
   if (tarefa) {
@@ -362,18 +401,15 @@
     if (descSalva) document.getElementById('desc').textContent = descSalva;
     // Done
     if (tarefa.done) detail.classList.add('is-done');
-    // Categoria
-    const ci = CATS.findIndex(c => c.nome === tarefa.cat);
-    setCat(ci >= 0 ? ci : 0);
+    // Categoria: selecionada de forma assíncrona após Categorias.carregar()
     // Prioridade
-    setPrio(tarefa.prioridade || 'urgent');
-    // Data
-    document.getElementById('dataChip').textContent = tarefa.data || 'Hoje';
+    setPrio(tarefa.prioridade || 'normal');
+    // Data — a do calendário (?data) tem prioridade sobre a salva na tarefa.
+    document.getElementById('dataChip').textContent = dataParam
+      ? Utils.dataRelativa(selectedDate)
+      : (tarefa.data || 'Hoje');
     // Botões de modo edição
     document.getElementById('saveBtn').textContent = 'Salvar alterações';
-    // Mostra painel de especificações
-    document.getElementById('specPanel').classList.remove('hidden');
-    atualizarSpec();
   }
 
   // Persiste descrição ao editar
@@ -389,39 +425,72 @@
     const tv = timePicker.valor();
     const horaValor = tv.hora !== null ? fmtHora(tv.hora, tv.min) : undefined;
 
+    const descricao = document.getElementById('desc').textContent.trim();
+    const recorrencia = cicloAtual !== 'none' ? cicloAtual : undefined;
+    const btn = document.getElementById('saveBtn');
+
     if (tarefa) {
-      // Atualiza tarefa existente
-      tarefa.titulo      = titulo;
-      tarefa.cat         = CATS[catIdx].nome;
-      tarefa.prioridade  = prioridadeAtual;
-      tarefa.done        = detail.classList.contains('is-done');
-      tarefa.data        = document.getElementById('dataChip').textContent;
-      tarefa.quando      = Utils.calcQuando(selectedDate);
-      tarefa.dataIso     = Utils.dataIso(selectedDate);
-      if (horaValor) tarefa.hora = horaValor; else delete tarefa.hora;
-      if (cicloAtual !== 'none') tarefa.recorrencia = cicloAtual;
-      Tarefas.salvar(tarefas);
-      const btn = document.getElementById('saveBtn');
-      btn.textContent = 'Salvo ✓';
-      setTimeout(() => { btn.textContent = 'Salvar alterações'; }, 1800);
+      // Atualiza tarefa existente — PUT no backend (task-service).
+      const querConcluir = detail.classList.contains('is-done');
+      const doneMudou    = querConcluir !== tarefa.done;
+      const rotuloPadrao = 'Salvar alterações';
+
+      btn.disabled = true;
+      Tarefas.atualizar(taskId, {
+        titulo,
+        descricao,
+        cat:         CATS[catIdx].nome,
+        categoriaId: CATS[catIdx].id,
+        prioridade:  prioridadeAtual,
+        dataIso:     Utils.dataIso(selectedDate),
+        hora:        horaValor,
+        recorrencia,
+      })
+        // Status (concluída/aberta) é persistido por endpoint próprio.
+        .then(() => doneMudou ? Tarefas.toggleDone(taskId) : null)
+        .then(() => {
+          btn.disabled = false;
+          btn.textContent = 'Salvo ✓';
+          setTimeout(() => { btn.textContent = rotuloPadrao; }, 1800);
+        })
+        .catch((err) => {
+          btn.disabled = false;
+          btn.textContent = 'Erro ao salvar';
+          console.error('Falha ao salvar tarefa:', err);
+          setTimeout(() => { btn.textContent = rotuloPadrao; }, 1800);
+        });
     } else {
-      // Cria nova tarefa
+      // Cria nova tarefa — POST no backend. Só navega DEPOIS que a
+      // requisição conclui, senão a navegação aborta o fetch em andamento.
+      btn.disabled = true;
       Tarefas.criar({
         titulo,
-        cat:        CATS[catIdx].nome,
-        prioridade: prioridadeAtual,
-        quando:     Utils.calcQuando(selectedDate),
-        data:       document.getElementById('dataChip').textContent,
-        dataIso:    Utils.dataIso(selectedDate),
-        hora:       horaValor,
-      });
-      Storage.remover(KEY_SUBS);
-      Storage.remover(KEY_NOTAS);
-      Storage.remover(KEY_DESC);
-      window.location.href = 'todo.html';
+        descricao,
+        cat:         CATS[catIdx].nome,
+        categoriaId: CATS[catIdx].id,
+        prioridade:  prioridadeAtual,
+        quando:      Utils.calcQuando(selectedDate),
+        data:        document.getElementById('dataChip').textContent,
+        dataIso:     Utils.dataIso(selectedDate),
+        hora:        horaValor,
+        recorrencia,
+      })
+        .then(() => {
+          Storage.remover(KEY_SUBS);
+          Storage.remover(KEY_NOTAS);
+          Storage.remover(KEY_DESC);
+          window.location.href = 'todo.html';
+        })
+        .catch((err) => {
+          btn.disabled = false;
+          btn.textContent = 'Erro ao salvar';
+          console.error('Falha ao criar tarefa:', err);
+          setTimeout(() => { btn.textContent = 'Registrar tarefa'; }, 1800);
+        });
     }
   });
 
   // Inicializa o ring do Pomodoro
   pintarPomo(25 * 60, 25 * 60, 'foco');
+  } // fim de iniciar()
 })();

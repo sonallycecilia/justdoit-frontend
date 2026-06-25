@@ -131,6 +131,7 @@
       update:   function (id) { return SVC.tasks + '/tasks/' + id; },
       remove:   function (id) { return SVC.tasks + '/tasks/' + id; },
       complete: function (id) { return SVC.tasks + '/tasks/' + id + '/complete'; },
+      reopen:   function (id) { return SVC.tasks + '/tasks/' + id + '/reopen'; },
 
       // task-detail.html — módulo Subtarefas
       subtasks: {
