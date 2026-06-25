@@ -18,9 +18,9 @@ const Utils = (function () {
   // Saudação conforme a hora do dia
   function saudacao(data = new Date()) {
     const h = data.getHours();
-    if (h < 12) return 'Bom dia';
-    if (h < 18) return 'Boa tarde';
-    return 'Boa noite';
+    if (h >= 5 && h < 12) return 'Bom dia';
+    if (h >= 12 && h < 18) return 'Boa tarde';
+    return 'Boa noite'; // 18h–4h59 (inclui madrugada)
   }
 
   // "Qui, 7 jun"

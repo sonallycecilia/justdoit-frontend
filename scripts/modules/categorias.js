@@ -6,9 +6,9 @@
 const Categorias = (function () {
   'use strict';
 
+  // Genérico é a única categoria padrão de todo usuário. As demais são
+  // criadas pelo próprio usuário (sidebar → "Nova categoria", task-service).
   const TODAS = [
-    { id: 'estudos',  nome: 'Estudos',  cor: 'var(--color-cat-estudos)'  },
-    { id: 'casa',     nome: 'Casa',     cor: 'var(--color-cat-casa)'     },
     { id: 'generico', nome: 'Genérico', cor: 'var(--color-cat-generico)' },
   ];
 
