@@ -6,6 +6,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JustDoIt — To Do</title>
+<link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 <link rel="stylesheet" href="../../styles/tokens.css?v=2">
 <link rel="stylesheet" href="../../styles/reset.css?v=2">
 <link rel="stylesheet" href="../../styles/global.css?v=2">
@@ -13,7 +14,7 @@
 <link rel="stylesheet" href="../../styles/components/sidebar.css?v=6">
 <link rel="stylesheet" href="../../styles/components/card.css?v=2">
 <link rel="stylesheet" href="../../styles/components/badge.css?v=2">
-<link rel="stylesheet" href="../../styles/pages/todo.css?v=2">
+<link rel="stylesheet" href="../../styles/pages/todo.css?v=3">
 </head>
 <body>
   <div class="app">
@@ -46,12 +47,9 @@
 
         <!-- Filtros -->
         <div class="filters">
-          <!-- Categoria -->
+          <!-- Categoria (preenchida em runtime a partir do backend) -->
           <div class="filter-group" data-filter="cat">
             <button class="filter-chip is-active" data-value="all">Todas</button>
-            <button class="filter-chip" data-value="Estudos"><span class="filter-chip__dot" style="background:var(--color-cat-estudos)"></span>Estudos</button>
-            <button class="filter-chip" data-value="Casa"><span class="filter-chip__dot" style="background:var(--color-cat-casa)"></span>Casa</button>
-            <button class="filter-chip" data-value="Genérico"><span class="filter-chip__dot" style="background:var(--color-cat-generico)"></span>Genérico</button>
           </div>
           <!-- Status -->
           <div class="filter-group" data-filter="status">
@@ -85,6 +83,6 @@
   <script src="../../scripts/components/sidebar.js?v=7"></script>
   <script src="../../scripts/modules/priority.js?v=2"></script>
   <script src="../../scripts/features/tasks/tasks.js?v=2"></script>
-  <script src="../../scripts/features/tasks/todo.js?v=3"></script>
+  <script src="../../scripts/features/tasks/todo.js?v=5"></script>
 </body>
 </html>

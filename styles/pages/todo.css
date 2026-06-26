@@ -65,6 +65,9 @@
 .notepad__area::placeholder { color: var(--color-text-faint); }
 .notepad__area:focus-visible { box-shadow: none; }
 
+/* Ação rápida (+ Nova tarefa) — respiro entre anotações e filtros */
+.page__head-actions { margin-bottom: var(--space-lg); }
+
 /* Barra de filtros */
 .filters { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-lg); }
 .filter-group { display: inline-flex; padding: 3px; background: var(--color-surface-sunken); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
@@ -128,7 +131,7 @@
 .todo-right { display: flex; align-items: center; gap: var(--space-sm); flex: none; }
 
 /* Estado vazio */
-.empty { text-align: center; padding: var(--space-2xl) var(--space-lg); color: var(--color-text-muted); }
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: var(--space-2xl) var(--space-lg); color: var(--color-text-muted); }
 .empty svg { width: 40px; height: 40px; color: var(--color-border-strong); margin-bottom: var(--space-sm); }
 .empty p { font-family: var(--font-display); font-style: italic; font-size: var(--font-size-lg); }
 
