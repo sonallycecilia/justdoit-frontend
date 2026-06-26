@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="styles/components/badge.css?v=2">
 <link rel="stylesheet" href="styles/components/card.css?v=2">
 <link rel="stylesheet" href="landing/landing.css?v=2">
+<link rel="stylesheet" href="styles/components/legal-modal.css?v=1">
 <script>
 (function(){
   var t = localStorage.getItem('jdi.tema') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
@@ -270,13 +271,14 @@
       </div>
     </div>
     <nav class="mkt-foot__links">
-      <a href="#">Termos</a>
-      <a href="#">Privacidade</a>
+      <a href="#" data-legal="termos">Termos</a>
+      <a href="#" data-legal="privacidade">Privacidade</a>
     </nav>
   </div>
 </footer>
 
 <script src="https://unpkg.com/lucide@latest"></script>
+<script src="scripts/features/auth/legal.js?v=3"></script>
 <script src="landing/landing.js?v=2"></script>
 </body>
 </html>

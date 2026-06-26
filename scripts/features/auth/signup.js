@@ -46,45 +46,7 @@
   ligarOlho('toggleSenha', inputSenha);
   ligarOlho('toggleConfirmar', document.getElementById('confirmar'));
 
-  /* ---------- Modal de termos legais ---------- */
-  (function () {
-    const modal  = document.getElementById('legalModal');
-    const titulo = document.getElementById('legalModalTitle');
-    const corpo  = document.getElementById('legalModalBody');
-    if (!modal || !titulo || !corpo) return;
-
-    let ultimoFoco = null;
-
-    function abrir(tplId, tituloTexto) {
-      const tpl = document.getElementById(tplId);
-      if (!tpl) return;
-      titulo.textContent = tituloTexto;
-      corpo.innerHTML = '';
-      corpo.appendChild(tpl.content.cloneNode(true));
-      corpo.scrollTop = 0;
-      ultimoFoco = document.activeElement;
-      modal.hidden = false;
-      const fechar = document.getElementById('legalModalClose');
-      if (fechar) fechar.focus();
-    }
-
-    function fechar() {
-      modal.hidden = true;
-      if (ultimoFoco && ultimoFoco.focus) ultimoFoco.focus();
-    }
-
-    const linkTermos = document.getElementById('linkTermos');
-    const linkPriv   = document.getElementById('linkPrivacidade');
-    if (linkTermos) linkTermos.addEventListener('click', function (e) { e.preventDefault(); abrir('tplTermos', 'Termos de Uso'); });
-    if (linkPriv)   linkPriv.addEventListener('click', function (e) { e.preventDefault(); abrir('tplPrivacidade', 'Política de Privacidade'); });
-
-    modal.addEventListener('click', function (e) {
-      if (e.target.closest('[data-legal-close]')) fechar();
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !modal.hidden) fechar();
-    });
-  })();
+  /* Modal de termos legais: ver features/auth/legal.js (componente compartilhado). */
 
   /* ---------- Cadastro ---------- */
   const form = document.getElementById('signupForm');
