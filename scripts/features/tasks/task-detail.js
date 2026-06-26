@@ -216,12 +216,26 @@
   const timerToggle  = document.getElementById('timerToggle');
   const timerInitial = taskId ? Storage.ler(Storage.KEYS.detalheTimer(taskId), 0) : 0;
 
+  // Acumula o tempo de execução por dia (lido pelo card "Tempo executado" do
+  // dashboard). O cronômetro guarda o total acumulado da tarefa sem data, então
+  // registramos só o delta de cada tick no dia de hoje.
+  let ultimoTimer = timerInitial;
+  function registrarTempoDiario(deltaSeg) {
+    if (deltaSeg <= 0) return;
+    const log = Storage.ler(Storage.KEYS.TEMPO_DIARIO, {});
+    const hoje = Utils.dataIso(new Date());
+    log[hoje] = (log[hoje] || 0) + deltaSeg;
+    Storage.gravar(Storage.KEYS.TEMPO_DIARIO, log);
+  }
+
   const cron = TaskTimer.criar({
     inicial: timerInitial,
     onTick: (s) => {
       timerDisplay.textContent = TaskTimer.formatar(s);
       if (taskId) Storage.gravar(Storage.KEYS.detalheTimer(taskId), s);
       document.getElementById('specTempo').textContent = TaskTimer.formatar(s);
+      registrarTempoDiario(s - ultimoTimer); // ignora reset (delta ≤ 0)
+      ultimoTimer = s;
     },
   });
   timerDisplay.textContent = document.getElementById('specTempo').textContent = TaskTimer.formatar(timerInitial);
@@ -251,7 +265,22 @@
     pomoRing.style.setProperty('--color-accent', fase === 'pausa' ? 'var(--color-success)' : '');
   }
 
+  const FOCO_MIN = 25;
+
+  // Cada bloco de foco concluído entra no log diário (lido pelo card
+  // "Foco hoje" do dashboard), agregado por dia.
+  function registrarFocoDiario() {
+    const log = Storage.ler(Storage.KEYS.FOCO_DIARIO, {});
+    const hoje = Utils.dataIso(new Date());
+    const dia = log[hoje] || { ciclos: 0, minutos: 0 };
+    dia.ciclos += 1;
+    dia.minutos += FOCO_MIN;
+    log[hoje] = dia;
+    Storage.gravar(Storage.KEYS.FOCO_DIARIO, log);
+  }
+
   const pomo = Focus.criar({
+    focoMin: FOCO_MIN,
     onTick: (restante, dur) => {
       const e = pomo.estado();
       pintarPomo(restante, dur, e.fase);
@@ -262,6 +291,7 @@
         ciclosPomodoro++;
         if (taskId) Storage.gravar(Storage.KEYS.detalheCiclos(taskId), ciclosPomodoro);
         document.getElementById('specPomos').textContent = String(ciclosPomodoro);
+        registrarFocoDiario();
       }
     },
   });

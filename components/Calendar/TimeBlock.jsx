@@ -35,7 +35,7 @@ function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, onDragEnd, draggi
   // segue refletindo a prioridade. Sem cor resolvida, mantém a classe CSS.
   const style = { top: `${top}px`, height: `${height}px` };
   if (catCor) {
-    style.background = `color-mix(in srgb, ${catCor} 13%, var(--color-card))`;
+    style.background = `color-mix(in srgb, ${catCor} var(--block-tint, 13%), var(--color-card))`;
     style.borderColor = `color-mix(in srgb, ${catCor} 45%, transparent)`;
     style.color = catCor;
   }

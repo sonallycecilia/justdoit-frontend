@@ -48,18 +48,18 @@
               <span class="stat__label">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 Foco hoje</span>
-              <span class="stat__value">3h20</span>
-              <span class="stat__hint">em 4 ciclos de Pomodoro</span>
+              <span class="stat__value" id="statFoco">0h</span>
+              <span class="stat__hint" id="statFocoHint">em 0 ciclos de Pomodoro</span>
             </div>
             <div class="stat stat--wide">
               <span class="stat__label">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                Planejado vs. executado</span>
+                Tempo executado</span>
               <div class="progress" style="margin-top:6px">
-                <div class="progress__head"><span class="progress__label" id="statProgressLabel">—</span><span class="progress__value" id="statProgressValue">—</span></div>
+                <div class="progress__head"><span class="progress__label" id="statProgressLabel">esta semana</span><span class="progress__value" id="statProgressValue">0h</span></div>
                 <div class="progress__track"><div class="progress__fill" id="statProgressFill" style="width:0%"></div></div>
               </div>
-              <span class="stat__hint" id="statProgressHint">carregando…</span>
+              <span class="stat__hint" id="statProgressHint">0h em foco · 0h em execução</span>
             </div>
           </div>
         </section>
@@ -101,7 +101,7 @@
     </main>
   </div>
 
-  <script src="../../scripts/core/storage.js?v=2"></script>
+  <script src="../../scripts/core/storage.js?v=4"></script>
   <script src="../../scripts/core/api.js?v=5"></script>
   <script src="../../scripts/features/auth/auth.js?v=2"></script>
   <script src="../../scripts/core/auth-guard.js?v=2"></script>
@@ -110,6 +110,6 @@
   <script src="../../scripts/modules/tarefas.js?v=4"></script>
   <script src="../../scripts/components/sidebar.js?v=7"></script>
   <script src="../../scripts/modules/priority.js?v=2"></script>
-  <script src="../../scripts/features/dashboard/dashboard.js?v=3"></script>
+  <script src="../../scripts/features/dashboard/dashboard.js?v=5"></script>
 </body>
 </html>

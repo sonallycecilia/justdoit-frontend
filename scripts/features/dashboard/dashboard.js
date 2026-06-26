@@ -41,6 +41,8 @@
           </div>`).join('')
       : '<div style="padding:var(--space-md);color:var(--color-text-subtle)">Nenhuma tarefa para hoje.</div>';
 
+    statsLocais();
+
     lista.querySelectorAll('.task__check').forEach(btn => {
       btn.addEventListener('click', () => {
         Tarefas.toggleDone(btn.closest('.task').getAttribute('data-id')).then(pintar);
@@ -54,6 +56,75 @@
         window.location.href = '../tasks/task-detail.html?id=' + id;
       });
     });
+  }
+
+  // Stats calculadas localmente (o endpoint /analytics/weekly ainda não
+  // existe no backend): concluídas da semana, foco do dia e tempo executado.
+  function statsLocais() {
+    const h = Utils.hoje();
+    const inicio = new Date(h);
+    inicio.setDate(h.getDate() - ((h.getDay() + 6) % 7)); // segunda
+    const fim = new Date(inicio);
+    fim.setDate(inicio.getDate() + 6); // domingo
+
+    // ISOs dos 7 dias da semana atual (para somar os logs diários).
+    const diasSemana = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(inicio);
+      d.setDate(inicio.getDate() + i);
+      diasSemana.push(Utils.dataIso(d));
+    }
+    const hojeIso = Utils.dataIso(new Date());
+
+    // ── Concluídas desta semana (cache local de tarefas) ──
+    const elConcl = document.getElementById('statConcl');
+    if (elConcl) {
+      const daSemana = Tarefas.listar().filter(t => {
+        if (!t.dataIso) return false;
+        const d = new Date(t.dataIso + 'T00:00:00');
+        return d >= inicio && d <= fim;
+      });
+      const feitas = daSemana.filter(t => t.done).length;
+      elConcl.innerHTML = `${feitas} <small>/ ${daSemana.length}</small>`;
+    }
+
+    // ── Foco hoje (log diário de ciclos Pomodoro) ──
+    const focoLog = Storage.ler(Storage.KEYS.FOCO_DIARIO, {});
+    const elFoco = document.getElementById('statFoco');
+    const elFocoHint = document.getElementById('statFocoHint');
+    if (elFoco) {
+      const dia = focoLog[hojeIso] || { ciclos: 0, minutos: 0 };
+      elFoco.textContent = fmtH(dia.minutos / 60);
+      if (elFocoHint) {
+        elFocoHint.textContent = `em ${dia.ciclos} ${dia.ciclos === 1 ? 'ciclo' : 'ciclos'} de Pomodoro`;
+      }
+    }
+
+    // ── Tempo executado desta semana (cronômetro + foco) ──
+    const elExecVal  = document.getElementById('statProgressValue');
+    const elExecFill = document.getElementById('statProgressFill');
+    const elExecHint = document.getElementById('statProgressHint');
+    if (elExecVal) {
+      const tempoLog = Storage.ler(Storage.KEYS.TEMPO_DIARIO, {});
+      let focoHoras = 0, cronHoras = 0, hojeHoras = 0;
+      diasSemana.forEach(iso => {
+        const f = (focoLog[iso] && focoLog[iso].minutos || 0) / 60;
+        const c = (tempoLog[iso] || 0) / 3600;
+        focoHoras += f;
+        cronHoras += c;
+        if (iso === hojeIso) hojeHoras = f + c;
+      });
+      const totalHoras = focoHoras + cronHoras;
+
+      elExecVal.textContent = fmtH(totalHoras);
+      if (elExecFill) {
+        // Barra: fatia do tempo da semana que foi executada hoje.
+        elExecFill.style.width = `${totalHoras ? Math.round((hojeHoras / totalHoras) * 100) : 0}%`;
+      }
+      if (elExecHint) {
+        elExecHint.textContent = `${fmtH(focoHoras)} em foco · ${fmtH(cronHoras)} em execução`;
+      }
+    }
   }
 
   function fmtH(h) {

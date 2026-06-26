@@ -702,28 +702,61 @@ function WeeklyCalendar() {
   function openModal(ev) { setDrawerEv(null); setModalEv(ev); }
   function openDrawer(ev) { setModalEv(null); setDrawerEv(ev); }
 
+  // Dia-do-mês escolhido no seletor do modal → data ISO, herdando ano/mês do
+  // dia atual do evento (o seletor cobre apenas esse mês).
+  function isoDoDiaDoMes(n) {
+    const ref = (dias[modalEv.d] && dias[modalEv.d].iso) || (dias[0] && dias[0].iso);
+    if (!ref) return null;
+    return ref.slice(0, 8) + String(n).padStart(2, '0'); // "AAAA-MM-" + "DD"
+  }
+
   function handleUpdate(changes) {
     if (!modalEv) return;
     const novo = { ...modalEv, ...changes };
     setEventos(evs => evs.map(e => e.id === modalEv.id ? novo : e));
     setModalEv(novo);
-    if (modalEv.taskId && window.Storage) {
-      const lista = window.Storage.ler('todo-tarefas', []);
-      const t = lista.find(x => x.id === modalEv.taskId);
-      if (t) {
-        if (changes.prio !== undefined) t.prioridade = changes.prio;
-        if (changes.done !== undefined) t.done = changes.done;
-        if (changes.catNome     !== undefined) t.cat = changes.catNome;
-        else if (changes.cat    !== undefined) t.cat = CAT_LABEL[changes.cat] || changes.cat;
-        if (changes.categoriaId !== undefined) t.categoriaId = changes.categoriaId;
-        if (changes.ini  !== undefined) t.hora = fmtHora(changes.ini);
-        window.Storage.gravar('todo-tarefas', lista);
-      }
-    }
+
     // Mudança de horário do bloco → persiste no schedule-service.
     if ((changes.ini !== undefined || changes.fim !== undefined) && window.Blocos && ehPersistido(novo.id)) {
       Blocos.atualizar(novo, dias).catch(() => {});
     }
+
+    // Sem tarefa vinculada (bloco avulso) não há o que persistir no task-service.
+    const taskId = modalEv.taskId;
+    if (!taskId || !window.Tarefas) return;
+
+    // Concluir/reabrir tem endpoint próprio (PATCH complete/reopen) e já avisa a UI.
+    if (changes.done !== undefined) {
+      Tarefas.toggleDone(taskId).catch(() => {});
+      return;
+    }
+
+    // Categoria, prioridade, data e hora → PUT /tasks. Monta o corpo completo a
+    // partir da tarefa em cache para não zerar os demais campos no backend.
+    const tarefa = Tarefas.buscar(taskId);
+    if (!tarefa) return;
+    const patch = {};
+    if (changes.catNome     !== undefined) patch.cat = changes.catNome;
+    else if (changes.cat    !== undefined) patch.cat = CAT_LABEL[changes.cat] || changes.cat;
+    if (changes.categoriaId !== undefined) patch.categoriaId = changes.categoriaId;
+    if (changes.prio        !== undefined) patch.prioridade = changes.prio;
+    if (changes.ini         !== undefined) patch.hora = fmtHora(changes.ini);
+    if (changes.dateNum     !== undefined) { const iso = isoDoDiaDoMes(changes.dateNum); if (iso) patch.dataIso = iso; }
+    if (!Object.keys(patch).length) return;
+
+    // Reflete no cache local na hora (otimista) e persiste no backend; recalcula
+    // os campos derivados de data quando o dia muda.
+    if (patch.dataIso && window.Utils) {
+      const dataObj = new Date(patch.dataIso + 'T00:00:00');
+      patch.data   = Utils.dataRelativa(dataObj);
+      patch.quando = Utils.calcQuando(dataObj);
+    }
+    const lista = Tarefas.listar();
+    const i = lista.findIndex(x => x.id === taskId);
+    if (i >= 0) { lista[i] = { ...lista[i], ...patch }; Tarefas.salvar(lista); }
+    Tarefas.atualizar(taskId, { ...tarefa, ...patch })
+      .then(() => window.dispatchEvent(new CustomEvent('tarefas:atualizadas')))
+      .catch(() => {});
   }
 
   function onEvUpdate(id, changes) {
