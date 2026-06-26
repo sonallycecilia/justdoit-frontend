@@ -475,4 +475,71 @@
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') adicionar(); });
 
   carregar();
+
+  /* ---------- Excluir conta ---------- */
+  // Ação irreversível: exige digitar "EXCLUIR", chama DELETE /auth/me, limpa a
+  // sessão local e volta para o login.
+  (function () {
+    const btn = document.getElementById('deleteAccountBtn');
+    if (!btn) return;
+
+    let modal = null;
+    function construir() {
+      modal = document.createElement('div');
+      modal.className = 'cat-modal';
+      modal.id = 'accDelModal';
+      modal.hidden = true;
+      modal.innerHTML = `
+        <div class="cat-modal__backdrop" data-close></div>
+        <div class="cat-modal__card" role="dialog" aria-modal="true" aria-label="Excluir conta">
+          <div class="cat-modal__head">
+            <h3 class="cat-modal__title">Excluir conta</h3>
+          </div>
+          <p class="cat-del__text">Esta ação é <strong>permanente</strong> e remove sua conta e seus dados de acesso. Não é possível desfazer.</p>
+          <p class="cat-del__text">Para confirmar, digite <strong>EXCLUIR</strong> abaixo.</p>
+          <input class="cat-modal__input" id="accDelInput" placeholder="EXCLUIR" autocomplete="off">
+          <div class="cat-modal__error" id="accDelErr" hidden></div>
+          <div class="cat-modal__actions">
+            <button class="btn btn--secondary btn--sm" type="button" data-close>Cancelar</button>
+            <button class="btn btn--danger btn--sm" type="button" id="accDelConfirm" disabled>Excluir conta</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+
+      const campo   = modal.querySelector('#accDelInput');
+      const confirm = modal.querySelector('#accDelConfirm');
+      const erro    = modal.querySelector('#accDelErr');
+
+      const fechar = () => { modal.hidden = true; campo.value = ''; confirm.disabled = true; erro.hidden = true; };
+      modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', fechar));
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) fechar(); });
+
+      campo.addEventListener('input', () => {
+        confirm.disabled = campo.value.trim().toUpperCase() !== 'EXCLUIR';
+      });
+
+      confirm.addEventListener('click', () => {
+        confirm.disabled = true;
+        confirm.textContent = 'Excluindo…';
+        erro.hidden = true;
+        Api.remove(Api.endpoints.auth.me)
+          .then(() => {
+            Auth.limparSessao();
+            window.location.href = 'login.html';
+          })
+          .catch((e) => {
+            confirm.textContent = 'Excluir conta';
+            confirm.disabled = false;
+            erro.textContent = (e && (e.error || e.message)) || 'Não foi possível excluir a conta. Tente novamente.';
+            erro.hidden = false;
+          });
+      });
+    }
+
+    btn.addEventListener('click', () => {
+      if (!modal) construir();
+      modal.hidden = false;
+      modal.querySelector('#accDelInput').focus();
+    });
+  })();
 })();

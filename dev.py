@@ -3,10 +3,11 @@
 Automação de desenvolvimento local — sobe backend + frontend de uma vez.
 
 Uso:
-  python dev.py start   — sobe banco + 4 serviços (backend) e serve o frontend em :3000
-  python dev.py front   — serve só o frontend em http://localhost:3000
-  python dev.py back     — sobe só o backend (banco + serviços)
-  python dev.py stop     — para o backend (banco + serviços)
+  python dev.py start    — sobe banco + 4 serviços (backend) e serve o frontend em :3000
+  python dev.py front    — serve só o frontend em http://localhost:3000
+  python dev.py back      — sobe só o backend (banco + serviços)
+  python dev.py restart   — reinicia só os serviços do backend (banco e frontend seguem no ar)
+  python dev.py stop      — para o backend (banco + serviços)
 
 Observação: o backend só aceita CORS de http://localhost:3000, por isso o frontend
 é sempre servido nessa porta. Não abra os HTML direto (file://) — as requisições
@@ -71,7 +72,7 @@ def backend(cmd):
 
 
 def main():
-    commands = ["start", "front", "back", "stop"]
+    commands = ["start", "front", "back", "restart", "stop"]
     if len(sys.argv) != 2 or sys.argv[1] not in commands:
         print(f"Uso: python dev.py [{' | '.join(commands)}]")
         sys.exit(1)
@@ -85,6 +86,10 @@ def main():
         serve_front()
     elif cmd == "back":
         backend("start")
+    elif cmd == "restart":
+        backend("restart")
+        print("\nServiços do backend reiniciados. O frontend (se já estava no ar) "
+              "segue em http://localhost:3000")
     elif cmd == "stop":
         backend("stop")
         print("Backend parado. Feche a janela do frontend manualmente (ou Ctrl+C nela).")

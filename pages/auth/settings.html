@@ -186,13 +186,27 @@
           <div class="card">
             <div class="set-row">
               <div class="set-row__main">
-                <div class="set-row__label">Exportar tarefas</div>
+                <div class="set-row__label">Exportar tarefas <span class="set-soon">(em breve)</span></div>
                 <div class="set-row__desc">Baixe seus dados em CSV ou JSON</div>
               </div>
               <div class="row" style="gap: var(--space-sm)">
-                <button class="btn btn--secondary btn--sm">CSV</button>
-                <button class="btn btn--secondary btn--sm">JSON</button>
+                <button class="btn btn--secondary btn--sm" disabled>CSV</button>
+                <button class="btn btn--secondary btn--sm" disabled>JSON</button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Excluir conta -->
+        <div class="set-section">
+          <div class="set-section__title">Excluir conta</div>
+          <div class="card">
+            <div class="set-row">
+              <div class="set-row__main">
+                <div class="set-row__label">Excluir minha conta</div>
+                <div class="set-row__desc">Remove permanentemente sua conta e seus dados de acesso. Esta ação não pode ser desfeita.</div>
+              </div>
+              <button class="btn btn--danger btn--sm" id="deleteAccountBtn" type="button">Excluir conta</button>
             </div>
           </div>
         </div>
@@ -208,6 +222,6 @@
   <script src="../../scripts/modules/categorias.js?v=4"></script>
   <script src="../../scripts/modules/tarefas.js?v=5"></script>
   <script src="../../scripts/components/sidebar.js?v=8"></script>
-  <script src="../../scripts/features/auth/settings.js?v=13"></script>
+  <script src="../../scripts/features/auth/settings.js?v=14"></script>
 </body>
 </html>
