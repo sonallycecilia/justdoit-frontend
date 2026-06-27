@@ -88,6 +88,14 @@
     }).catch(function () { return [GENERICO]; });
   }
 
+  // Capitaliza cada palavra do nome (ex.: "ana silva" → "Ana Silva")
+  function capitalizar(nome) {
+    if (!nome) return '';
+    return nome.trim().split(/\s+/).map(function (parte) {
+      return parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase();
+    }).join(' ');
+  }
+
   // Iniciais a partir do nome completo (ex.: "Ana Silva" → "AS")
   function iniciais(nome) {
     if (!nome) return '–';
@@ -105,7 +113,7 @@
     if (!nameEl || !avatarEl) return;
 
     function aplicar(dados) {
-      const nome = (dados && dados.name) || '';
+      const nome = capitalizar((dados && dados.name) || '');
       nameEl.textContent   = nome || 'Usuário';
       avatarEl.textContent = iniciais(nome);
       if (avatarImgEl) {

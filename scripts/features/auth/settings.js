@@ -178,7 +178,7 @@
 
       let body, btn;
       if (campo === 'name') {
-        const nome = fName.value.trim();
+        const nome = Utils.capitalizarNome(fName.value);
         if (!nome) { aviso('Informe seu nome.', true); return; }
         body = { name: nome };
         btn = campoEl('name').querySelector('[data-save="name"]');

@@ -195,13 +195,15 @@
     submitBtn.disabled    = true;
     submitBtn.textContent = 'Criando conta…';
 
+    const nome = Utils.capitalizarNome(document.getElementById('nome').value);
+
     Api.post(Api.endpoints.auth.register, {
-      name:      document.getElementById('nome').value.trim(),
+      name:      nome,
       email:     document.getElementById('email').value.trim(),
       password:  senha,
       birthDate: nascimentoInput.value,
     }).then(function (res) {
-      Auth.gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken, name: document.getElementById('nome').value.trim() });
+      Auth.gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken, name: nome });
       Storage.gravar(Storage.KEYS.TAREFAS, []);
       window.location.href = 'onboarding.html';
     }).catch(function (err) {
