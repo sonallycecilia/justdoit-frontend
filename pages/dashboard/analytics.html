@@ -6,11 +6,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JustDoIt — Análise</title>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 <link rel="stylesheet" href="../../styles/tokens.css?v=2">
 <link rel="stylesheet" href="../../styles/reset.css?v=2">
 <link rel="stylesheet" href="../../styles/global.css?v=2">
 <link rel="stylesheet" href="../../styles/components/button.css?v=2">
-<link rel="stylesheet" href="../../styles/components/sidebar.css?v=4">
+<link rel="stylesheet" href="../../styles/components/sidebar.css?v=6">
 <link rel="stylesheet" href="../../styles/components/card.css?v=2">
 <link rel="stylesheet" href="../../styles/components/badge.css?v=2">
 <link rel="stylesheet" href="../../styles/pages/analytics.css?v=2">
@@ -62,34 +63,21 @@
               <span class="an-card__title">Resumo e insights</span>
               <span class="an-card__hint">Gerado a partir da sua semana</span>
             </div>
-            <div class="an-insights">
-              <div class="an-insight">
-                <span class="an-insight__ic an-insight__ic--up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M21 7v6h-6"/></svg></span>
-                <p class="an-insight__text">Você executou <strong>15h30 das 18h planejadas</strong> — uma taxa de aderência de <strong>86%</strong>. Bom ritmo, sem sobrecarga.</p>
-              </div>
-              <div class="an-insight">
-                <span class="an-insight__ic an-insight__ic--info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
-                <p class="an-insight__text"><strong>Estudos</strong> foi sua categoria de maior foco (<strong>7h30</strong>, 49% do tempo) — alinhado com a semana de provas.</p>
-              </div>
-              <div class="an-insight">
-                <span class="an-insight__ic an-insight__ic--down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 6 6 4-4 8 8"/><path d="M21 17v-6h-6"/></svg></span>
-                <p class="an-insight__text">O fim de semana teve o maior desvio (<strong>−1h</strong>). Considere planejar blocos mais curtos no sábado e domingo.</p>
-              </div>
-            </div>
+            <div id="insights" style="color: var(--color-text-subtle); padding: var(--space-md)">Em breve.</div>
           </div>
         </div>
       </div>
     </main>
   </div>
 
-  <script src="../../scripts/core/storage.js?v=2"></script>
-  <script src="../../scripts/core/api.js?v=2"></script>
+  <script src="../../scripts/core/storage.js?v=4"></script>
+  <script src="../../scripts/core/api.js?v=5"></script>
   <script src="../../scripts/features/auth/auth.js?v=2"></script>
   <script src="../../scripts/core/auth-guard.js?v=2"></script>
   <script src="../../scripts/core/utils.js?v=2"></script>
-  <script src="../../scripts/modules/categorias.js?v=2"></script>
-  <script src="../../scripts/modules/tarefas.js?v=2"></script>
-  <script src="../../scripts/components/sidebar.js?v=4"></script>
+  <script src="../../scripts/modules/categorias.js?v=4"></script>
+  <script src="../../scripts/modules/tarefas.js?v=6"></script>
+  <script src="../../scripts/components/sidebar.js?v=7"></script>
 
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>

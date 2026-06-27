@@ -129,5 +129,10 @@
   // Inicializa
   syncDone();
   renderPrio();
-  renderCat();
+  // Carrega as categorias do usuário antes de montar o picker, para mostrar
+  // todas (com cores reais) e resolver corretamente a categoria do evento.
+  Categorias.carregar().then(() => {
+    if (!tarefa) estado.cat = Categorias.porId(catKey).nome;
+    renderCat();
+  });
 })();

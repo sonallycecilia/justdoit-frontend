@@ -79,6 +79,9 @@
 .color-swatch:hover { transform: scale(1.1); }
 .color-swatch.is-sel { border-color: var(--color-text); }
 
+/* Mensagem de erro */
+.onb__error { margin-top: var(--space-md); font-size: var(--font-size-sm); color: var(--color-danger); }
+
 /* Rodapé de navegação */
 .onb__nav { display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-xl); }
 

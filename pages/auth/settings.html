@@ -6,14 +6,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JustDoIt - Configurações</title>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 <link rel="stylesheet" href="../../styles/tokens.css?v=2">
 <link rel="stylesheet" href="../../styles/reset.css?v=2">
 <link rel="stylesheet" href="../../styles/global.css?v=2">
 <link rel="stylesheet" href="../../styles/components/button.css?v=2">
-<link rel="stylesheet" href="../../styles/components/sidebar.css?v=4">
+<link rel="stylesheet" href="../../styles/components/sidebar.css?v=6">
 <link rel="stylesheet" href="../../styles/components/card.css?v=2">
 <link rel="stylesheet" href="../../styles/components/badge.css?v=2">
-<link rel="stylesheet" href="../../styles/pages/settings.css?v=2">
+<link rel="stylesheet" href="../../styles/pages/settings.css?v=13">
 </head>
 <body>
   <div class="app">
@@ -30,14 +31,71 @@
         <!-- Perfil -->
         <div class="set-section">
           <div class="set-section__title">Conta</div>
-          <div class="card">
-            <div class="set-profile">
-              <span class="set-profile__avatar">SV</span>
-              <div style="flex:1">
-                <div class="set-profile__name">Sonally Vitorino</div>
-                <div class="set-profile__email">sonally@exemplo.com</div>
+          <div class="card set-acc-card">
+            <div class="set-acc__photo">
+              <button type="button" class="set-acc__avatar" id="avatarBtn" aria-label="Alterar foto de perfil">
+                <img class="set-acc__avatar-img" id="profileAvatarImg" alt="" hidden>
+                <span class="set-acc__avatar-initials" id="profileAvatar">–</span>
+                <span class="set-acc__avatar-cam" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </span>
+              </button>
+              <input type="file" id="avatarInput" accept="image/*" hidden>
+              <div class="set-acc__photo-actions">
+                <button type="button" class="set-acc__photo-link" id="avatarUploadBtn">Alterar foto</button>
+                <button type="button" class="set-acc__photo-link set-acc__photo-link--danger" id="avatarRemoveBtn" hidden>Remover foto</button>
               </div>
-              <button class="btn btn--secondary btn--sm">Editar</button>
+            </div>
+
+            <div class="set-acc">
+              <!-- Nome -->
+              <div class="acc-field" data-field="name">
+                <label class="acc-field__label" for="pfName">Nome</label>
+                <input class="acc-field__input" id="pfName" type="text" autocomplete="name" placeholder="Seu nome" readonly>
+                <button type="button" class="acc-field__edit" data-edit="name">Editar</button>
+                <span class="acc-field__btns" hidden>
+                  <button type="button" class="btn btn--secondary btn--sm" data-cancel="name">Cancelar</button>
+                  <button type="button" class="btn btn--primary btn--sm" data-save="name">Salvar</button>
+                </span>
+              </div>
+
+              <!-- Email -->
+              <div class="acc-field" data-field="email">
+                <label class="acc-field__label" for="pfEmail">Email</label>
+                <input class="acc-field__input" id="pfEmail" type="email" autocomplete="email" placeholder="seu@email.com" readonly>
+                <button type="button" class="acc-field__edit" data-edit="email">Editar</button>
+                <span class="acc-field__btns" hidden>
+                  <button type="button" class="btn btn--secondary btn--sm" data-cancel="email">Cancelar</button>
+                  <button type="button" class="btn btn--primary btn--sm" data-save="email">Salvar</button>
+                </span>
+              </div>
+
+              <!-- Senha -->
+              <div class="acc-field" data-field="password">
+                <label class="acc-field__label">Senha</label>
+                <input class="acc-field__input" type="password" value="********" readonly tabindex="-1" aria-hidden="true">
+                <button type="button" class="acc-field__edit" data-edit="password">Editar</button>
+              </div>
+              <form class="acc-pwd" data-form="password" hidden>
+                <div class="set-field">
+                  <label class="set-field__label" for="pfCurrentPwd">Senha atual</label>
+                  <input class="set-field__input" id="pfCurrentPwd" type="password" autocomplete="current-password">
+                </div>
+                <div class="set-field">
+                  <label class="set-field__label" for="pfNewPwd">Nova senha</label>
+                  <input class="set-field__input" id="pfNewPwd" type="password" autocomplete="new-password" placeholder="Mínimo de 8 caracteres">
+                </div>
+                <div class="set-field">
+                  <label class="set-field__label" for="pfConfirmPwd">Confirmar nova senha</label>
+                  <input class="set-field__input" id="pfConfirmPwd" type="password" autocomplete="new-password">
+                </div>
+                <div class="set-acc__actions">
+                  <button type="button" class="btn btn--secondary btn--sm" data-cancel="password">Cancelar</button>
+                  <button type="submit" class="btn btn--primary btn--sm">Salvar</button>
+                </div>
+              </form>
+
+              <div class="set-profile-edit__msg" id="profileMsg" hidden></div>
             </div>
           </div>
         </div>
@@ -66,24 +124,24 @@
           <div class="card">
             <div class="set-row">
               <div class="set-row__main">
-                <div class="set-row__label">Lembretes diários</div>
+                <div class="set-row__label">Lembretes diários <span class="set-soon">(em breve)</span></div>
                 <div class="set-row__desc">Receba um resumo das tarefas do dia pela manhã</div>
               </div>
-              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span></label>
+              <label class="switch is-disabled"><input type="checkbox" checked disabled><span class="switch__track"><span class="switch__thumb"></span></span></label>
             </div>
             <div class="set-row">
               <div class="set-row__main">
-                <div class="set-row__label">Notificações de prazo</div>
+                <div class="set-row__label">Notificações de prazo <span class="set-soon">(em breve)</span></div>
                 <div class="set-row__desc">Avisar quando uma tarefa estiver perto de vencer</div>
               </div>
-              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span></label>
+              <label class="switch is-disabled"><input type="checkbox" checked disabled><span class="switch__track"><span class="switch__thumb"></span></span></label>
             </div>
             <div class="set-row">
               <div class="set-row__main">
-                <div class="set-row__label">Som ao concluir ciclo de foco</div>
+                <div class="set-row__label">Som ao concluir ciclo de foco <span class="set-soon">(em breve)</span></div>
                 <div class="set-row__desc">Toque sutil ao fim de cada Pomodoro</div>
               </div>
-              <label class="switch"><input type="checkbox"><span class="switch__track"><span class="switch__thumb"></span></span></label>
+              <label class="switch is-disabled"><input type="checkbox" disabled><span class="switch__track"><span class="switch__thumb"></span></span></label>
             </div>
             <div class="set-row">
               <div class="set-row__main">
@@ -106,11 +164,15 @@
             <div class="divider"></div>
             <div class="cat-add">
               <div class="cat-add__colors" id="catColors">
-                <span class="cat-add__swatch is-sel" style="background:var(--color-cat-estudos)" data-color="var(--color-cat-estudos)"></span>
-                <span class="cat-add__swatch" style="background:var(--color-cat-casa)" data-color="var(--color-cat-casa)"></span>
-                <span class="cat-add__swatch" style="background:var(--color-priority-urgent)" data-color="var(--color-priority-urgent)"></span>
-                <span class="cat-add__swatch" style="background:var(--color-priority-normal)" data-color="var(--color-priority-normal)"></span>
-                <span class="cat-add__swatch" style="background:var(--brand-sage)" data-color="var(--brand-sage)"></span>
+                <span class="cat-add__swatch is-sel" style="background:var(--color-cat-teal)" data-color="var(--color-cat-teal)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-cat-rust)" data-color="var(--color-cat-rust)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-cat-green)" data-color="var(--color-cat-green)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-cat-sage)" data-color="var(--color-cat-sage)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-cat-purple)" data-color="var(--color-cat-purple)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-cat-pink)" data-color="var(--color-cat-pink)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-cat-blue)" data-color="var(--color-cat-blue)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-cat-terracotta)" data-color="var(--color-cat-terracotta)"></span>
+                <span class="cat-add__swatch" style="background:var(--color-cat-plum)" data-color="var(--color-cat-plum)"></span>
               </div>
               <input class="cat-add__input" id="catInput" placeholder="Nova categoria… pressione Enter">
               <button class="btn btn--primary btn--sm" id="catAddBtn">Adicionar</button>
@@ -124,13 +186,27 @@
           <div class="card">
             <div class="set-row">
               <div class="set-row__main">
-                <div class="set-row__label">Exportar tarefas</div>
+                <div class="set-row__label">Exportar tarefas <span class="set-soon">(em breve)</span></div>
                 <div class="set-row__desc">Baixe seus dados em CSV ou JSON</div>
               </div>
               <div class="row" style="gap: var(--space-sm)">
-                <button class="btn btn--secondary btn--sm">CSV</button>
-                <button class="btn btn--secondary btn--sm">JSON</button>
+                <button class="btn btn--secondary btn--sm" disabled>CSV</button>
+                <button class="btn btn--secondary btn--sm" disabled>JSON</button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Excluir conta -->
+        <div class="set-section">
+          <div class="set-section__title">Excluir conta</div>
+          <div class="card">
+            <div class="set-row">
+              <div class="set-row__main">
+                <div class="set-row__label">Excluir minha conta</div>
+                <div class="set-row__desc">Remove permanentemente sua conta e seus dados de acesso. Esta ação não pode ser desfeita.</div>
+              </div>
+              <button class="btn btn--danger btn--sm" id="deleteAccountBtn" type="button">Excluir conta</button>
             </div>
           </div>
         </div>
@@ -138,14 +214,14 @@
     </main>
   </div>
 
-  <script src="../../scripts/core/storage.js?v=2"></script>
-  <script src="../../scripts/core/api.js?v=2"></script>
+  <script src="../../scripts/core/storage.js?v=4"></script>
+  <script src="../../scripts/core/api.js?v=5"></script>
   <script src="../../scripts/features/auth/auth.js?v=2"></script>
   <script src="../../scripts/core/auth-guard.js?v=2"></script>
   <script src="../../scripts/core/utils.js?v=2"></script>
-  <script src="../../scripts/modules/categorias.js?v=2"></script>
-  <script src="../../scripts/modules/tarefas.js?v=2"></script>
-  <script src="../../scripts/components/sidebar.js?v=4"></script>
-  <script src="../../scripts/features/auth/settings.js?v=3"></script>
+  <script src="../../scripts/modules/categorias.js?v=4"></script>
+  <script src="../../scripts/modules/tarefas.js?v=6"></script>
+  <script src="../../scripts/components/sidebar.js?v=8"></script>
+  <script src="../../scripts/features/auth/settings.js?v=14"></script>
 </body>
 </html>

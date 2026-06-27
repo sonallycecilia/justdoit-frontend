@@ -6,12 +6,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JustDoIt — Vamos começar</title>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 <link rel="stylesheet" href="../../styles/tokens.css?v=2">
 <link rel="stylesheet" href="../../styles/reset.css?v=2">
 <link rel="stylesheet" href="../../styles/global.css?v=2">
 <link rel="stylesheet" href="../../styles/components/button.css?v=2">
 <link rel="stylesheet" href="../../styles/components/card.css?v=2">
-<link rel="stylesheet" href="../../styles/pages/onboarding.css?v=2">
+<link rel="stylesheet" href="../../styles/pages/onboarding.css?v=3">
 </head>
 <body>
   <div class="onb">
@@ -34,35 +35,41 @@
         <p class="onb__sub">Comece com uma categoria e uma tarefa — você pode adicionar mais depois.</p>
         <div class="onb-field">
           <label class="onb-field__label">Nome da categoria</label>
-          <input class="onb-input" id="catName" placeholder="Ex.: Faculdade" value="Faculdade">
+          <input class="onb-input" id="catName" placeholder="Ex.: Faculdade">
         </div>
         <div class="onb-field">
           <label class="onb-field__label">Cor</label>
           <div class="color-picker" id="colorPicker">
-            <span class="color-swatch is-sel" style="background:var(--color-cat-estudos)" data-color="estudos"></span>
-            <span class="color-swatch" style="background:var(--color-cat-casa)" data-color="casa"></span>
-            <span class="color-swatch" style="background:var(--color-priority-urgent)" data-color="urgent"></span>
-            <span class="color-swatch" style="background:var(--color-priority-normal)" data-color="normal"></span>
-            <span class="color-swatch" style="background:var(--brand-sage)" data-color="sage"></span>
+            <span class="color-swatch is-sel" style="background:var(--color-cat-teal)" data-color="var(--color-cat-teal)"></span>
+            <span class="color-swatch" style="background:var(--color-cat-rust)" data-color="var(--color-cat-rust)"></span>
+            <span class="color-swatch" style="background:var(--color-cat-green)" data-color="var(--color-cat-green)"></span>
+            <span class="color-swatch" style="background:var(--color-cat-sage)" data-color="var(--color-cat-sage)"></span>
+            <span class="color-swatch" style="background:var(--color-cat-purple)" data-color="var(--color-cat-purple)"></span>
+            <span class="color-swatch" style="background:var(--color-cat-pink)" data-color="var(--color-cat-pink)"></span>
+            <span class="color-swatch" style="background:var(--color-cat-blue)" data-color="var(--color-cat-blue)"></span>
+            <span class="color-swatch" style="background:var(--color-cat-terracotta)" data-color="var(--color-cat-terracotta)"></span>
+            <span class="color-swatch" style="background:var(--color-cat-plum)" data-color="var(--color-cat-plum)"></span>
           </div>
         </div>
         <div class="onb-field">
           <label class="onb-field__label">Primeira tarefa</label>
-          <input class="onb-input" id="taskName" placeholder="O que você precisa fazer?" value="Revisar Cálculo II">
+          <input class="onb-input" id="taskName" placeholder="O que você precisa fazer?">
         </div>
       </div>
 
+      <p class="onb__error" id="onbError" hidden role="alert"></p>
+
       <!-- Navegação -->
       <div class="onb__nav" id="onbNav">
-        <button class="btn btn--primary btn--md" id="btnNext">Concluir</button>
+        <button class="btn btn--primary btn--md" id="btnNext" disabled>Concluir</button>
       </div>
     </div>
   </div>
 
-  <script src="../../scripts/core/storage.js?v=2"></script>
-  <script src="../../scripts/core/api.js?v=2"></script>
+  <script src="../../scripts/core/storage.js?v=4"></script>
+  <script src="../../scripts/core/api.js?v=5"></script>
   <script src="../../scripts/features/auth/auth.js?v=2"></script>
   <script src="../../scripts/core/auth-guard.js?v=2"></script>
-  <script src="../../scripts/features/auth/onboarding.js?v=2"></script>
+  <script src="../../scripts/features/auth/onboarding.js?v=3"></script>
 </body>
 </html>

@@ -5,12 +5,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JustDoIt - Entrar</title>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 <meta name="description" content="JustDoIt — planejamento semanal, foco e clareza. Entre na sua conta.">
 <link rel="stylesheet" href="../../styles/tokens.css?v=2">
 <link rel="stylesheet" href="../../styles/reset.css?v=2">
 <link rel="stylesheet" href="../../styles/global.css?v=2">
 <link rel="stylesheet" href="../../styles/components/button.css?v=2">
-<link rel="stylesheet" href="../../styles/components/auth.css?v=2">
+<link rel="stylesheet" href="../../styles/components/auth.css?v=7">
+<link rel="stylesheet" href="../../styles/components/legal-modal.css?v=1">
 </head>
 <body>
   <!-- Botão de tema (claro/escuro) -->
@@ -21,9 +23,9 @@
   <div class="auth">
     <!-- Painel da marca -->
     <aside class="auth__aside">
-      <span class="auth__mark">
+      <a href="../../index.html" class="auth__mark" aria-label="Ir para a página inicial">
           <svg width="60" height="60" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M33 7 L46.5 21 L39.6 21 L39.6 36.4 C39.6 44.2 34.6 48.9 27 48.3 C19.8 47.7 15.3 42.6 15.9 37.5 C16.3 33.9 18.9 31.9 21.9 32.5 C24.4 33 25.6 35.4 24.2 37.4 C23.2 38.8 21.4 38.7 20.6 37.6 M33 7 L19.5 21 L26.4 21 L26.4 36.4 C26.4 40 28.8 42.3 32.2 42.3"/></svg>
-        </span>
+        </a>
 
       <div class="auth__quote">
         <h2>Seu dia <em>+leve.</em></h2>
@@ -32,7 +34,7 @@
       <div class="auth__bottom">
         <div class="auth__foot">Gerenciador de Tarefas</div>
           <div class="auth__brand">
-            <span class="auth__word">JustDoIt</span>
+            <a href="../../index.html" class="auth__word">JustDoIt</a>
           </div>
       </div>
     </aside>
@@ -77,16 +79,17 @@
             <button type="submit" class="btn btn--primary btn--lg btn--full" id="submitBtn">Entrar</button>
           </form>
 
-          <p class="auth__legal">Ao entrar, você concorda com os <a>Termos</a> e a <a>Política de Privacidade</a>.</p>
+          <p class="auth__legal">Ao entrar, você concorda com os <a href="#" data-legal="termos">Termos</a> e a <a href="#" data-legal="privacidade">Política de Privacidade</a>.</p>
         </div>
 
       </div>
     </main>
   </div>
 
-  <script src="../../scripts/core/storage.js?v=2"></script>
-  <script src="../../scripts/core/api.js?v=2"></script>
+  <script src="../../scripts/core/storage.js?v=4"></script>
+  <script src="../../scripts/core/api.js?v=5"></script>
   <script src="../../scripts/features/auth/auth.js?v=2"></script>
+  <script src="../../scripts/features/auth/legal.js?v=3"></script>
   <script src="../../scripts/features/auth/login.js?v=2"></script>
 </body>
 </html>

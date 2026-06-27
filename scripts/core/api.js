@@ -110,6 +110,7 @@
     auth: {
       login:    SVC.auth + '/auth/login',
       register: SVC.auth + '/auth/register',
+      checkEmail: function (email) { return SVC.auth + '/auth/check-email?email=' + encodeURIComponent(email); },
       refresh:  SVC.auth + '/auth/refresh',
       logout:   SVC.auth + '/auth/logout',
       me:       SVC.auth + '/auth/me',
@@ -131,6 +132,7 @@
       update:   function (id) { return SVC.tasks + '/tasks/' + id; },
       remove:   function (id) { return SVC.tasks + '/tasks/' + id; },
       complete: function (id) { return SVC.tasks + '/tasks/' + id + '/complete'; },
+      reopen:   function (id) { return SVC.tasks + '/tasks/' + id + '/reopen'; },
 
       // task-detail.html — módulo Subtarefas
       subtasks: {

@@ -11,6 +11,8 @@ const Storage = (function () {
     TAREFAS_HOJE: 'tarefas-hoje',
     NOTAS:        'todo-notas',
     TEMA:         'tema',
+    FOCO_DIARIO:  'foco-diario',   // { 'YYYY-MM-DD': { ciclos, minutos } }
+    TEMPO_DIARIO: 'tempo-diario',  // { 'YYYY-MM-DD': segundos } — cronômetro de execução
     // chaves por tarefa — passam taskId (string) ou null para nova tarefa
     detalheNotas:  (id) => id ? 'detalhe-notas-'  + id : 'detalhe-notas',
     detalheSubs:   (id) => id ? 'detalhe-subs-'   + id : 'detalhe-subs',

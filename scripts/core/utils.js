@@ -18,9 +18,9 @@ const Utils = (function () {
   // Saudação conforme a hora do dia
   function saudacao(data = new Date()) {
     const h = data.getHours();
-    if (h < 12) return 'Bom dia';
-    if (h < 18) return 'Boa tarde';
-    return 'Boa noite';
+    if (h >= 5 && h < 12) return 'Bom dia';
+    if (h >= 12 && h < 18) return 'Boa tarde';
+    return 'Boa noite'; // 18h–4h59 (inclui madrugada)
   }
 
   // "Qui, 7 jun"
@@ -100,7 +100,15 @@ const Utils = (function () {
     return Math.max(0, Math.min(100, Math.round((parte / total) * 100)));
   }
 
-  return { DIAS, DIAS_CURTOS, MESES, MESES_LONGOS, hoje, saudacao, dataCurta, dataRelativa, calcQuando, dataIso, parseData, intervaloSemana, horas, pct };
+  // Capitaliza cada palavra do nome: "ana silva" → "Ana Silva"
+  function capitalizarNome(nome) {
+    if (!nome) return '';
+    return nome.trim().split(/\s+/).map(function (parte) {
+      return parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase();
+    }).join(' ');
+  }
+
+  return { DIAS, DIAS_CURTOS, MESES, MESES_LONGOS, hoje, saudacao, dataCurta, dataRelativa, calcQuando, dataIso, parseData, intervaloSemana, horas, pct, capitalizarNome };
 })();
 
 window.Utils = Utils;

@@ -82,7 +82,7 @@
 .auth--signup .auth__main  { align-items: flex-start; overflow-y: auto; max-height: 100vh; padding-block: var(--space-2xl); }
 
 /* Lista de benefícios no painel da marca */
-.auth__checklist { list-style: none; display: flex; flex-direction: column; gap: var(--space-sm); position: relative; z-index: 2; }
+.auth__checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-sm); position: relative; z-index: 2; }
 .auth__checklist li { display: flex; align-items: center; gap: 10px; font-size: var(--font-size-sm); color: #a3cac6; }
 .auth__checklist svg { width: 16px; height: 16px; color: #6aa9a4; flex: none; }
 
@@ -98,6 +98,10 @@
 
 /* Mensagem de erro inline */
 .field__error { font-size: var(--font-size-xs); color: var(--color-danger); padding-top: 2px; }
+.field__error--muted { color: var(--color-text-muted); }
+.field__error--ok    { color: var(--color-success); }
+
+/* Modal de termos legais: ver styles/components/legal-modal.css (componente compartilhado). */
 
 /* Cards de perfil de uso */
 .profile-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }

@@ -20,6 +20,8 @@
     moon:        ic('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>'),
     chevron:     ic('<path d="m6 9 6 6 6-6"/>'),
     chevronLeft: ic('<path d="m15 6-6 6 6 6"/>'),
+    plus:        ic('<path d="M12 5v14M5 12h14"/>'),
+    close:       ic('<path d="M18 6 6 18M6 6l12 12"/>'),
     search:      ic('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>'),
     gripDots:    ic('<circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/>'),
     logout:      ic('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>'),
@@ -35,8 +37,8 @@
 
   const NAV = [
     { id: 'dashboard', label: 'Visão geral', href: BASE + 'pages/dashboard/dashboard.html' },
-    { id: 'calendar',  label: 'Calendário',  href: BASE + 'pages/tasks/calendar.html', count: 14 },
-    { id: 'todo',      label: 'To Do',        href: BASE + 'pages/tasks/todo.html',     count: 9  },
+    { id: 'calendar',  label: 'Calendário',  href: BASE + 'pages/tasks/calendar.html' },
+    { id: 'todo',      label: 'To Do',        href: BASE + 'pages/tasks/todo.html' },
     { id: 'analytics', label: 'Análise',      href: BASE + 'pages/dashboard/analytics.html' },
   ];
 
@@ -47,20 +49,51 @@
     return window.Tarefas ? Tarefas.listar() : [];
   }
 
-  // Busca as categorias REAIS do usuário no backend (task-service: GET /categories).
-  // Sem categorias cadastradas → lista vazia (não existem mais categorias fixas).
+  // Contadores dos badges da navegação, a partir das tarefas reais:
+  // Calendário → pendentes com data agendada; To Do → todas as pendentes.
+  function contarNav(tarefas) {
+    const pendentes = (tarefas || []).filter(t => !t.done);
+    return {
+      calendar: pendentes.filter(t => t.dataIso).length,
+      todo:     pendentes.length,
+    };
+  }
+
+  // Atualiza os badges já renderizados com a contagem das tarefas informadas.
+  function atualizarNavCounts(mount, tarefas) {
+    const c = contarNav(tarefas);
+    mount.querySelectorAll('.nav-item__count[data-nav-count]').forEach(el => {
+      const id = el.getAttribute('data-nav-count');
+      if (c[id] != null) el.textContent = c[id];
+    });
+  }
+
+  // "Genérico" é a categoria padrão de todo usuário: aparece sempre, no topo,
+  // e não é armazenada no backend (igual a settings.html).
+  const GENERICO = { id: 'generico', nome: 'Genérico', cor: 'var(--color-cat-generico)' };
+
+  // Busca as categorias do usuário no backend (task-service: GET /categories)
+  // e garante "Genérico" no topo. Sem outras categorias → só "Genérico".
   function carregarCategorias() {
-    if (!(window.Api && Api.endpoints.categories)) return Promise.resolve([]);
+    if (!(window.Api && Api.endpoints.categories)) return Promise.resolve([GENERICO]);
     return Api.get(Api.endpoints.categories.list).then(function (cats) {
-      if (!Array.isArray(cats)) return [];
-      return cats.map(function (c) {
+      var resto = (Array.isArray(cats) ? cats : []).map(function (c) {
         return {
           id:   c.id,
           nome: c.name,
           cor:  c.color || 'var(--color-cat-generico)',
         };
-      });
-    }).catch(function () { return []; });
+      }).filter(function (c) { return c.nome !== GENERICO.nome; });
+      return [GENERICO].concat(resto);
+    }).catch(function () { return [GENERICO]; });
+  }
+
+  // Capitaliza cada palavra do nome (ex.: "ana silva" → "Ana Silva")
+  function capitalizar(nome) {
+    if (!nome) return '';
+    return nome.trim().split(/\s+/).map(function (parte) {
+      return parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase();
+    }).join(' ');
   }
 
   // Iniciais a partir do nome completo (ex.: "Ana Silva" → "AS")
@@ -76,12 +109,18 @@
   function preencherUsuario(mount) {
     const nameEl   = mount.querySelector('#userName');
     const avatarEl = mount.querySelector('#userAvatar');
+    const avatarImgEl = mount.querySelector('#userAvatarImg');
     if (!nameEl || !avatarEl) return;
 
     function aplicar(dados) {
-      const nome = (dados && dados.name) || '';
+      const nome = capitalizar((dados && dados.name) || '');
       nameEl.textContent   = nome || 'Usuário';
       avatarEl.textContent = iniciais(nome);
+      if (avatarImgEl) {
+        const url = dados && dados.avatarUrl;
+        if (url) { avatarImgEl.src = url; avatarImgEl.hidden = false; }
+        else     { avatarImgEl.removeAttribute('src'); avatarImgEl.hidden = true; }
+      }
     }
 
     // Render imediato com o que já temos em sessão
@@ -164,14 +203,113 @@
     });
   }
 
+  // Modal "Nova categoria" — janelinha flutuante (não é uma página).
+  // Espelha a seção de criar categoria de settings.html: paleta de cores +
+  // nome, criando a categoria de verdade no backend (POST /categories).
+  function wireNovaCategoria(mount, onCreated) {
+    const abrir = mount.querySelector('#catAddOpen');
+    if (!abrir) return;
+
+    const CORES = [
+      'var(--color-cat-teal)',
+      'var(--color-cat-rust)',
+      'var(--color-cat-green)',
+      'var(--color-cat-sage)',
+      'var(--color-cat-purple)',
+      'var(--color-cat-pink)',
+      'var(--color-cat-blue)',
+      'var(--color-cat-terracotta)',
+      'var(--color-cat-plum)',
+    ];
+
+    let modal = document.getElementById('catModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'cat-modal';
+      modal.id = 'catModal';
+      modal.hidden = true;
+      modal.innerHTML = `
+        <div class="cat-modal__backdrop" data-close></div>
+        <div class="cat-modal__card" role="dialog" aria-modal="true" aria-label="Nova categoria">
+          <div class="cat-modal__head">
+            <h3 class="cat-modal__title">Nova categoria</h3>
+            <button class="cat-modal__close" type="button" data-close aria-label="Fechar">${ICONS.close}</button>
+          </div>
+          <span class="cat-modal__label">Cor</span>
+          <div class="cat-modal__colors">
+            ${CORES.map((cor, i) => `<span class="cat-modal__swatch ${i === 0 ? 'is-sel' : ''}" style="background:${cor}" data-color="${cor}" role="button" tabindex="0" aria-label="Selecionar cor"></span>`).join('')}
+          </div>
+          <input class="cat-modal__input" id="catModalInput" type="text" placeholder="Nome da categoria…" autocomplete="off" maxlength="40">
+          <div class="cat-modal__error" id="catModalError" hidden></div>
+          <div class="cat-modal__actions">
+            <button class="btn btn--secondary btn--sm" type="button" data-close>Cancelar</button>
+            <button class="btn btn--primary btn--sm" id="catModalAdd" type="button">Adicionar</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+    }
+
+    const input    = modal.querySelector('#catModalInput');
+    const erroEl   = modal.querySelector('#catModalError');
+    const addBtn   = modal.querySelector('#catModalAdd');
+    const swatches = modal.querySelectorAll('.cat-modal__swatch');
+    let corSel = CORES[0];
+
+    function mostrarErro(msg) {
+      erroEl.textContent = msg || '';
+      erroEl.hidden = !msg;
+    }
+    function fechar() {
+      modal.hidden = true;
+      document.removeEventListener('keydown', onKey);
+    }
+    function onKey(e) { if (e.key === 'Escape') fechar(); }
+    function abrirModal() {
+      mostrarErro('');
+      input.value = '';
+      corSel = CORES[0];
+      swatches.forEach((s, i) => s.classList.toggle('is-sel', i === 0));
+      addBtn.disabled = false;
+      modal.hidden = false;
+      document.addEventListener('keydown', onKey);
+      input.focus();
+    }
+
+    function salvar() {
+      const nome = input.value.trim();
+      if (!nome) { mostrarErro('Dê um nome à categoria.'); input.focus(); return; }
+      if (!(window.Api && Api.endpoints.categories)) { mostrarErro('Serviço indisponível.'); return; }
+
+      addBtn.disabled = true;
+      mostrarErro('');
+      Api.post(Api.endpoints.categories.create, { name: nome, color: corSel })
+        .then(() => { fechar(); if (onCreated) onCreated(); })
+        .catch(err => {
+          addBtn.disabled = false;
+          mostrarErro((err && (err.message || err.error)) || 'Não foi possível criar a categoria.');
+        });
+    }
+
+    abrir.addEventListener('click', abrirModal);
+    modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', fechar));
+    swatches.forEach(sw => sw.addEventListener('click', () => {
+      swatches.forEach(s => s.classList.remove('is-sel'));
+      sw.classList.add('is-sel');
+      corSel = sw.getAttribute('data-color');
+    }));
+    addBtn.addEventListener('click', salvar);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') salvar(); });
+  }
+
   function render(mount) {
     const active = mount.getAttribute('data-active') || 'dashboard';
 
+    const counts = contarNav(carregarTarefas());
     const navHtml = NAV.map(n => `
       <a class="nav-item ${n.id === active ? 'is-active' : ''}" href="${n.href}">
         <span class="nav-item__ic">${ICONS[n.id]}</span>
         <span class="nav-item__label">${n.label}</span>
-        ${n.count != null ? `<span class="nav-item__count">${n.count}</span>` : ''}
+        ${counts[n.id] != null ? `<span class="nav-item__count" data-nav-count="${n.id}">${counts[n.id]}</span>` : ''}
       </a>`).join('');
 
     taskRegistry.clear();
@@ -187,7 +325,10 @@
         <nav class="sidebar__nav">${navHtml}</nav>
         <div class="sidebar__section">
           <span>Categorias</span>
-          <button class="sidebar__cat-toggle" id="catToggle" aria-label="Ocultar categorias" aria-expanded="true">${ICONS.chevron}</button>
+          <div class="sidebar__section-actions">
+            <button class="sidebar__cat-toggle" id="catAddOpen" aria-label="Nova categoria">${ICONS.plus}</button>
+            <button class="sidebar__cat-toggle" id="catToggle" aria-label="Ocultar categorias" aria-expanded="true">${ICONS.chevron}</button>
+          </div>
         </div>
         <div id="catSection">
           <div class="sidebar__search">
@@ -198,7 +339,10 @@
         </div>
       </div>
       <div class="sidebar__foot">
-        <span class="sidebar__avatar" id="userAvatar">–</span>
+        <span class="sidebar__avatar">
+          <span class="sidebar__avatar-initials" id="userAvatar">–</span>
+          <img class="sidebar__avatar-img" id="userAvatarImg" alt="" hidden>
+        </span>
         <div class="sidebar__user">
           <div class="sidebar__name" id="userName">Carregando…</div>
           <button class="sidebar__logout" id="logoutBtn" type="button" aria-label="Sair">
@@ -213,9 +357,10 @@
       </div>
       <div class="sidebar__resizer" id="sidebarResizer"></div>`;
 
-    // ── Categorias (carregadas do backend) ──────────────────────
+    // ── Categorias + contadores (dados reais do backend) ────────
     const catNav = mount.querySelector('#catNav');
-    carregarCategorias().then(cats => {
+
+    function pintarCategorias(cats) {
       const allTarefas = carregarTarefas();
       taskRegistry.clear();
       if (!cats.length) {
@@ -225,6 +370,46 @@
       catNav.innerHTML = cats.map(c => catHtml(c, allTarefas)).join('');
       catNav.querySelectorAll('.sidebar-cat').forEach(wireCatExpand);
       catNav.querySelectorAll('.sidebar-cat__tasks').forEach(wireTaskDrag);
+    }
+
+    const tarefasPromise = (window.Tarefas && Tarefas.carregarDaApi)
+      ? Tarefas.carregarDaApi().catch(() => carregarTarefas())
+      : Promise.resolve(carregarTarefas());
+
+    Promise.all([carregarCategorias(), tarefasPromise]).then(([cats, allTarefas]) => {
+      atualizarNavCounts(mount, allTarefas);
+      pintarCategorias(cats);
+    });
+
+    // Outra parte da UI mudou a lista (Tarefas.toggleDone) → atualiza badges e
+    // tarefas pendentes nas categorias JÁ renderizadas, lendo o cache local.
+    // Não repintamos a lista de categorias (isso apagaria "Genérico" enquanto
+    // elas ainda não foram buscadas); só atualizamos o conteúdo de cada uma.
+    window.addEventListener('tarefas:atualizadas', () => {
+      const allTarefas = carregarTarefas();
+      atualizarNavCounts(mount, allTarefas);
+      const busca = searchInput ? searchInput.value.trim() : '';
+      mount.querySelectorAll('.sidebar-cat').forEach(catEl => {
+        const catNome = catEl.getAttribute('data-cat');
+        const countEl = catEl.querySelector('.sidebar-cat__header .nav-item__count');
+        const tasksEl = catEl.querySelector('.sidebar-cat__tasks');
+        if (countEl) countEl.textContent = allTarefas.filter(t => !t.done && t.cat === catNome).length;
+        tasksEl.innerHTML = renderCatTarefas(catNome, busca, allTarefas);
+        wireTaskDrag(tasksEl);
+      });
+    });
+
+    // A lista de categorias mudou em outra parte da UI (ex.: settings.html criou
+    // ou excluiu uma categoria). Aqui SIM repintamos a lista inteira, buscando de
+    // novo no backend — ao contrário de 'tarefas:atualizadas', que só atualiza
+    // contadores/tarefas das categorias já renderizadas.
+    window.addEventListener('categorias:atualizadas', () => {
+      carregarCategorias().then(pintarCategorias);
+    });
+
+    // ── Modal "Nova categoria" ──────────────────────────────────
+    wireNovaCategoria(mount, function () {
+      carregarCategorias().then(pintarCategorias);
     });
 
     // ── Task search ─────────────────────────────────────────────
