@@ -161,7 +161,7 @@ function WeekView({ dias, eventos, categorias, mover, adicionar, onOpen, onDrawe
         const task = JSON.parse(taskJson);
         const rect = e.currentTarget.getBoundingClientRect();
         const ini  = Math.max(START, Math.min(END - 1, START + Math.round(((e.clientY - rect.top) / ROW_H) * 2) / 2));
-        adicionar({ id: 'ext-' + task.id + '-' + Date.now(), d: diaIdx, ini, fim: ini + 1, cat: CAT_MAP[task.cat] || 'generico', prio: task.prioridade || 'normal', titulo: task.titulo, mod: null, taskId: task.id });
+        adicionar({ id: 'ext-' + task.id + '-' + Date.now(), d: diaIdx, ini, fim: ini + 1, cat: CAT_MAP[task.cat] || 'generico', catNome: task.cat, prio: task.prioridade || 'normal', titulo: task.titulo, mod: null, taskId: task.id });
       } catch (_) {}
       setArrastando(null); setOver(null);
       return;
@@ -657,9 +657,10 @@ function WeeklyCalendar() {
   }
 
   function adicionar(novoEv) {
-    // Arrastar uma tarefa da sidebar cria uma NOVA tarefa independente no banco
-    // (cópia da tarefa de origem, agendada na posição onde foi solta). Cada
-    // arraste gera sua própria tarefa + bloco — duplicatas são permitidas.
+    // Arrastar uma tarefa da sidebar para o calendário. Regra "copiar só se já
+    // agendada": se a tarefa ainda não tem data, agenda a PRÓPRIA tarefa (sem
+    // duplicar); se já está agendada em outro horário, cria uma cópia para o novo
+    // horário (permite o mesmo afazer em vários blocos).
     setEventos(evs => [...evs, novoEv]); // mostra na hora (otimista)
 
     const dia  = dias[novoEv.d];
@@ -668,6 +669,15 @@ function WeeklyCalendar() {
     // Sem módulo de tarefas: cria só o bloco ligado à tarefa de origem (fallback).
     if (!window.Tarefas) { criarBlocoDoEvento(novoEv); return; }
 
+    // Tarefa de origem ainda sem data → agenda ela mesma (não duplica).
+    if (orig && !orig.dataIso) {
+      sincronizarAgendaTarefa(orig.id, novoEv.d, novoEv.ini); // PUT data/hora
+      criarBlocoDoEvento(novoEv);                             // bloco ligado a orig.id
+      window.dispatchEvent(new CustomEvent('tarefas:atualizadas'));
+      return;
+    }
+
+    // Já agendada (ou sem cache da origem) → cria uma nova tarefa (cópia).
     Tarefas.criar({
       titulo:      orig ? orig.titulo : novoEv.titulo,
       descricao:   orig ? orig.descricao : '',

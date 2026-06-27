@@ -62,11 +62,14 @@ const Tarefas = (function () {
     const dataObj = t.dueDate ? new Date(t.dueDate + 'T00:00:00') : null;
     const quando = dataObj ? Utils.calcQuando(dataObj) : 'all';
     const concluida = t.status === 'COMPLETED';
-    // Nome da categoria: prefere o cache local (meta, sempre gravado ao salvar);
-    // senão resolve pelo categoryId real do backend; senão Genérico.
+    // Nome da categoria: o categoryId do backend é a fonte da verdade. Quando ele
+    // resolve para uma categoria real (Categorias já carregado), esse nome vence —
+    // assim corrige meta/cache antigos que tenham ficado com "Genérico". Só cai no
+    // cache local (meta) quando não há categoryId resolvível (ex.: offline).
     let catNome = meta.cat;
-    if (!catNome && t.categoryId && window.Categorias) {
-      catNome = Categorias.porId(t.categoryId).nome;
+    if (t.categoryId && window.Categorias) {
+      const c = Categorias.porId(t.categoryId);
+      if (c && c.id === t.categoryId) catNome = c.nome;
     }
     return {
       id:          t.id,
@@ -150,7 +153,14 @@ const Tarefas = (function () {
   }
 
   function carregarDaApi() {
-    return Api.get(Api.endpoints.tasks.list)
+    // As categorias precisam estar carregadas ANTES de mapear as tarefas, senão
+    // daApi resolve o nome da categoria como "Genérico" (a lista ainda só tem o
+    // padrão) e grava esse nome errado no cache. Carrega categorias primeiro.
+    const preCats = (window.Categorias && Categorias.carregar)
+      ? Categorias.carregar().catch(function () {})
+      : Promise.resolve();
+    return preCats
+      .then(function () { return Api.get(Api.endpoints.tasks.list); })
       .then(function (dados) {
         const lista = (Array.isArray(dados) ? dados : []).map(daApi);
         salvar(lista);
