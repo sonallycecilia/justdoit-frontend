@@ -37,7 +37,12 @@
                 ${t.hora ? `<span class="task__time">${t.hora}</span>` : ''}
               </div>
             </div>
-            <span class="badge badge--${t.prioridade}">${Priority.ROTULO[t.prioridade]}</span>
+            <div class="task__right">
+              <span class="badge badge--${t.prioridade}">${Priority.ROTULO[t.prioridade]}</span>
+              <button class="task__del" data-del aria-label="Excluir tarefa" title="Excluir tarefa">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
           </div>`).join('')
       : '<div style="padding:var(--space-md);color:var(--color-text-subtle)">Nenhuma tarefa para hoje.</div>';
 
@@ -54,6 +59,18 @@
       el.addEventListener('click', () => {
         const id = el.closest('.task').getAttribute('data-id');
         window.location.href = '../tasks/task-detail.html?id=' + id;
+      });
+    });
+
+    lista.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = btn.closest('.task').getAttribute('data-id');
+        btn.disabled = true;
+        Tarefas.remover(id).then(pintar).catch(err => {
+          console.error('Falha ao excluir tarefa:', err);
+          btn.disabled = false;
+        });
       });
     });
   }

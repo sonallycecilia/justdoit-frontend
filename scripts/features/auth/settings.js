@@ -309,7 +309,21 @@
   // carregamento. "Genérico" é a categoria padrão de todo usuário: aparece
   // sempre, no topo, e não pode ser excluída.
   const DEL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+  const EDIT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   const GENERICO = { nome: 'Genérico', cor: 'var(--color-cat-generico)' };
+
+  // Mesma paleta da janela "Nova categoria" (sidebar) e da criação abaixo.
+  const CORES = [
+    'var(--color-cat-teal)',
+    'var(--color-cat-rust)',
+    'var(--color-cat-green)',
+    'var(--color-cat-sage)',
+    'var(--color-cat-purple)',
+    'var(--color-cat-pink)',
+    'var(--color-cat-blue)',
+    'var(--color-cat-terracotta)',
+    'var(--color-cat-plum)',
+  ];
 
   let categorias = [];                       // backend: { id, name, color }
   let corSel = 'var(--color-cat-estudos)';
@@ -351,7 +365,8 @@
   function rowHtml(nome, cor, count, opts) {
     opts = opts || {};
     const acao = opts.removivel
-      ? `<button class="cat-row__del" aria-label="Excluir categoria">${DEL_ICON}</button>`
+      ? `<button class="cat-row__edit" aria-label="Editar nome da categoria">${EDIT_ICON}</button>` +
+        `<button class="cat-row__del" aria-label="Excluir categoria">${DEL_ICON}</button>`
       : `<span class="cat-row__tag">padrão</span>`;
     return `
       <div class="cat-row"${opts.id ? ` data-id="${opts.id}"` : ''} data-count="${count}">
@@ -376,6 +391,13 @@
         row.dataset.id,
         row.querySelector('.cat-row__name').textContent,
         Number(row.dataset.count) || 0
+      ));
+    });
+    lista.querySelectorAll('.cat-row__edit').forEach(btn => {
+      const row = btn.closest('.cat-row');
+      btn.addEventListener('click', () => editar(
+        row.dataset.id,
+        row.querySelector('.cat-row__name').textContent
       ));
     });
   }
@@ -462,6 +484,110 @@
     onConfirmar = onSim;
     modal.hidden = false;
     modal.querySelector('#catDelConfirm').focus();
+  }
+
+  // Edição de uma categoria. Abre a MESMA janela da criação ("Nova categoria"):
+  // paleta de cores + nome. Ao salvar, chama o backend (PUT /categories/{id})
+  // com o novo nome e a nova cor; as tarefas locais são reassociadas do nome
+  // antigo para o novo e a sidebar é notificada para repintar.
+  let modalEdit = null;
+  let corEdit = CORES[0];
+  function editar(id, nomeAtual) {
+    if (!id || !temApi()) return;
+
+    if (!modalEdit) {
+      modalEdit = document.createElement('div');
+      modalEdit.className = 'cat-modal';
+      modalEdit.id = 'catEditModal';
+      modalEdit.hidden = true;
+      modalEdit.innerHTML = `
+        <div class="cat-modal__backdrop" data-close></div>
+        <div class="cat-modal__card" role="dialog" aria-modal="true" aria-label="Editar categoria">
+          <div class="cat-modal__head">
+            <h3 class="cat-modal__title">Editar categoria</h3>
+          </div>
+          <span class="cat-modal__label">Cor</span>
+          <div class="cat-modal__colors" id="catEditColors">
+            ${CORES.map(cor => `<span class="cat-modal__swatch" style="background:${cor}" data-color="${cor}" role="button" tabindex="0" aria-label="Selecionar cor"></span>`).join('')}
+          </div>
+          <label class="cat-modal__label" for="catEditInput">Nome da categoria</label>
+          <input class="cat-modal__input" id="catEditInput" autocomplete="off" maxlength="60">
+          <div class="cat-modal__error" id="catEditErr" hidden></div>
+          <div class="cat-modal__actions">
+            <button class="btn btn--secondary btn--sm" type="button" data-close>Cancelar</button>
+            <button class="btn btn--primary btn--sm" type="button" id="catEditConfirm">Salvar</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modalEdit);
+
+      const fechar = () => { modalEdit.hidden = true; };
+      modalEdit.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', fechar));
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modalEdit.hidden) fechar(); });
+      modalEdit.querySelector('#catEditInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); modalEdit.querySelector('#catEditConfirm').click(); }
+      });
+      modalEdit.querySelectorAll('#catEditColors .cat-modal__swatch').forEach(sw => {
+        sw.addEventListener('click', () => {
+          modalEdit.querySelectorAll('#catEditColors .cat-modal__swatch').forEach(s => s.classList.remove('is-sel'));
+          sw.classList.add('is-sel');
+          corEdit = sw.dataset.color;
+        });
+      });
+      modalEdit.querySelector('#catEditConfirm').addEventListener('click', () => salvarEdicao());
+    }
+
+    const campo   = modalEdit.querySelector('#catEditInput');
+    const erro    = modalEdit.querySelector('#catEditErr');
+    erro.hidden = true;
+    campo.value = nomeAtual;
+    modalEdit.dataset.id = id;
+    modalEdit.dataset.nomeAtual = nomeAtual;
+
+    // Pré-seleciona a cor atual da categoria (ou a 1ª da paleta se não estiver nela).
+    const atual = categorias.find(c => c.id === id);
+    corEdit = (atual && atual.color) || CORES[0];
+    modalEdit.dataset.corAtual = corEdit;
+    const swatches = modalEdit.querySelectorAll('#catEditColors .cat-modal__swatch');
+    let achou = false;
+    swatches.forEach(sw => {
+      const sel = sw.dataset.color === corEdit;
+      sw.classList.toggle('is-sel', sel);
+      if (sel) achou = true;
+    });
+    if (!achou && swatches[0]) { swatches[0].classList.add('is-sel'); corEdit = swatches[0].dataset.color; }
+
+    modalEdit.hidden = false;
+    campo.focus();
+    campo.select();
+  }
+
+  function salvarEdicao() {
+    const id        = modalEdit.dataset.id;
+    const nomeAntigo = modalEdit.dataset.nomeAtual;
+    const corAntiga  = modalEdit.dataset.corAtual;
+    const campo     = modalEdit.querySelector('#catEditInput');
+    const erro      = modalEdit.querySelector('#catEditErr');
+    const confirm   = modalEdit.querySelector('#catEditConfirm');
+    const nome      = campo.value.trim();
+
+    const mostrarErro = (t) => { erro.textContent = t; erro.hidden = false; };
+
+    if (!nome) { mostrarErro('Informe o nome da categoria.'); return; }
+    if (nome === GENERICO.nome) { mostrarErro('Este nome é reservado à categoria padrão.'); return; }
+    // Nada mudou (nome e cor iguais): fecha sem chamar o backend.
+    if (nome === nomeAntigo && corEdit === corAntiga) { modalEdit.hidden = true; return; }
+
+    confirm.disabled = true;
+    erro.hidden = true;
+    Api.put(Api.endpoints.categories.update(id), { name: nome, color: corEdit })
+      .then(() => {
+        if (nome !== nomeAntigo && window.Tarefas && Tarefas.renomearCategoria) Tarefas.renomearCategoria(nomeAntigo, nome);
+        modalEdit.hidden = true;
+        notificarCategorias();
+        return carregar();
+      })
+      .catch(err => mostrarErro((err && (err.message || err.error)) || 'Não foi possível salvar a categoria.'))
+      .then(() => { confirm.disabled = false; });
   }
 
   document.getElementById('catColors').querySelectorAll('.cat-add__swatch').forEach(sw => {

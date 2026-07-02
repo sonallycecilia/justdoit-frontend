@@ -90,19 +90,47 @@ const Tarefas = (function () {
 
   // ── Operações ───────────────────────────────────────────────
   function criar(dados) {
+    // Guarda os ids atuais para conseguir identificar a tarefa recém-criada caso
+    // o backend responda sem corpo (ver abaixo).
+    const idsAntes = {};
+    listar().forEach(function (t) { idsAntes[t.id] = true; });
+
     return Api.post(Api.endpoints.tasks.create, paraApi(dados)).then(function (resp) {
-      // Sem corpo no retorno (ex.: 201 só com Location): não há id para atrelar a
-      // meta; recarrega a lista da API para refletir a nova tarefa.
-      if (!resp || !resp.id) return carregarDaApi();
-      gravarMeta(resp.id, {
-        cat: dados.cat, categoriaId: dados.categoriaId,
-        prioridade: dados.prioridade, recorrencia: dados.recorrencia,
+      if (resp && resp.id) {
+        gravarMeta(resp.id, {
+          cat: dados.cat, categoriaId: dados.categoriaId,
+          prioridade: dados.prioridade, recorrencia: dados.recorrencia,
+        });
+        const nova = daApi(resp);
+        const lista = listar();
+        lista.unshift(nova);
+        salvar(lista);
+        return nova;
+      }
+
+      // Sem corpo no retorno (ex.: 201 só com Location): recarrega a lista e
+      // identifica a nova tarefa (id que não existia antes) para atrelar a meta
+      // e DEVOLVER SEU ID. Sem isso, o detalhe não sabe sob qual id gravar
+      // módulos/descrição/subtarefas/notas/ciclo e perde essas configurações.
+      return carregarDaApi().then(function (lista) {
+        const nova = lista.find(function (t) { return !idsAntes[t.id]; });
+        if (!nova) return null;
+        gravarMeta(nova.id, {
+          cat: dados.cat, categoriaId: dados.categoriaId,
+          prioridade: dados.prioridade, recorrencia: dados.recorrencia,
+        });
+        // Reaplica a meta ao cache para refletir prioridade/categoria escolhidas
+        // (carregarDaApi remapeou a tarefa antes da meta existir).
+        const atual = listar();
+        const i = atual.findIndex(function (t) { return t.id === nova.id; });
+        if (i < 0) return nova;
+        atual[i] = Object.assign({}, atual[i], {
+          cat: dados.cat, categoriaId: dados.categoriaId,
+          prioridade: dados.prioridade || 'normal', recorrencia: dados.recorrencia,
+        });
+        salvar(atual);
+        return atual[i];
       });
-      const nova = daApi(resp);
-      const lista = listar();
-      lista.unshift(nova);
-      salvar(lista);
-      return nova;
     });
   }
 
@@ -117,6 +145,31 @@ const Tarefas = (function () {
       const atualizada = daApi(resp);
       if (i >= 0) lista[i] = atualizada; else lista.unshift(atualizada);
       salvar(lista);
+      return atualizada;
+    });
+  }
+
+  // Move uma tarefa para outra categoria e persiste no backend. Reaproveita os
+  // demais campos da tarefa (título, data, hora, prioridade, recorrência) do
+  // cache local e só troca a categoria, delegando a atualizar() → PUT /tasks/{id}
+  // (e a meta lateral). categoriaId 'generico' vira category_id null no backend.
+  function mudarCategoria(id, categoriaId, catNome) {
+    const t = buscar(id);
+    if (!t) return Promise.reject(new Error('Tarefa não encontrada: ' + id));
+    if (t.categoriaId === categoriaId) return Promise.resolve(t);
+    return atualizar(id, {
+      titulo:      t.titulo,
+      descricao:   t.descricao,
+      cat:         catNome,
+      categoriaId: categoriaId,
+      prioridade:  t.prioridade,
+      dataIso:     t.dataIso,
+      hora:        t.hora,
+      recorrencia: t.recorrencia,
+    }).then(function (atualizada) {
+      // Avisa a UI (ex.: sidebar) para repintar as categorias a partir do cache
+      // já atualizado — a tarefa sai da categoria antiga e entra na nova.
+      notificarMudanca();
       return atualizada;
     });
   }
@@ -187,6 +240,22 @@ const Tarefas = (function () {
     notificarMudanca();
   }
 
+  // Renomeia a categoria (por nome) no cache local + meta, refletindo no nome
+  // exibido a edição feita no backend (PUT /categories/{id}). A associação por
+  // categoryId não muda — só o rótulo. Notifica a UI para re-renderizar.
+  function renomearCategoria(nomeAntigo, nomeNovo) {
+    if (!nomeAntigo || !nomeNovo || nomeAntigo === nomeNovo) return;
+    const mapa = lerMeta();
+    const lista = listar().map(function (t) {
+      if (t.cat !== nomeAntigo) return t;
+      mapa[t.id] = Object.assign({}, mapa[t.id], { cat: nomeNovo });
+      return Object.assign({}, t, { cat: nomeNovo });
+    });
+    Storage.gravar(META_KEY, mapa);
+    salvar(lista);
+    notificarMudanca();
+  }
+
   // Exclui a tarefa no backend (DELETE /tasks/{id}) e a remove do cache local.
   function remover(id) {
     return Api.remove(Api.endpoints.tasks.remove(id)).then(function () {
@@ -195,7 +264,7 @@ const Tarefas = (function () {
     });
   }
 
-  return { listar, buscar, salvar, criar, atualizar, toggleDone, remover, moverParaGenerico, carregarDaApi };
+  return { listar, buscar, salvar, criar, atualizar, mudarCategoria, toggleDone, remover, moverParaGenerico, renomearCategoria, carregarDaApi };
 })();
 
 window.Tarefas = Tarefas;

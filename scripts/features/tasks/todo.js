@@ -54,6 +54,7 @@
               </div>
               <div class="todo-right">
                 <span class="badge badge--${Priority.normalizar(t.prioridade)}">${Priority.ROTULO[Priority.normalizar(t.prioridade)]}</span>
+                <button class="todo-del" data-del aria-label="Excluir tarefa" title="Excluir tarefa">${ico('<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>')}</button>
               </div>
             </div>`).join('')}
         </div>
@@ -69,6 +70,18 @@
       el.addEventListener('click', () => {
         const id = el.closest('.todo-item').getAttribute('data-id');
         window.location.href = 'task-detail.html?id=' + id;
+      });
+    });
+
+    groups.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = btn.closest('.todo-item').getAttribute('data-id');
+        btn.disabled = true;
+        Tarefas.remover(id).then(pintar).catch(err => {
+          console.error('Falha ao excluir tarefa:', err);
+          btn.disabled = false;
+        });
       });
     });
   }
@@ -87,23 +100,75 @@
     });
   });
 
-  // Renderiza os chips de categoria a partir das categorias reais do backend
-  // (Categorias.TODAS, preenchido por Categorias.carregar). Mantém o "Todas"
-  // no início e marca o chip ativo conforme o filtro atual.
-  const catGroup = document.querySelector('.filter-group[data-filter="cat"]');
+  // Filtro de categoria como dropdown (mesmo padrão do modal do calendário).
+  // Escala para qualquer número de categorias: o menu rola em vez de estourar
+  // a barra de filtros. Fonte: Categorias.TODAS (backend).
+  const catFilter = document.getElementById('catFilter');
+
+  function fecharMenuCat() {
+    const btn  = catFilter.querySelector('.cat-filter__btn');
+    const menu = catFilter.querySelector('.cat-filter__menu');
+    const ov   = catFilter.querySelector('.cat-filter__overlay');
+    if (btn)  { btn.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); }
+    if (menu) menu.hidden = true;
+    if (ov)   ov.hidden = true;
+  }
+
   function pintarCategorias() {
     // Se a categoria filtrada deixou de existir (ex.: excluída na sidebar),
     // volta para "Todas" para não esconder todas as tarefas.
     if (filtros.cat !== 'all' && !Categorias.TODAS.some(c => c.nome === filtros.cat)) {
       filtros.cat = 'all';
     }
-    catGroup.innerHTML =
-      `<button class="filter-chip ${filtros.cat === 'all' ? 'is-active' : ''}" data-value="all">Todas</button>` +
-      Categorias.TODAS.map(c =>
-        `<button class="filter-chip ${filtros.cat === c.nome ? 'is-active' : ''}" data-value="${c.nome}">` +
-          `<span class="filter-chip__dot" style="background:${c.cor}"></span>${c.nome}</button>`
-      ).join('');
+    const sel     = Categorias.TODAS.find(c => c.nome === filtros.cat);
+    const rotulo  = filtros.cat === 'all' ? 'Todas as categorias' : filtros.cat;
+    const check   = `<span class="cat-filter__check">${ico('<path d="M20 6 9 17l-5-5"/>')}</span>`;
+    const chevron = `<svg class="cat-filter__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="m6 9 6 6 6-6"/></svg>`;
+
+    catFilter.innerHTML =
+      `<button class="cat-filter__btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+        ${sel ? `<span class="cat-filter__dot" style="background:${sel.cor}"></span>` : ''}
+        <span class="cat-filter__name">${rotulo}</span>
+        ${chevron}
+      </button>
+      <div class="cat-filter__overlay" hidden></div>
+      <div class="cat-filter__menu" role="listbox" hidden>
+        <button class="cat-filter__item ${filtros.cat === 'all' ? 'is-on' : ''}" data-value="all" role="option">
+          <span class="cat-filter__item-name">Todas as categorias</span>
+          ${filtros.cat === 'all' ? check : ''}
+        </button>
+        ${Categorias.TODAS.map(c => `
+          <button class="cat-filter__item ${filtros.cat === c.nome ? 'is-on' : ''}" data-value="${c.nome}" role="option">
+            <span class="cat-filter__dot" style="background:${c.cor}"></span>
+            <span class="cat-filter__item-name">${c.nome}</span>
+            ${filtros.cat === c.nome ? check : ''}
+          </button>`).join('')}
+      </div>`;
   }
+
+  // Delegação no contêiner estável (sobrevive aos re-renders do innerHTML).
+  catFilter.addEventListener('click', e => {
+    const trigger = e.target.closest('.cat-filter__btn');
+    const overlay = e.target.closest('.cat-filter__overlay');
+    const item    = e.target.closest('.cat-filter__item');
+
+    if (trigger) {
+      const menu = catFilter.querySelector('.cat-filter__menu');
+      const ov   = catFilter.querySelector('.cat-filter__overlay');
+      const abrir = menu.hidden;
+      menu.hidden = !abrir;
+      ov.hidden = !abrir;
+      trigger.classList.toggle('is-open', abrir);
+      trigger.setAttribute('aria-expanded', String(abrir));
+      return;
+    }
+    if (overlay) { fecharMenuCat(); return; }
+    if (item) {
+      filtros.cat = item.getAttribute('data-value');
+      pintarCategorias();   // re-render atualiza rótulo/seleção e fecha o menu
+      pintar();
+    }
+  });
 
   // Carrega tarefas e categorias do usuário (para as cores reais dos pontos)
   // antes do primeiro render. As cores ficam cacheadas em Categorias.TODAS.
@@ -120,6 +185,12 @@
       pintar();
     });
   });
+
+  // A categoria (ou outro campo) de uma tarefa mudou em outra parte da UI — ex.:
+  // arrastar entre categorias na sidebar dispara 'tarefas:atualizadas'. O cache
+  // local já está atualizado nesse ponto, então basta repintar a lista (sem ir
+  // ao backend); a lista de categorias em si não mudou.
+  window.addEventListener('tarefas:atualizadas', pintar);
 
   // Bloco de anotações — persiste via Storage
   const notepadArea = document.getElementById('notepadArea');

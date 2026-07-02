@@ -78,7 +78,7 @@
 .nav-item__ic { display: flex; color: var(--color-text-muted); }
 .nav-item.is-active .nav-item__ic { color: var(--color-accent); }
 .nav-item__ic svg { width: 18px; height: 18px; }
-.nav-item__label { flex: 1; }
+.nav-item__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-item__count { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
 .nav-item.is-active .nav-item__count { color: var(--color-accent); }
 
@@ -187,7 +187,15 @@
 /* ── Expandable category rows ────────────────────────── */
 .sidebar__nav--cats { gap: 1px; }
 
-.sidebar-cat { display: flex; flex-direction: column; }
+.sidebar-cat { display: flex; flex-direction: column; border-radius: var(--radius-md); }
+
+/* Alvo de drop: destaca a categoria enquanto uma tarefa é arrastada sobre ela */
+.sidebar-cat.is-drop-target {
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 0 1.5px var(--color-accent);
+}
+.sidebar-cat.is-drop-target > .sidebar-cat__header { color: var(--color-accent); }
+.sidebar-cat.is-moving { opacity: .6; pointer-events: none; }
 
 .sidebar-cat__header {
   display: flex; align-items: center; gap: 10px;

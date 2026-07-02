@@ -164,7 +164,7 @@
   function catHtml(c, allTarefas) {
     const pendentes = allTarefas.filter(t => !t.done && t.cat === c.nome);
     return `
-      <div class="sidebar-cat" data-cat="${c.nome}">
+      <div class="sidebar-cat" data-cat="${c.nome}" data-cat-id="${c.id}">
         <button class="sidebar-cat__header" aria-expanded="false" aria-label="Expandir ${c.nome}">
           <span class="cat-dot" style="background:${c.cor}"></span>
           <span class="nav-item__label">${c.nome}</span>
@@ -190,6 +190,15 @@
 
   function wireTaskDrag(container) {
     container.querySelectorAll('.sidebar-task[draggable="true"]').forEach(el => {
+      // Se houver uma seleção de texto na página (fácil de criar no calendário,
+      // cheio de rótulos), o arraste nativo arrasta o TEXTO em vez da tarefa —
+      // o dragstart dispara em outro elemento, sem 'application/jdi-task', e o
+      // drop na categoria nunca acontece. Limpamos a seleção ao pressionar a
+      // tarefa, antes do gesto começar, para o drag grudar na tarefa.
+      el.addEventListener('mousedown', () => {
+        const sel = window.getSelection && window.getSelection();
+        if (sel && sel.rangeCount) sel.removeAllRanges();
+      });
       el.addEventListener('dragstart', e => {
         const task = taskRegistry.get(el.getAttribute('data-task-id'));
         if (!task) return;
@@ -200,6 +209,46 @@
         e.dataTransfer.clearData('text/uri-list');
       });
       el.addEventListener('dragend', () => el.classList.remove('is-dragging'));
+    });
+  }
+
+  // Torna uma categoria alvo de drop: arrastar uma tarefa (de outra categoria) e
+  // soltar aqui move a tarefa para esta categoria, persistindo no backend
+  // (Tarefas.mudarCategoria → PUT /tasks/{id}). O sidebar se repinta sozinho
+  // via o evento 'tarefas:atualizadas' que mudarCategoria dispara.
+  function wireCatDrop(catEl) {
+    const destNome = catEl.getAttribute('data-cat');
+    const destId   = catEl.getAttribute('data-cat-id');
+
+    catEl.addEventListener('dragover', e => {
+      // Só reage ao nosso tipo de arraste (ignora seleção de texto, arquivos…).
+      if (Array.prototype.indexOf.call(e.dataTransfer.types, 'application/jdi-task') < 0) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy'; // compatível com effectAllowed do dragstart
+      catEl.classList.add('is-drop-target');
+    });
+
+    catEl.addEventListener('dragleave', e => {
+      // Ignora a saída ao passar sobre elementos-filhos da própria categoria.
+      if (!catEl.contains(e.relatedTarget)) catEl.classList.remove('is-drop-target');
+    });
+
+    catEl.addEventListener('drop', e => {
+      e.preventDefault();
+      catEl.classList.remove('is-drop-target');
+      const raw = e.dataTransfer.getData('application/jdi-task');
+      if (!raw) return;
+      let task;
+      try { task = JSON.parse(raw); } catch (_) { return; }
+      if (!task || !task.id) return;
+      // Já pertence a esta categoria → nada a fazer.
+      if (task.categoriaId === destId || task.cat === destNome) return;
+      if (!(window.Tarefas && Tarefas.mudarCategoria)) return;
+
+      catEl.classList.add('is-moving');
+      Tarefas.mudarCategoria(task.id, destId, destNome)
+        .catch(err => console.error('Falha ao mover tarefa de categoria:', err))
+        .then(() => catEl.classList.remove('is-moving'));
     });
   }
 
@@ -369,6 +418,7 @@
       }
       catNav.innerHTML = cats.map(c => catHtml(c, allTarefas)).join('');
       catNav.querySelectorAll('.sidebar-cat').forEach(wireCatExpand);
+      catNav.querySelectorAll('.sidebar-cat').forEach(wireCatDrop);
       catNav.querySelectorAll('.sidebar-cat__tasks').forEach(wireTaskDrag);
     }
 

@@ -426,8 +426,10 @@
   if (tarefa) {
     // Título
     document.getElementById('title').textContent = tarefa.titulo;
-    // Descrição (persistida separadamente)
-    const descSalva = Storage.ler(KEY_DESC, '');
+    // Descrição: prioriza o rascunho local (KEY_DESC); se vazio, usa a que o
+    // backend guardou (tarefa.descricao) — assim ela aparece mesmo em outro
+    // dispositivo ou quando o save local foi pulado.
+    const descSalva = Storage.ler(KEY_DESC, '') || tarefa.descricao || '';
     if (descSalva) document.getElementById('desc').textContent = descSalva;
     // Done
     if (tarefa.done) detail.classList.add('is-done');
@@ -505,7 +507,22 @@
         hora:        horaValor,
         recorrencia,
       })
-        .then(() => {
+        .then((nova) => {
+          const novoId = nova && nova.id;
+          // As configurações de detalhe (subtarefas, notas, descrição, módulos
+          // ativos, ciclo) foram criadas sob as chaves genéricas de "nova
+          // tarefa" — ou nem chegaram a ser gravadas (módulos/ciclo, cujas
+          // KEY_* são null quando não há id). Grava tudo sob o id definitivo,
+          // senão a tarefa reabre sem essas configurações.
+          if (novoId) {
+            Storage.gravar(Storage.KEYS.detalheSubs(novoId), subs);
+            Storage.gravar(Storage.KEYS.detalheNotas(novoId), notes.value);
+            Storage.gravar(Storage.KEYS.detalheDesc(novoId), descricao);
+            const modsAtivos = [...grid.querySelectorAll('.module-toggle.is-on')]
+              .map(b => b.getAttribute('data-mod'));
+            Storage.gravar(Storage.KEYS.detalheMods(novoId), modsAtivos);
+            Storage.gravar(Storage.KEYS.detalheCiclo(novoId), cicloAtual);
+          }
           Storage.remover(KEY_SUBS);
           Storage.remover(KEY_NOTAS);
           Storage.remover(KEY_DESC);

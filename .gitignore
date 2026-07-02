@@ -3,4 +3,6 @@
 *.key
 *.pem
 *.ppk
-dev.py
+dev.
+__pycache__/
+*.pyc
