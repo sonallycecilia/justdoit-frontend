@@ -25,7 +25,7 @@ function fmtHora(x) {
   return `${String(h).padStart(2, '0')}:${m}`;
 }
 
-function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, onDragEnd, dragging, onOpen, onDrawer, onDelete }) {
+function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, onDragEnd, dragging, onOpen, onDrawer, onDelete, layout }) {
   const wasDragged = useRef(false);
   const top = (ev.ini - startHour) * rowH;
   const height = (ev.fim - ev.ini) * rowH - 4;
@@ -34,6 +34,14 @@ function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, onDragEnd, draggi
   // inteiro — fundo suave, borda e texto — enquanto a barrinha à esquerda
   // segue refletindo a prioridade. Sem cor resolvida, mantém a classe CSS.
   const style = { top: `${top}px`, height: `${height}px` };
+  // Layout lado a lado quando há sobreposição de horários: em vez de ocupar a
+  // largura toda (left/right no CSS), o bloco fica numa "coluna" da largura da
+  // faixa de eventos que se sobrepõem. `layout` traz {left, width} em fração.
+  if (layout) {
+    style.left  = `calc(${layout.left * 100}% + 3px)`;
+    style.width = `calc(${layout.width * 100}% - 6px)`;
+    style.right = 'auto';
+  }
   if (catCor) {
     style.background = `color-mix(in srgb, ${catCor} var(--block-tint, 13%), var(--color-card))`;
     style.borderColor = `color-mix(in srgb, ${catCor} 45%, transparent)`;
@@ -42,7 +50,7 @@ function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, onDragEnd, draggi
 
   return (
     <div
-      className={`timeblock timeblock--${ev.cat} ${dragging ? 'is-dragging' : ''} ${ev.done ? 'timeblock--done' : ''}`}
+      className={`timeblock timeblock--${ev.cat} ${layout && layout.width < 0.9 ? 'timeblock--multi' : ''} ${dragging ? 'is-dragging' : ''} ${ev.done ? 'timeblock--done' : ''}`}
       style={style}
       draggable="true"
       onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); wasDragged.current = true; }}

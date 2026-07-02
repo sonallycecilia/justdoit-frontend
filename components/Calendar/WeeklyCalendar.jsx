@@ -6,7 +6,10 @@
    ============================================================ */
 const { useState, useRef, useEffect } = React;
 
-const START = 6, END = 23;
+// Faixa padrão da grade (6h–22h). É expandida dinamicamente por faixaHoras()
+// quando existe algum evento fora disso (ex.: uma tarefa às 4h), para que ele
+// não fique fora da grade (top negativo) e "suma".
+const START = 6, END = 22;
 const ROW_H  = 56;
 const CAT_LABEL  = { estudos: 'Estudos', casa: 'Casa', generico: 'Genérico' };
 const CAT_MAP    = { 'Estudos': 'estudos', 'Casa': 'casa', 'Genérico': 'generico' };
@@ -175,12 +178,292 @@ function Icon({ d, size = 16 }) {
   );
 }
 
+/* ── Pacotes de sobreposição ─────────────────────────────────
+   Tarefas no mesmo horário deixam de ficar empilhadas e ilegíveis: quando duas
+   ou mais se sobrepõem no tempo, viram um "pacote" — um único bloco com o total
+   e um botão de expandir. Ao expandir, as tarefas aparecem lado a lado como
+   blocos reais (arrastáveis, clicáveis, com lixeira) e um botão recolhe de volta. */
+
+// Agrupa os eventos de um dia por faixa de 1 hora (balde da hora cheia de
+// início): tudo que começa dentro da mesma hora — ex.: 10:00, 10:15, 10:45 —
+// cai no pacote "10:00 – 11:00". Tarefa sozinha na faixa continua como bloco
+// normal, na sua hora real.
+function empacotarEventos(evs) {
+  const baldes = new Map(); // hora inteira → cluster
+  evs.slice().sort((a, b) => a.ini - b.ini).forEach(ev => {
+    const h = Math.floor(ev.ini);
+    let c = baldes.get(h);
+    if (!c) { c = { itens: [], ini: h, fim: h + 1 }; baldes.set(h, c); }
+    c.itens.push(ev);
+  });
+  return Array.from(baldes.values()).sort((a, b) => a.ini - b.ini);
+}
+
+// Chave estável do pacote (para lembrar se está aberto entre renders). Usa o
+// horário de início + o id da 1ª tarefa do cluster.
+function chavePacote(c) { return `${c.ini}-${c.itens[0].id}`; }
+
+// Layout "lado a lado" (usado na vista Dia, onde há largura de sobra): agrupa
+// os eventos que se sobrepõem no tempo e distribui cada um numa coluna paralela
+// (algoritmo guloso: reaproveita a 1ª coluna cujo último evento já terminou).
+// Retorna cada evento com sua posição {left, width} em fração da largura do dia.
+function empacotarLadoALado(evs) {
+  const ordenados = evs.slice().sort((a, b) => a.ini - b.ini || a.fim - b.fim);
+  const clusters = [];
+  let atual = null;
+  ordenados.forEach(ev => {
+    if (atual && ev.ini < atual.fim - 1e-9) { atual.itens.push(ev); atual.fim = Math.max(atual.fim, ev.fim); }
+    else { atual = { itens: [ev], fim: ev.fim }; clusters.push(atual); }
+  });
+  const out = [];
+  clusters.forEach(c => {
+    const colFim = [];
+    const slots = c.itens.map(ev => {
+      let col = colFim.findIndex(f => f <= ev.ini + 1e-9);
+      if (col === -1) { col = colFim.length; colFim.push(ev.fim); }
+      else colFim[col] = ev.fim;
+      return { ev, col };
+    });
+    const cols = colFim.length || 1;
+    slots.forEach(s => out.push({ ev: s.ev, left: s.col / cols, width: 1 / cols }));
+  });
+  return out;
+}
+
+// Faixa de horas a desenhar na grade: parte do padrão [START, END] e expande
+// para caber qualquer evento com horário fora dele (tarefas às 4h, 23h30…).
+// Ignora eventos "Sem horário" (vão para a faixa do topo).
+function faixaHoras(evs) {
+  let ini = START, fim = END;
+  (evs || []).forEach(ev => {
+    if (ev.semHora) return;
+    if (Number.isFinite(ev.ini)) ini = Math.min(ini, Math.floor(ev.ini));
+    if (Number.isFinite(ev.fim)) fim = Math.max(fim, Math.ceil(ev.fim));
+  });
+  return { ini: Math.max(0, ini), fim: Math.min(24, fim) };
+}
+
+/* ── PacotePanel (pacote expandido: tarefas empilhadas) ──────
+   Painel flutuante que sobrepõe a coluna mostrando as tarefas do pacote uma
+   abaixo da outra. Cada linha é arrastável (mesmo fluxo de mover dos blocos):
+   enquanto uma está sendo arrastada, o painel deixa passar o clique (pointer-
+   events: none) para a coluna receber o "drop" e reposicionar a tarefa. */
+function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDragEnd, onOpen, onDrawer, onDelete, onClose }) {
+  const arrastou = useRef(false);
+  const itens = cluster.itens.slice().sort((a, b) => a.ini - b.ini);
+  // Ao arrastar, o painel fica translúcido para revelar a grade por baixo. NÃO
+  // usamos pointer-events:none aqui: como a linha arrastada é filha do painel,
+  // tornar o painel não-interativo cancelaria o arraste no Chrome. O "drop" já
+  // sobe (bubbling) da linha até a coluna .cal-col, que reposiciona a tarefa.
+  const arrastando = !!arrastandoId;
+  return (
+    <div className="cal-pack-open" style={{ top: `${top}px`, opacity: arrastando ? 0.18 : 1 }}
+      onClick={e => e.stopPropagation()}>
+      <div className="cal-pack-open__head">
+        <span className="cal-pack-open__title">{itens.length} tarefas · {fmtHora(cluster.ini)}</span>
+        <button className="cal-pack-open__close" onClick={onClose} title="Recolher pacote">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+        </button>
+      </div>
+      <div className="cal-pack-open__list">
+        {itens.map(ev => {
+          const cor = corCategoria(categorias, ev);
+          return (
+            <div key={ev.id}
+              className={`cal-pack-row${ev.done ? ' is-done' : ''}`}
+              draggable="true"
+              style={{ background: `color-mix(in srgb, ${cor} 10%, var(--color-card))`, borderColor: `color-mix(in srgb, ${cor} 40%, transparent)` }}
+              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); arrastou.current = true; }}
+              onDragEnd={() => { onDragEnd(); setTimeout(() => { arrastou.current = false; }, 0); }}
+              onClick={() => { if (!arrastou.current && onOpen) onOpen(ev); }}
+              title={ev.titulo}>
+              <span className="cal-pack-row__prio" style={{ background: (window.COR_PRIORIDADE && window.COR_PRIORIDADE[ev.prio]) || 'var(--color-border-strong)' }} />
+              <span className="cal-pack-row__main">
+                <span className="cal-pack-row__title">{ev.titulo}</span>
+                <span className="cal-pack-row__time">{ev.semHora ? 'Sem hora' : fmtHora(ev.ini)}</span>
+              </span>
+              {onDrawer && (
+                <button className="cal-pack-row__act" onClick={e => { e.stopPropagation(); onDrawer(ev); }} title="Abrir painel lateral">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+              )}
+              {onDelete && (
+                <button className="cal-pack-row__act cal-pack-row__act--del" onClick={e => { e.stopPropagation(); onDelete(ev); }} title="Excluir tarefa">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── ColunaDoDia (eventos de um dia) ─────────────────────────
+   modo="pacote" (padrão, vistas semana): tarefas do mesmo horário viram um
+   pacote expansível. modo="lado" (vista Dia): tarefas sobrepostas ficam lado
+   a lado em colunas paralelas, aproveitando a largura. */
+function ColunaDoDia({ evs, categorias, rowH, startHour, arrastandoId, onDragStart, onDragEnd, onOpen, onDrawer, onDelete, modo }) {
+  const [aberto, setAberto] = useState({}); // { chaveDoPacote: true }
+
+  function bloco(ev, layout) {
+    return (
+      <TimeBlock key={ev.id} ev={ev} rowH={rowH} startHour={startHour}
+        catCor={corCategoria(categorias, ev)}
+        layout={layout}
+        dragging={arrastandoId === ev.id}
+        onDragStart={onDragStart} onDragEnd={onDragEnd}
+        onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
+    );
+  }
+
+  // Vista Dia: colunas lado a lado, sem pacotes.
+  if (modo === 'lado') {
+    return <>{empacotarLadoALado(evs).map(s => bloco(s.ev, { left: s.left, width: s.width }))}</>;
+  }
+
+  return (
+    <>
+      {empacotarEventos(evs).map(c => {
+        // Sem sobreposição: bloco normal, largura cheia.
+        if (c.itens.length === 1) return bloco(c.itens[0]);
+
+        const key = chavePacote(c);
+        const top = (c.ini - startHour) * rowH;
+
+        // Pacote aberto: painel com as tarefas empilhadas (uma abaixo da outra).
+        if (aberto[key]) {
+          return (
+            <PacotePanel key={key} cluster={c} top={top} categorias={categorias}
+              arrastandoId={arrastandoId}
+              onDragStart={onDragStart} onDragEnd={onDragEnd}
+              onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete}
+              onClose={() => setAberto(a => ({ ...a, [key]: false }))} />
+          );
+        }
+
+        // Pacote fechado: um único bloco com contador + botão expandir.
+        const height = (c.fim - c.ini) * rowH - 4;
+        return (
+          <button key={key} className="cal-pack" style={{ top: `${top}px`, height: `${height}px` }}
+            onClick={() => setAberto(a => ({ ...a, [key]: true }))}
+            title={`Expandir ${c.itens.length} tarefas deste horário`}>
+            <span className="cal-pack__stack" aria-hidden="true">
+              {c.itens.slice(0, 3).map(ev => (
+                <span key={ev.id} className="cal-pack__chip" style={{ background: corCategoria(categorias, ev) }} />
+              ))}
+            </span>
+            <span className="cal-pack__body">
+              <span className="cal-pack__count">{c.itens.length} tarefas</span>
+              <span className="cal-pack__time">{fmtHora(c.ini)} – {fmtHora(c.fim)}</span>
+            </span>
+            <span className="cal-pack__expand">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
+          </button>
+        );
+      })}
+    </>
+  );
+}
+
+/* ── LaneSemHora (faixa "Sem horário", estilo all-day) ───────
+   Tarefas com data mas sem horário definido não ocupam mais a grade (antes
+   caíam todas em 06:00). Ficam nesta faixa acima da grade, por dia. São
+   clicáveis (abrem o modal) e arrastáveis para a grade — ao soltar num horário
+   elas ganham hora e descem para o calendário. `colunas` já vem filtrado por
+   dia (um array de eventos por coluna). */
+function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onSoltar, arrastando }) {
+  const arrastou = useRef(false);
+  const [aberto, setAberto] = useState({}); // { indiceDaColuna: true }
+  const [over, setOver] = useState(null);   // coluna sob o cursor no arraste
+
+  // Chip arrastável de uma tarefa sem horário (arrastar para a grade dá hora).
+  function chip(ev) {
+    const cor = corCategoria(categorias, ev);
+    return (
+      <button key={ev.id}
+        className={`cal-allday__chip${ev.done ? ' is-done' : ''}`}
+        draggable="true"
+        style={{ background: `color-mix(in srgb, ${cor} 12%, var(--color-card))`, borderColor: `color-mix(in srgb, ${cor} 40%, transparent)`, color: cor }}
+        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); arrastou.current = true; }}
+        onDragEnd={() => { onDragEnd(); setTimeout(() => { arrastou.current = false; }, 0); }}
+        onClick={() => { if (!arrastou.current && onOpen) onOpen(ev); }}
+        title={ev.titulo}>
+        <span className="cal-allday__dot" style={{ background: cor }} />
+        <span className="cal-allday__chip-title">{ev.titulo}</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="cal-allday" style={{ '--cols': colunas.length }}>
+      <div className="cal-allday__label">Sem<br />horário</div>
+      {colunas.map((col, i) => (
+        <div key={i}
+          className={`cal-allday__col${over === i ? ' drag-over' : ''}`}
+          onDragOver={onSoltar ? (e => { e.preventDefault(); setOver(i); }) : undefined}
+          onDragLeave={onSoltar ? (() => setOver(o => o === i ? null : o)) : undefined}
+          onDrop={onSoltar ? (e => { onSoltar(i, e); setOver(null); }) : undefined}>
+          {/* Uma tarefa: chip solto. Várias: pacote (igual ao da grade). */}
+          {arrastando && col.length === 0 && <span className="cal-allday__hint">soltar aqui</span>}
+          {col.length <= 1 && col.map(chip)}
+
+          {col.length > 1 && !aberto[i] && (
+            <button className="cal-allday__pack" onClick={() => setAberto(a => ({ ...a, [i]: true }))}
+              title={`Expandir ${col.length} tarefas sem horário`}>
+              <span className="cal-allday__pack-chips" aria-hidden="true">
+                {col.slice(0, 3).map(ev => (
+                  <span key={ev.id} className="cal-allday__pack-dot" style={{ background: corCategoria(categorias, ev) }} />
+                ))}
+              </span>
+              <span className="cal-allday__pack-count">{col.length} tarefas</span>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          )}
+
+          {col.length > 1 && aberto[i] && (
+            <div className="cal-allday__open">
+              <button className="cal-allday__collapse" onClick={() => setAberto(a => ({ ...a, [i]: false }))} title="Recolher pacote">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                {col.length} tarefas
+              </button>
+              {col.map(chip)}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ── WeekView ─────────────────────────────────────────────── */
-function WeekView({ dias, eventos, categorias, mover, adicionar, onOpen, onDrawer, onDelete }) {
+function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHora, adicionar, onOpen, onDrawer, onDelete }) {
   const [arrastando, setArrastando] = useState(null);
   const [over, setOver]             = useState(null);
+
+  const semHoraEvs = eventos.filter(ev => ev.semHora);
+  const timedEvs   = eventos.filter(ev => !ev.semHora);
+  // Faixa de horas visível (padrão 6–22, expandida por eventos fora do padrão).
+  const { ini: gStart, fim: gEnd } = faixaHoras(timedEvs);
   const horas = [];
-  for (let h = START; h <= END; h++) horas.push(h);
+  for (let h = gStart; h <= gEnd; h++) horas.push(h);
+
+  // Soltar na faixa "Sem horário": tarefa da sidebar agenda sem hora; bloco/
+  // evento do calendário perde a hora e vai para a faixa do dia.
+  function soltarSemHora(diaIdx, e) {
+    e.preventDefault();
+    const taskJson = e.dataTransfer.getData('application/jdi-task');
+    if (taskJson) {
+      try { agendarSemHora(JSON.parse(taskJson), diaIdx); } catch (_) {}
+      setArrastando(null); setOver(null);
+      return;
+    }
+    if (!arrastando) return;
+    moverSemHora(arrastando.id, diaIdx);
+    setArrastando(null); setOver(null);
+  }
 
   function soltar(diaIdx, e) {
     e.preventDefault();
@@ -189,7 +472,7 @@ function WeekView({ dias, eventos, categorias, mover, adicionar, onOpen, onDrawe
       try {
         const task = JSON.parse(taskJson);
         const rect = e.currentTarget.getBoundingClientRect();
-        const ini  = Math.max(START, Math.min(END - 1, START + Math.round(((e.clientY - rect.top) / ROW_H) * 2) / 2));
+        const ini  = Math.max(gStart, Math.min(gEnd - 1, gStart + Math.round(((e.clientY - rect.top) / ROW_H) * 2) / 2));
         adicionar({ id: 'ext-' + task.id + '-' + Date.now(), d: diaIdx, ini, fim: ini + 1, cat: CAT_MAP[task.cat] || 'generico', catNome: task.cat, prio: task.prioridade || 'normal', titulo: task.titulo, mod: null, taskId: task.id });
       } catch (_) {}
       setArrastando(null); setOver(null);
@@ -197,21 +480,30 @@ function WeekView({ dias, eventos, categorias, mover, adicionar, onOpen, onDrawe
     }
     if (!arrastando) return;
     const rect  = e.currentTarget.getBoundingClientRect();
-    const novaIni = Math.max(START, Math.min(END - 0.5, START + Math.round(((e.clientY - rect.top) / ROW_H) * 2) / 2));
+    const novaIni = Math.max(gStart, Math.min(gEnd - 0.5, gStart + Math.round(((e.clientY - rect.top) / ROW_H) * 2) / 2));
     mover(arrastando.id, diaIdx, novaIni);
     setArrastando(null); setOver(null);
   }
 
   return (
     <div className="cal-grid" style={{ '--cols': 7 }}>
-      <div className="cal-head">
-        <div className="cal-corner"></div>
-        {dias.map((d, i) => (
-          <div key={i} className={`cal-day ${d.hoje ? 'is-today' : ''}`}>
-            <div className="cal-day__dow">{d.dow}</div>
-            <div className="cal-day__num">{d.num}</div>
-          </div>
-        ))}
+      <div className="cal-stickytop">
+        <div className="cal-head">
+          <div className="cal-corner"></div>
+          {dias.map((d, i) => (
+            <div key={i} className={`cal-day ${d.hoje ? 'is-today' : ''}`}>
+              <div className="cal-day__dow">{d.dow}</div>
+              <div className="cal-day__num">{d.num}</div>
+            </div>
+          ))}
+        </div>
+        {(semHoraEvs.length > 0 || arrastando) && (
+          <LaneSemHora colunas={dias.map((d, di) => semHoraEvs.filter(ev => ev.d === di))}
+            categorias={categorias} onOpen={onOpen} onSoltar={soltarSemHora}
+            arrastando={!!arrastando}
+            onDragStart={setArrastando}
+            onDragEnd={() => { setArrastando(null); setOver(null); }} />
+        )}
       </div>
       <div className="cal-body">
         <div className="cal-rail">
@@ -220,20 +512,17 @@ function WeekView({ dias, eventos, categorias, mover, adicionar, onOpen, onDrawe
         {dias.map((d, di) => (
           <div key={di}
             className={`cal-col ${d.hoje ? 'is-today' : ''} ${over === di ? 'drag-over' : ''}`}
-            style={{ height: `${(END - START) * ROW_H}px` }}
+            style={{ height: `${(gEnd - gStart) * ROW_H}px` }}
             onDragOver={e => { e.preventDefault(); setOver(di); }}
             onDragLeave={() => setOver(o => o === di ? null : o)}
             onDrop={e => soltar(di, e)}
           >
-            {eventos.filter(ev => ev.d === di).map(ev => (
-              <TimeBlock key={ev.id} ev={ev} rowH={ROW_H} startHour={START}
-                catCor={corCategoria(categorias, ev)}
-                dragging={arrastando && arrastando.id === ev.id}
-                onDragStart={setArrastando}
-                onDragEnd={() => { setArrastando(null); setOver(null); }}
-                onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
-            ))}
-            {d.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - START) * ROW_H}px` }}></div>}
+            <ColunaDoDia evs={timedEvs.filter(ev => ev.d === di)} categorias={categorias} rowH={ROW_H} startHour={gStart}
+              arrastandoId={arrastando && arrastando.id}
+              onDragStart={setArrastando}
+              onDragEnd={() => { setArrastando(null); setOver(null); }}
+              onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
+            {d.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - gStart) * ROW_H}px` }}></div>}
           </div>
         ))}
       </div>
@@ -243,31 +532,76 @@ function WeekView({ dias, eventos, categorias, mover, adicionar, onOpen, onDrawe
 
 /* ── DayView ──────────────────────────────────────────────── */
 function DayView({ dia, eventos, categorias, mover, onOpen, onDrawer, onDelete }) {
-  const horas = [];
-  for (let h = START; h <= END; h++) horas.push(h);
   const doDia = eventos.filter(ev => ev.d === dia.idx);
+  const semHoraEvs = doDia.filter(ev => ev.semHora);
+  const timedEvs   = doDia.filter(ev => !ev.semHora);
+  const { ini: gStart, fim: gEnd } = faixaHoras(timedEvs);
+  const horas = [];
+  for (let h = gStart; h <= gEnd; h++) horas.push(h);
   return (
     <div className="cal-grid" style={{ '--cols': 1, minWidth: 'auto' }}>
-      <div className="cal-head">
-        <div className="cal-corner"></div>
-        <div className={`cal-day ${dia.hoje ? 'is-today' : ''}`}>
-          <div className="cal-day__dow">{dia.dow}</div>
-          <div className="cal-day__num">{dia.num}</div>
+      <div className="cal-stickytop">
+        <div className="cal-head">
+          <div className="cal-corner"></div>
+          <div className={`cal-day ${dia.hoje ? 'is-today' : ''}`}>
+            <div className="cal-day__dow">{dia.dow}</div>
+            <div className="cal-day__num">{dia.num}</div>
+          </div>
         </div>
+        {semHoraEvs.length > 0 && (
+          <LaneSemHora colunas={[semHoraEvs]} categorias={categorias} onOpen={onOpen}
+            onDragStart={() => {}} onDragEnd={() => {}} />
+        )}
       </div>
       <div className="cal-body">
         <div className="cal-rail">
           {horas.map(h => <div key={h} className="cal-slot"><span>{String(h).padStart(2,'0')}:00</span></div>)}
         </div>
-        <div className={`cal-col ${dia.hoje ? 'is-today' : ''}`} style={{ height: `${(END - START) * ROW_H}px` }}>
-          {doDia.map(ev => <TimeBlock key={ev.id} ev={ev} rowH={ROW_H} startHour={START}
-            catCor={corCategoria(categorias, ev)}
-            dragging={false} onDragStart={() => {}} onDragEnd={() => {}}
-            onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />)}
-          {dia.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - START) * ROW_H}px` }}></div>}
+        <div className={`cal-col ${dia.hoje ? 'is-today' : ''}`} style={{ height: `${(gEnd - gStart) * ROW_H}px` }}>
+          <ColunaDoDia evs={timedEvs} categorias={categorias} rowH={ROW_H} startHour={gStart} modo="lado"
+            arrastandoId={null} onDragStart={() => {}} onDragEnd={() => {}}
+            onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
+          {dia.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - gStart) * ROW_H}px` }}></div>}
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── MonthDayPopover (todas as tarefas de um dia, no mês) ────
+   Painel expansível do mês: lista todas as tarefas do dia, arrastáveis para
+   outro dia (mesmo fluxo de mover/persistir do mês) e clicáveis para abrir o
+   modal. Durante o arraste, o painel e o backdrop ficam sem captar o mouse
+   (só as linhas seguem interativas) para o "drop" chegar na célula de destino. */
+function MonthDayPopover({ iso, num, rect, eventos, categorias, arrastandoId, onDragStart, onDragEnd, onOpen, onClose }) {
+  const evs = eventos.filter(ev => ev.iso === iso);
+  const arrastando = !!arrastandoId;
+  const top  = Math.max(8, Math.min(rect.top, window.innerHeight - 340));
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - 256));
+  return (
+    <>
+      <div className="cal-monthpop__overlay" style={{ pointerEvents: arrastando ? 'none' : 'auto' }} onClick={onClose} />
+      <div className="cal-monthpop" style={{ top, left, opacity: arrastando ? 0.2 : 1, pointerEvents: arrastando ? 'none' : 'auto' }}>
+        <div className="cal-monthpop__head">
+          <span className="cal-monthpop__title">Dia {num} · {evs.length} tarefas</span>
+          <button className="cal-monthpop__close" onClick={onClose} aria-label="Fechar"><Icon d="M18 6 6 18|M6 6l12 12" size={14} /></button>
+        </div>
+        <div className="cal-monthpop__list">
+          {evs.map(ev => (
+            <div key={ev.id}
+              className={`cal-monthpop__item${ev.done ? ' is-done' : ''}${arrastandoId === ev.id ? ' is-dragging' : ''}`}
+              draggable
+              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.id); onDragStart(ev.id); }}
+              onDragEnd={onDragEnd}
+              onClick={() => { onClose(); onOpen(ev); }}
+              title={ev.titulo}>
+              <span className="cal-monthpop__dot" style={{ background: corCategoria(categorias, ev) }} />
+              <span className="cal-monthpop__item-title">{ev.titulo}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -277,6 +611,7 @@ function DayView({ dia, eventos, categorias, mover, onOpen, onDrawer, onDelete }
 function MonthView({ mesData, eventos, categorias, onOpen, mover }) {
   const [arrastando, setArrastando] = useState(null); // id do evento em arraste
   const [over, setOver]             = useState(null); // iso do dia sob o cursor
+  const [expandido, setExpandido]   = useState(null); // { iso, num, rect } popover
 
   function soltar(iso, e) {
     e.preventDefault();
@@ -312,11 +647,23 @@ function MonthView({ mesData, eventos, categorias, onOpen, mover }) {
                   <span className="cal-month__ev-title">{ev.titulo}</span>
                 </span>
               ))}
-              {evs.length > 3 && <span className="cal-month__ev cal-month__ev--more">+{evs.length - 3} mais</span>}
+              {evs.length > 3 && (
+                <button className="cal-month__ev cal-month__ev--more"
+                  onClick={e => { e.stopPropagation(); setExpandido({ iso: c.iso, num: c.num, rect: e.currentTarget.getBoundingClientRect() }); }}
+                  title="Ver todas as tarefas do dia">
+                  +{evs.length - 3} mais
+                </button>
+              )}
             </div>
           );
         })}
       </div>
+      {expandido && (
+        <MonthDayPopover iso={expandido.iso} num={expandido.num} rect={expandido.rect}
+          eventos={eventos} categorias={categorias} arrastandoId={arrastando}
+          onDragStart={setArrastando} onDragEnd={() => { setArrastando(null); setOver(null); }}
+          onOpen={onOpen} onClose={() => setExpandido(null)} />
+      )}
     </div>
   );
 }
@@ -746,10 +1093,53 @@ function WeeklyCalendar() {
     const atual = eventos.find(e => e.id === id);
     if (!atual) return;
     const dur = atual.fim - atual.ini;
-    const novo = { ...atual, d: novoDia, ini: novaIni, fim: novaIni + dur };
+    // Soltar na grade define um horário: a tarefa deixa de ser "Sem horário".
+    const novo = { ...atual, d: novoDia, ini: novaIni, fim: novaIni + dur, semHora: false };
     setEventos(evs => evs.map(ev => ev.id === id ? novo : ev));
     if (window.Blocos && ehPersistido(id)) Blocos.atualizar(novo, dias).catch(() => {});
     sincronizarAgendaTarefa(atual.taskId, dias[novoDia] && dias[novoDia].iso, novaIni);
+  }
+
+  // Zera a hora da tarefa (mantendo a data) — usado ao mover para "Sem horário".
+  // Reflete no cache local (otimista) e persiste no task-service (dueTime = null).
+  function limparHoraTarefa(taskId, iso) {
+    if (!taskId || !window.Tarefas) return;
+    const tarefa = Tarefas.buscar(taskId);
+    if (!tarefa) return;
+    const lista = Tarefas.listar();
+    const i = lista.findIndex(x => x.id === taskId);
+    if (i >= 0) { lista[i] = { ...lista[i], hora: undefined, dataIso: iso || lista[i].dataIso }; Tarefas.salvar(lista); }
+    Tarefas.atualizar(taskId, { ...tarefa, hora: null, dataIso: iso || tarefa.dataIso })
+      .then(() => window.dispatchEvent(new CustomEvent('tarefas:atualizadas')))
+      .catch(() => {});
+  }
+
+  // Move um evento do calendário para a faixa "Sem horário" do dia destino:
+  // remove o bloco de tempo (se persistido) e zera a hora da tarefa. O evento
+  // vira "virtual" (id 'task-…'), já que não há mais bloco no schedule-service.
+  function moverParaSemHora(id, novoDia) {
+    const atual = eventos.find(e => e.id === id);
+    if (!atual || atual.semHora === true && atual.d === novoDia) return;
+    const iso = dias[novoDia] && dias[novoDia].iso;
+    const novoId = atual.taskId ? ('task-' + atual.taskId) : atual.id;
+    const novo = { ...atual, id: novoId, d: novoDia, semHora: true };
+    setEventos(evs => evs.map(ev => ev.id === id ? novo : ev));
+    if (window.Blocos && ehPersistido(id)) Blocos.remover(id).catch(() => {});
+    limparHoraTarefa(atual.taskId, iso);
+  }
+
+  // Arrastar uma tarefa da sidebar direto para a faixa "Sem horário": agenda no
+  // dia (sem hora). Se já estiver no calendário, reaproveita moverParaSemHora.
+  function agendarSemHora(task, novoDia) {
+    const existente = eventos.find(e => e.taskId === task.id);
+    if (existente) { moverParaSemHora(existente.id, novoDia); return; }
+    const iso = dias[novoDia] && dias[novoDia].iso;
+    setEventos(evs => [...evs, {
+      id: 'task-' + task.id, taskId: task.id, d: novoDia, ini: START, fim: START + 1,
+      semHora: true, titulo: task.titulo, cat: CAT_MAP[task.cat] || 'generico',
+      catNome: task.cat, prio: task.prioridade || 'normal', done: false, mod: null,
+    }]);
+    limparHoraTarefa(task.id, iso);
   }
 
   // Move um evento da vista "mês" para outro dia (só muda a data ISO; a hora é
@@ -936,7 +1326,7 @@ function WeeklyCalendar() {
         </div>
 
         <div className="cal-scroll">
-          {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} adicionar={adicionar} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} />}
+          {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} moverSemHora={moverParaSemHora} agendarSemHora={agendarSemHora} adicionar={adicionar} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} />}
           {vista === 'dia'    && <DayView dia={diaAtual} eventos={eventos} categorias={categorias} mover={mover} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} />}
           {vista === 'mes'    && <MonthView mesData={mesData} eventos={eventosMes} categorias={categorias} onOpen={openModal} mover={moverMes} />}
         </div>

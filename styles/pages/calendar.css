@@ -24,7 +24,33 @@
 
 /* ---------- Grade semanal ---------- */
 .cal-grid { --time-w: 64px; --row-h: 56px; min-width: 880px; }
-.cal-head { display: grid; grid-template-columns: var(--time-w) repeat(var(--cols, 7), 1fr); position: sticky; top: 0; z-index: 5; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.cal-stickytop { position: sticky; top: 0; z-index: 5; background: var(--color-surface); }
+.cal-head { display: grid; grid-template-columns: var(--time-w) repeat(var(--cols, 7), 1fr); background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+
+/* Faixa "Sem horário" (all-day) */
+.cal-allday { display: grid; grid-template-columns: var(--time-w) repeat(var(--cols, 7), 1fr); background: var(--color-surface); border-bottom: 1px solid var(--color-border); min-height: 44px; max-height: 108px; overflow-y: auto; }
+.cal-allday__label { border-right: 1px solid var(--color-border); padding: 6px 8px; display: flex; align-items: center; font-family: var(--font-mono); font-size: 9px; line-height: 1.2; letter-spacing: .05em; text-transform: uppercase; color: var(--color-text-muted); }
+.cal-allday__col { border-right: 1px solid var(--color-border); padding: 4px; display: flex; flex-direction: column; gap: 3px; min-width: 0; transition: background var(--duration-fast); }
+.cal-allday__col.drag-over { background: var(--color-accent-soft); box-shadow: inset 0 0 0 2px var(--color-accent); }
+.cal-allday__hint { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 30px; font-family: var(--font-mono); font-size: 9px; letter-spacing: .05em; text-transform: uppercase; color: var(--color-text-faint); pointer-events: none; }
+.cal-allday__chip { display: flex; align-items: center; gap: 5px; min-width: 0; padding: 3px 7px; border: 1px solid; border-radius: var(--radius-sm); cursor: grab; text-align: left; font-size: var(--font-size-xs); font-weight: var(--weight-medium); transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast); }
+.cal-allday__chip:hover { transform: translateY(-1px); box-shadow: var(--shadow-card); }
+.cal-allday__chip:active { cursor: grabbing; }
+.cal-allday__chip.is-done { opacity: .55; }
+.cal-allday__chip.is-done .cal-allday__chip-title { text-decoration: line-through; }
+.cal-allday__dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.cal-allday__chip-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Pacote da faixa "Sem horário" (mesma ideia do pacote da grade) */
+.cal-allday__pack { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 6px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-card); color: var(--color-text-soft); cursor: pointer; text-align: left; box-shadow: 2px 2px 0 -1px var(--color-card), 2px 2px 0 0 var(--color-border); transition: border-color var(--duration-fast), transform var(--duration-fast) var(--ease-out); }
+.cal-allday__pack:hover { border-color: var(--color-accent); transform: translateY(-1px); }
+.cal-allday__pack-chips { display: inline-flex; gap: 2px; flex: none; }
+.cal-allday__pack-dot { width: 4px; height: 16px; border-radius: 2px; }
+.cal-allday__pack-count { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-size-xs); font-weight: var(--weight-semibold); color: var(--color-text); }
+.cal-allday__pack svg { flex: none; color: var(--color-text-muted); }
+.cal-allday__open { display: flex; flex-direction: column; gap: 3px; }
+.cal-allday__collapse { display: flex; align-items: center; gap: 5px; padding: 3px 6px; border: 1px solid var(--color-accent); border-radius: var(--radius-sm); background: var(--color-accent-soft); color: var(--color-accent); cursor: pointer; font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; font-weight: var(--weight-semibold); }
+.cal-allday__collapse svg { flex: none; }
 .cal-corner { border-right: 1px solid var(--color-border); }
 .cal-day { padding: 10px 12px; border-right: 1px solid var(--color-border); }
 .cal-day__dow { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-muted); }
@@ -32,7 +58,7 @@
 .cal-day.is-today .cal-day__num { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 6px; background: var(--color-accent); color: var(--color-text-on-dark); border-radius: var(--radius-pill); }
 .cal-day.is-today .cal-day__dow { color: var(--color-accent); }
 
-.cal-body { display: grid; grid-template-columns: var(--time-w) repeat(var(--cols, 7), 1fr); }
+.cal-body { display: grid; grid-template-columns: var(--time-w) repeat(var(--cols, 7), 1fr); padding-top: 8px; }
 .cal-rail { border-right: 1px solid var(--color-border); }
 .cal-slot { height: var(--row-h); position: relative; }
 .cal-slot > span { position: absolute; top: -7px; right: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--color-text-faint); }
@@ -77,6 +103,81 @@
 .timeblock:hover .timeblock__trash { opacity: .6; }
 .timeblock__trash:hover { opacity: 1 !important; background: rgba(255,255,255,.3); color: var(--color-danger, #d33); }
 
+/* Bloco estreito (tarefas lado a lado num horário compartilhado) */
+.timeblock--multi { padding: 4px 5px 4px 8px; gap: 1px; }
+.timeblock--multi .timeblock__title { -webkit-line-clamp: 3; line-clamp: 3; padding-right: 4px; font-size: 12px; }
+.timeblock--multi .timeblock__meta { font-size: 9px; }
+
+/* Pacote fechado (tarefas agrupadas num mesmo horário) */
+.cal-pack {
+  position: absolute; left: 5px; right: 5px; z-index: 2;
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 9px 6px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong); background: var(--color-card);
+  color: var(--color-text-soft); cursor: pointer; text-align: left; overflow: hidden;
+  box-shadow: 3px 3px 0 -1px var(--color-card), 3px 3px 0 0 var(--color-border);
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast), border-color var(--duration-fast);
+}
+.cal-pack:hover { transform: translateY(-1px); border-color: var(--color-accent); z-index: 3; }
+.cal-pack__stack { display: inline-flex; gap: 3px; flex: none; }
+.cal-pack__chip { width: 5px; height: 22px; border-radius: 3px; }
+.cal-pack__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cal-pack__count { font-size: var(--font-size-sm); font-weight: var(--weight-semibold); color: var(--color-text); line-height: 1.1; }
+.cal-pack__time { font-family: var(--font-mono); font-size: 10px; opacity: .8; }
+.cal-pack__expand { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex: none; border-radius: var(--radius-sm); background: var(--color-surface-sunken); color: var(--color-text-soft); transition: background var(--duration-fast), color var(--duration-fast); }
+.cal-pack:hover .cal-pack__expand { background: var(--color-accent-soft); color: var(--color-accent); }
+
+/* Pacote aberto (painel flutuante com as tarefas empilhadas) */
+.cal-pack-open {
+  position: absolute; left: 3px; right: 3px; z-index: 8;
+  max-height: 340px; overflow-y: auto;
+  background: var(--color-card); border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-raised);
+  animation: modal-fade-in var(--duration-fast) var(--ease-out);
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.cal-pack-open__head {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 6px 6px 10px; background: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+}
+.cal-pack-open__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); }
+.cal-pack-open__close {
+  flex: none; width: 22px; height: 22px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius-sm); background: transparent;
+  color: var(--color-text-soft); cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.cal-pack-open__close:hover { background: var(--color-accent-soft); color: var(--color-accent); }
+.cal-pack-open__list { display: flex; flex-direction: column; gap: 4px; padding: 6px; }
+
+.cal-pack-row {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  padding: 7px 6px 7px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border); cursor: grab;
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast);
+}
+.cal-pack-row:hover { transform: translateY(-1px); box-shadow: var(--shadow-card); }
+.cal-pack-row:active { cursor: grabbing; }
+.cal-pack-row.is-done { opacity: .55; }
+.cal-pack-row.is-done .cal-pack-row__title { text-decoration: line-through; }
+.cal-pack-row__prio { position: absolute; left: 0; top: 4px; bottom: 4px; width: 4px; border-radius: 0 3px 3px 0; }
+.cal-pack-row__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cal-pack-row__title { font-size: var(--font-size-sm); font-weight: var(--weight-semibold); color: var(--color-text); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-pack-row__time { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
+.cal-pack-row__act {
+  flex: none; width: 22px; height: 22px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius-sm); background: transparent;
+  color: var(--color-text-soft); cursor: pointer; opacity: .55;
+  transition: opacity var(--duration-fast), background var(--duration-fast), color var(--duration-fast);
+}
+.cal-pack-row:hover .cal-pack-row__act { opacity: 1; }
+.cal-pack-row__act:hover { background: var(--color-surface-sunken); }
+.cal-pack-row__act--del:hover { color: var(--color-danger, #d33); }
+
 /* Linha do "agora" */
 .cal-now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--color-danger); z-index: 4; }
 .cal-now::before { content: ''; position: absolute; left: -4px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-danger); }
@@ -94,8 +195,25 @@
 .cal-month__ev.is-dragging { opacity: .4; }
 .cal-month__ev--done { opacity: .55; }
 .cal-month__ev--done .cal-month__ev-title { text-decoration: line-through; }
-.cal-month__ev--more { color: var(--color-text-muted); cursor: default; }
-.cal-month__ev--more:hover { background: transparent; }
+button.cal-month__ev { appearance: none; font: inherit; width: 100%; text-align: left; border: none; }
+.cal-month__ev--more { color: var(--color-text-muted); cursor: pointer; font-weight: var(--weight-semibold); }
+.cal-month__ev--more:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+
+/* Popover expansível do mês (todas as tarefas do dia) */
+.cal-monthpop__overlay { position: fixed; inset: 0; z-index: 210; }
+.cal-monthpop { position: fixed; z-index: 211; width: 244px; max-height: 320px; overflow-y: auto; background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-modal); padding: 8px; animation: modal-fade-in var(--duration-fast) var(--ease-out); transition: opacity var(--duration-fast) var(--ease-out); }
+.cal-monthpop__head { display: flex; align-items: center; gap: 6px; padding: 2px 2px 8px; border-bottom: 1px solid var(--color-border); margin-bottom: 6px; }
+.cal-monthpop__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); }
+.cal-monthpop__close { flex: none; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--color-text-soft); cursor: pointer; transition: background var(--duration-fast), color var(--duration-fast); }
+.cal-monthpop__close:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+.cal-monthpop__list { display: flex; flex-direction: column; gap: 2px; }
+.cal-monthpop__item { pointer-events: auto; display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--radius-sm); cursor: grab; transition: background var(--duration-fast); }
+.cal-monthpop__item:hover { background: var(--color-surface-sunken); }
+.cal-monthpop__item:active { cursor: grabbing; }
+.cal-monthpop__item.is-dragging { opacity: .4; }
+.cal-monthpop__item.is-done .cal-monthpop__item-title { text-decoration: line-through; color: var(--color-text-muted); }
+.cal-monthpop__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.cal-monthpop__item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-size-sm); color: var(--color-text); }
 .cal-month__ev-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-month__cell.drag-over { background: var(--color-accent-soft); box-shadow: inset 0 0 0 2px var(--color-accent); }
 .cal-month__dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
