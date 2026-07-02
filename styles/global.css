@@ -11,6 +11,9 @@ body {
   font-size: var(--font-size-md);
   color: var(--color-text);
   background-color: var(--color-surface);
+  /* Quebra texto longo (inclusive palavras sem espaços) para não vazar dos
+     contêineres. overflow-wrap é herdado, então cobre o site todo. */
+  overflow-wrap: break-word;
   transition: background-color var(--duration-base) var(--ease-standard),
               color var(--duration-base) var(--ease-standard);
 }

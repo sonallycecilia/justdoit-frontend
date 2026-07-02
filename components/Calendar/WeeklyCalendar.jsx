@@ -90,6 +90,16 @@ function fmtHora(x) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+// Constrói o objeto de dia (num/dow/iso/mes) a partir de uma data ISO. Usado
+// pelo modal quando o evento vem da vista "mês" — que carrega só `iso`, sem o
+// índice de dia `d` relativo à semana.
+function diaDeIso(iso) {
+  if (!iso) return null;
+  const d = new Date(iso + 'T00:00:00');
+  const DOW = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+  return { num: d.getDate(), dow: DOW[d.getDay()], iso, mes: d.getMonth() };
+}
+
 // Blocos recém-arrastados ganham um id temporário ('ext-…') antes de o POST
 // retornar o id real do backend. Eventos derivados de uma tarefa agendada
 // (id 'task-…') são virtuais e não existem no schedule-service. Só persistimos
@@ -243,7 +253,19 @@ function DayView({ dia, eventos, categorias, mover, onOpen, onDrawer, onDelete }
 }
 
 /* ── MonthView ────────────────────────────────────────────── */
-function MonthView({ mesData, eventos, categorias }) {
+// Clicar num evento → modal (onOpen). Arrastar um evento para outro dia →
+// mover (muda a data ISO do bloco/tarefa).
+function MonthView({ mesData, eventos, categorias, onOpen, mover }) {
+  const [arrastando, setArrastando] = useState(null); // id do evento em arraste
+  const [over, setOver]             = useState(null); // iso do dia sob o cursor
+
+  function soltar(iso, e) {
+    e.preventDefault();
+    setOver(null);
+    if (arrastando) mover(arrastando, iso);
+    setArrastando(null);
+  }
+
   return (
     <div className="cal-month">
       <div className="cal-month__grid">
@@ -251,15 +273,27 @@ function MonthView({ mesData, eventos, categorias }) {
         {mesData.cells.map((c, i) => {
           const evs = c.out ? [] : eventos.filter(ev => ev.iso === c.iso);
           return (
-            <div key={i} className={`cal-month__cell ${c.out ? 'is-out' : ''} ${c.hoje ? 'is-today' : ''}`}>
+            <div key={i}
+              className={`cal-month__cell ${c.out ? 'is-out' : ''} ${c.hoje ? 'is-today' : ''} ${(!c.out && over === c.iso) ? 'drag-over' : ''}`}
+              onDragOver={c.out ? undefined : (e => { e.preventDefault(); if (arrastando) setOver(c.iso); })}
+              onDragLeave={c.out ? undefined : (() => setOver(o => o === c.iso ? null : o))}
+              onDrop={c.out ? undefined : (e => soltar(c.iso, e))}
+            >
               {!c.out && <span className="cal-month__num">{c.num}</span>}
               {evs.slice(0, 3).map(ev => (
-                <span key={ev.id} className="cal-month__ev">
+                <span key={ev.id}
+                  className={`cal-month__ev${ev.done ? ' cal-month__ev--done' : ''}${arrastando === ev.id ? ' is-dragging' : ''}`}
+                  draggable
+                  onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.id); setArrastando(ev.id); }}
+                  onDragEnd={() => { setArrastando(null); setOver(null); }}
+                  onClick={() => onOpen(ev)}
+                  title={ev.titulo}
+                >
                   <span className="cal-month__dot" style={{ background: corCategoria(categorias, ev) }}></span>
-                  {ev.titulo}
+                  <span className="cal-month__ev-title">{ev.titulo}</span>
                 </span>
               ))}
-              {evs.length > 3 && <span className="cal-month__ev" style={{ color: 'var(--color-text-muted)' }}>+{evs.length - 3} mais</span>}
+              {evs.length > 3 && <span className="cal-month__ev cal-month__ev--more">+{evs.length - 3} mais</span>}
             </div>
           );
         })}
@@ -328,6 +362,7 @@ function TimePickerInline({ ini, fim, onChange }) {
 /* ── TaskModal (popup centralizado) ──────────────────────── */
 function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
   const [dateOpen, setDateOpen] = useState(false);
+  const [catOpen, setCatOpen] = useState(false);
   if (!ev) return null;
 
   // Categoria atual do evento, por nome (cai para o rótulo do slug em blocos
@@ -335,10 +370,38 @@ function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
   const cats = (categorias && categorias.length) ? categorias : [{ id: 'generico', nome: 'Genérico', cor: 'var(--color-cat-generico)' }];
   const catAtual = ev.catNome || CAT_LABEL[ev.cat] || 'Genérico';
 
-  const TODAY_NUM = 11;
-  const WEEK_NUMS = [8,9,10,11,12,13,14];
-  const curNum = ev.dateNum !== undefined ? ev.dateNum : (dia ? dia.num : TODAY_NUM);
-  const curDow = ev.dow || (dia ? dia.dow : DOW_JUN26[(curNum - 1) % 7]);
+  // Mês/ano de referência do seletor de data: derivado do dia do evento
+  // (dia.iso na semana; ev.iso no mês). Sem data → mês atual. Antes era fixo
+  // em "junho 2026", o que fazia tarefas de outros meses abrirem em junho.
+  const refDate = (dia && dia.iso) ? new Date(dia.iso + 'T00:00:00')
+                : ev.iso           ? new Date(ev.iso + 'T00:00:00')
+                :                     new Date();
+  const calAno = refDate.getFullYear();
+  const calMes = refDate.getMonth();
+  const diasNoMes = new Date(calAno, calMes + 1, 0).getDate();
+  const primeiroDow = inicioDomingo()
+    ? new Date(calAno, calMes, 1).getDay()
+    : (new Date(calAno, calMes, 1).getDay() + 6) % 7;
+  const DOW_FULL = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+  const dowDe = n => DOW_FULL[new Date(calAno, calMes, n).getDay()];
+  const curNum = ev.dateNum !== undefined ? ev.dateNum : (dia ? dia.num : refDate.getDate());
+  const curDow = ev.dow || dowDe(curNum);
+
+  // "Hoje" só destaca quando o mês exibido é o corrente.
+  const agora = new Date();
+  const hojeNum = (agora.getFullYear() === calAno && agora.getMonth() === calMes) ? agora.getDate() : -1;
+
+  // Dias da mesma semana do dia selecionado (destaque leve), limitados ao mês.
+  const semanaNums = (() => {
+    const sdow = new Date(calAno, calMes, curNum).getDay();
+    const recuo = inicioDomingo() ? sdow : (sdow === 0 ? 6 : sdow - 1);
+    const nums = [];
+    for (let k = 0; k < 7; k++) {
+      const d = new Date(calAno, calMes, curNum - recuo + k);
+      if (d.getMonth() === calMes) nums.push(d.getDate());
+    }
+    return nums;
+  })();
 
   return (
     <div className="task-modal__backdrop" onClick={onClose}>
@@ -356,6 +419,31 @@ function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
         {/* Metadados */}
         <div className="task-modal__info">
           <div className="task-modal__row">
+            <span className="task-modal__label">Categoria</span>
+            <span className="task-modal__val">
+              <div className="task-modal__cat-wrap">
+                <button className={`task-modal__cat-btn${catOpen ? ' is-open' : ''}`} onClick={() => setCatOpen(o => !o)}>
+                  <span className="task-modal__cat-dot" style={{ background: corCategoria(categorias, ev) }}></span>
+                  <span className="task-modal__cat-btn-name">{catAtual}</span>
+                  <Icon d="m6 9 6 6 6-6" size={13} />
+                </button>
+                {catOpen && <>
+                  <div className="task-modal__cat-overlay" onClick={() => setCatOpen(false)} />
+                  <div className="task-modal__cat-menu">
+                    {cats.map(c => (
+                      <button key={c.id} className={`task-modal__cat-item${catAtual === c.nome ? ' is-on' : ''}`}
+                        onClick={() => { onUpdate({ catNome: c.nome, categoriaId: c.id, cat: CAT_MAP[c.nome] || ev.cat }); setCatOpen(false); }}>
+                        <span className="task-modal__cat-dot" style={{ background: c.cor }}></span>
+                        <span className="task-modal__cat-item-name">{c.nome}</span>
+                        {catAtual === c.nome && <Icon d="M20 6 9 17l-5-5" size={14} />}
+                      </button>
+                    ))}
+                  </div>
+                </>}
+              </div>
+            </span>
+          </div>
+          <div className="task-modal__row">
             <span className="task-modal__label">Horário</span>
             <span className="task-modal__val">
               <TimePickerInline ini={ev.ini} fim={ev.fim} onChange={(novoIni, novoFim) => onUpdate({ ini: novoIni, fim: novoFim })} />
@@ -366,19 +454,20 @@ function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
             <span className="task-modal__val">
               <div className="task-modal__date-wrap">
                 <button className={`task-modal__date-btn${dateOpen ? ' is-open' : ''}`} onClick={() => setDateOpen(o => !o)}>
-                  {curDow}, {curNum} jun
+                  {curDow}, {curNum} {MESES[calMes]}
                   <Icon d="m6 9 6 6 6-6" size={13} />
                 </button>
                 {dateOpen && <>
                   <div className="task-modal__date-overlay" onClick={() => setDateOpen(false)} />
                   <div className="task-modal__date-menu">
-                    <div className="task-modal__cal-head">junho 2026</div>
+                    <div className="task-modal__cal-head">{MESES_LONGOS[calMes]} {calAno}</div>
                     <div className="task-modal__cal-grid">
-                      {DOW_JUN26.map(d => <div key={d} className="task-modal__cal-dow">{d.slice(0,1)}</div>)}
-                      {Array.from({ length: 30 }, (_, i) => i + 1).map(n => (
+                      {rotulosDow().map(d => <div key={d} className="task-modal__cal-dow">{d.slice(0,1)}</div>)}
+                      {Array.from({ length: primeiroDow }, (_, i) => <span key={'b' + i} />)}
+                      {Array.from({ length: diasNoMes }, (_, i) => i + 1).map(n => (
                         <button key={n}
-                          className={`task-modal__cal-day${n === curNum ? ' is-on' : ''}${n === TODAY_NUM ? ' is-today' : ''}${WEEK_NUMS.includes(n) ? ' is-week' : ''}`}
-                          onClick={() => { onUpdate({ dateNum: n, dow: DOW_JUN26[(n-1)%7] }); setDateOpen(false); }}
+                          className={`task-modal__cal-day${n === curNum ? ' is-on' : ''}${n === hojeNum ? ' is-today' : ''}${semanaNums.includes(n) ? ' is-week' : ''}`}
+                          onClick={() => { onUpdate({ dateNum: n, dow: dowDe(n) }); setDateOpen(false); }}
                         >{n}</button>
                       ))}
                     </div>
@@ -409,19 +498,6 @@ function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
                 <button key={n} className={`task-modal__prio-opt${ev.prio === n ? ' is-on' : ''}`} data-prio={n} onClick={() => onUpdate({ prio: n })}>
                   <span className="task-modal__prio-dot"></span>
                   {PRIO_LABEL[n]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="task-modal__ctrl-group">
-            <div className="task-modal__ctrl-label">Categoria</div>
-            <div className="task-modal__cat-row">
-              {cats.map(c => (
-                <button key={c.id} className={`task-modal__cat-opt${catAtual === c.nome ? ' is-on' : ''}`}
-                  onClick={() => onUpdate({ catNome: c.nome, categoriaId: c.id, cat: CAT_MAP[c.nome] || ev.cat })}>
-                  <span className="task-modal__cat-dot" style={{ background: c.cor }}></span>
-                  {c.nome}
                 </button>
               ))}
             </div>
@@ -615,24 +691,23 @@ function WeeklyCalendar() {
   // Mantém o dueDate/dueTime da tarefa em sincronia com a posição do bloco no
   // calendário (PUT /tasks no task-service). Chamado ao arrastar do sidebar
   // (cria bloco) e ao mover um bloco já existente.
-  function sincronizarAgendaTarefa(taskId, d, ini) {
+  function sincronizarAgendaTarefa(taskId, iso, ini) {
     if (!taskId || !window.Tarefas) return;
     const tarefa = Tarefas.buscar(taskId);
-    const dia = dias[d];
-    if (!tarefa || !dia) return;
+    if (!tarefa || !iso) return;
     const hora = fmtHora(ini);
     // Atualiza o cache local na hora (otimista): abrir o detalhe logo após
     // arrastar já mostra a nova data/hora, sem esperar o PUT responder.
     const lista = Tarefas.listar();
     const i = lista.findIndex(x => x.id === taskId);
     if (i >= 0) {
-      const dataObj = new Date(dia.iso + 'T00:00:00');
-      lista[i] = { ...lista[i], dataIso: dia.iso, hora,
+      const dataObj = new Date(iso + 'T00:00:00');
+      lista[i] = { ...lista[i], dataIso: iso, hora,
         data:   window.Utils ? Utils.dataRelativa(dataObj) : lista[i].data,
         quando: window.Utils ? Utils.calcQuando(dataObj)  : lista[i].quando };
       Tarefas.salvar(lista);
     }
-    Tarefas.atualizar(taskId, { ...tarefa, dataIso: dia.iso, hora }).catch(() => {});
+    Tarefas.atualizar(taskId, { ...tarefa, dataIso: iso, hora }).catch(() => {});
   }
 
   function mover(id, novoDia, novaIni) {
@@ -642,7 +717,20 @@ function WeeklyCalendar() {
     const novo = { ...atual, d: novoDia, ini: novaIni, fim: novaIni + dur };
     setEventos(evs => evs.map(ev => ev.id === id ? novo : ev));
     if (window.Blocos && ehPersistido(id)) Blocos.atualizar(novo, dias).catch(() => {});
-    sincronizarAgendaTarefa(atual.taskId, novoDia, novaIni);
+    sincronizarAgendaTarefa(atual.taskId, dias[novoDia] && dias[novoDia].iso, novaIni);
+  }
+
+  // Move um evento da vista "mês" para outro dia (só muda a data ISO; a hora é
+  // preservada). Persiste o bloco no schedule-service e sincroniza a data da
+  // tarefa vinculada. Blocos.atualizar espera índice de dia + array `dias`, então
+  // montamos um `dias` sintético de um elemento com o iso de destino.
+  function moverMes(id, novoIso) {
+    const atual = eventosMes.find(e => e.id === id);
+    if (!atual || atual.iso === novoIso) return;
+    const novo = { ...atual, iso: novoIso };
+    setEventosMes(evs => evs.map(ev => ev.id === id ? novo : ev));
+    if (window.Blocos && ehPersistido(id)) Blocos.atualizar({ ...novo, d: 0 }, [{ iso: novoIso }]).catch(() => {});
+    sincronizarAgendaTarefa(atual.taskId, novoIso, atual.ini);
   }
 
   // Cria o bloco no schedule-service para um evento já vinculado a uma tarefa.
@@ -671,7 +759,7 @@ function WeeklyCalendar() {
 
     // Tarefa de origem ainda sem data → agenda ela mesma (não duplica).
     if (orig && !orig.dataIso) {
-      sincronizarAgendaTarefa(orig.id, novoEv.d, novoEv.ini); // PUT data/hora
+      sincronizarAgendaTarefa(orig.id, dia && dia.iso, novoEv.ini); // PUT data/hora
       criarBlocoDoEvento(novoEv);                             // bloco ligado a orig.id
       window.dispatchEvent(new CustomEvent('tarefas:atualizadas'));
       return;
@@ -698,6 +786,7 @@ function WeeklyCalendar() {
 
   function removerEvento(ev) {
     setEventos(evs => evs.filter(e => e.id !== ev.id));
+    setEventosMes(evs => evs.filter(e => e.id !== ev.id));
     setModalEv(null);
     if (window.Blocos && ehPersistido(ev.id)) Blocos.remover(ev.id).catch(() => {});
     // Remover o bloco do calendário também exclui a tarefa vinculada no banco
@@ -715,20 +804,35 @@ function WeeklyCalendar() {
   // Dia-do-mês escolhido no seletor do modal → data ISO, herdando ano/mês do
   // dia atual do evento (o seletor cobre apenas esse mês).
   function isoDoDiaDoMes(n) {
-    const ref = (dias[modalEv.d] && dias[modalEv.d].iso) || (dias[0] && dias[0].iso);
+    const ref = modalEv.iso || (dias[modalEv.d] && dias[modalEv.d].iso) || (dias[0] && dias[0].iso);
     if (!ref) return null;
     return ref.slice(0, 8) + String(n).padStart(2, '0'); // "AAAA-MM-" + "DD"
+  }
+
+  // Persiste um bloco no schedule-service, aceitando tanto o modelo da semana
+  // (índice `d` + array `dias`) quanto o do mês (data `iso` absoluta).
+  function persistirBloco(ev) {
+    if (!window.Blocos || !ehPersistido(ev.id)) return;
+    if (ev.iso != null && ev.d == null) Blocos.atualizar({ ...ev, d: 0 }, [{ iso: ev.iso }]).catch(() => {});
+    else Blocos.atualizar(ev, dias).catch(() => {});
   }
 
   function handleUpdate(changes) {
     if (!modalEv) return;
     const novo = { ...modalEv, ...changes };
+    // Evento do mês: mudar o dia no seletor também move o bloco na grade (o
+    // modelo do mês localiza pelo `iso`, não pelo índice de dia).
+    if (changes.dateNum !== undefined && modalEv.iso != null) {
+      const iso = isoDoDiaDoMes(changes.dateNum);
+      if (iso) novo.iso = iso;
+    }
     setEventos(evs => evs.map(e => e.id === modalEv.id ? novo : e));
+    setEventosMes(evs => evs.map(e => e.id === modalEv.id ? novo : e));
     setModalEv(novo);
 
-    // Mudança de horário do bloco → persiste no schedule-service.
-    if ((changes.ini !== undefined || changes.fim !== undefined) && window.Blocos && ehPersistido(novo.id)) {
-      Blocos.atualizar(novo, dias).catch(() => {});
+    // Mudança de horário (ou do dia, na vista mês) → persiste no schedule-service.
+    if ((changes.ini !== undefined || changes.fim !== undefined || novo.iso !== modalEv.iso) && window.Blocos && ehPersistido(novo.id)) {
+      persistirBloco(novo);
     }
 
     // Sem tarefa vinculada (bloco avulso) não há o que persistir no task-service.
@@ -802,7 +906,7 @@ function WeeklyCalendar() {
         <div className="cal-scroll">
           {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} adicionar={adicionar} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} />}
           {vista === 'dia'    && <DayView dia={diaAtual} eventos={eventos} categorias={categorias} mover={mover} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} />}
-          {vista === 'mes'    && <MonthView mesData={mesData} eventos={eventosMes} categorias={categorias} />}
+          {vista === 'mes'    && <MonthView mesData={mesData} eventos={eventosMes} categorias={categorias} onOpen={openModal} mover={moverMes} />}
         </div>
 
         <div className="cal-legend">
@@ -818,7 +922,7 @@ function WeeklyCalendar() {
         </div>
       </div>
 
-      <TaskModal ev={modalEv} dia={modalEv ? dias[modalEv.d] : null} categorias={categorias} onClose={() => setModalEv(null)} onUpdate={handleUpdate} onDelete={pedirRemover} />
+      <TaskModal ev={modalEv} dia={modalEv ? (modalEv.iso != null ? diaDeIso(modalEv.iso) : dias[modalEv.d]) : null} categorias={categorias} onClose={() => setModalEv(null)} onUpdate={handleUpdate} onDelete={pedirRemover} />
       {drawerEv && <PainelDrawer key={drawerEv.id} ev={drawerEv} dias={dias} onClose={() => setDrawerEv(null)} />}
       {confirmarEv && (
         <ConfirmDialog titulo="Excluir tarefa" confirmar="Excluir"

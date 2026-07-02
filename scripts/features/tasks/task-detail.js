@@ -505,7 +505,22 @@
         hora:        horaValor,
         recorrencia,
       })
-        .then(() => {
+        .then((nova) => {
+          const novoId = nova && nova.id;
+          // As configurações de detalhe (subtarefas, notas, descrição, módulos
+          // ativos, ciclo) foram criadas sob as chaves genéricas de "nova
+          // tarefa" — ou nem chegaram a ser gravadas (módulos/ciclo, cujas
+          // KEY_* são null quando não há id). Grava tudo sob o id definitivo,
+          // senão a tarefa reabre sem essas configurações.
+          if (novoId) {
+            Storage.gravar(Storage.KEYS.detalheSubs(novoId), subs);
+            Storage.gravar(Storage.KEYS.detalheNotas(novoId), notes.value);
+            Storage.gravar(Storage.KEYS.detalheDesc(novoId), descricao);
+            const modsAtivos = [...grid.querySelectorAll('.module-toggle.is-on')]
+              .map(b => b.getAttribute('data-mod'));
+            Storage.gravar(Storage.KEYS.detalheMods(novoId), modsAtivos);
+            Storage.gravar(Storage.KEYS.detalheCiclo(novoId), cicloAtual);
+          }
           Storage.remover(KEY_SUBS);
           Storage.remover(KEY_NOTAS);
           Storage.remover(KEY_DESC);

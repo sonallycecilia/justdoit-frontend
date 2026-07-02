@@ -84,6 +84,45 @@
 .filters__spacer { flex: 1; }
 .filters__count { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-muted); }
 
+/* Filtro de categoria como dropdown (mesmo padrão do modal do calendário).
+   Escala para qualquer número de categorias: o menu rola, sem estourar a barra. */
+.cat-filter { position: relative; display: inline-block; }
+.cat-filter__btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 10px 7px 12px; border-radius: var(--radius-md);
+  border: 1px solid var(--color-border); background: var(--color-surface-sunken);
+  font-family: var(--font-body); font-size: var(--font-size-sm); font-weight: var(--weight-medium);
+  color: var(--color-text-soft); cursor: pointer;
+  transition: border-color var(--duration-fast), color var(--duration-fast);
+}
+.cat-filter__btn:hover, .cat-filter__btn.is-open { border-color: var(--color-accent); color: var(--color-accent); }
+.cat-filter__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.cat-filter__name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-filter__btn svg { flex: none; color: var(--color-text-muted); transition: transform var(--duration-fast); }
+.cat-filter__btn:hover svg, .cat-filter__btn.is-open svg { color: var(--color-accent); }
+.cat-filter__btn.is-open .cat-filter__chevron { transform: rotate(180deg); }
+
+.cat-filter__overlay { position: fixed; inset: 0; z-index: 40; }
+.cat-filter__menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 41;
+  min-width: 220px; max-width: 300px; max-height: 300px; overflow-y: auto;
+  background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  padding: 6px; box-shadow: var(--shadow-raised);
+}
+.cat-filter__overlay[hidden], .cat-filter__menu[hidden] { display: none; }
+.cat-filter__item {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border-radius: var(--radius-sm); border: none; background: transparent;
+  font-size: var(--font-size-sm); font-weight: var(--weight-medium); color: var(--color-text-soft);
+  cursor: pointer; text-align: left;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.cat-filter__item:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+.cat-filter__item.is-on { background: var(--color-accent-soft); color: var(--color-text); }
+.cat-filter__item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-filter__check { flex: none; display: flex; color: var(--color-accent); }
+.cat-filter__check svg { width: 15px; height: 15px; }
+
 /* Grupos de prioridade */
 .prio-group { margin-bottom: var(--space-lg); }
 .prio-group__head {

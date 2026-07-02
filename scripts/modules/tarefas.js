@@ -187,6 +187,22 @@ const Tarefas = (function () {
     notificarMudanca();
   }
 
+  // Renomeia a categoria (por nome) no cache local + meta, refletindo no nome
+  // exibido a edição feita no backend (PUT /categories/{id}). A associação por
+  // categoryId não muda — só o rótulo. Notifica a UI para re-renderizar.
+  function renomearCategoria(nomeAntigo, nomeNovo) {
+    if (!nomeAntigo || !nomeNovo || nomeAntigo === nomeNovo) return;
+    const mapa = lerMeta();
+    const lista = listar().map(function (t) {
+      if (t.cat !== nomeAntigo) return t;
+      mapa[t.id] = Object.assign({}, mapa[t.id], { cat: nomeNovo });
+      return Object.assign({}, t, { cat: nomeNovo });
+    });
+    Storage.gravar(META_KEY, mapa);
+    salvar(lista);
+    notificarMudanca();
+  }
+
   // Exclui a tarefa no backend (DELETE /tasks/{id}) e a remove do cache local.
   function remover(id) {
     return Api.remove(Api.endpoints.tasks.remove(id)).then(function () {
@@ -195,7 +211,7 @@ const Tarefas = (function () {
     });
   }
 
-  return { listar, buscar, salvar, criar, atualizar, toggleDone, remover, moverParaGenerico, carregarDaApi };
+  return { listar, buscar, salvar, criar, atualizar, toggleDone, remover, moverParaGenerico, renomearCategoria, carregarDaApi };
 })();
 
 window.Tarefas = Tarefas;

@@ -46,7 +46,7 @@
 .timeblock:active { cursor: grabbing; }
 .timeblock.is-dragging { opacity: .4; }
 .timeblock__prio { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
-.timeblock__title { font-size: var(--font-size-sm); font-weight: var(--weight-semibold); line-height: 1.2; }
+.timeblock__title { font-size: var(--font-size-sm); font-weight: var(--weight-semibold); line-height: 1.2; padding-right: 16px; overflow-wrap: anywhere; word-break: break-word; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .timeblock__meta { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; opacity: .85; }
 .timeblock--estudos { background: var(--color-priority-low-soft); border-color: color-mix(in srgb, var(--color-cat-estudos) 40%, transparent); color: var(--color-cat-estudos); }
 .timeblock--casa { background: var(--color-priority-important-soft); border-color: color-mix(in srgb, var(--color-cat-casa) 40%, transparent); color: var(--color-cat-casa); }
@@ -83,18 +83,26 @@
 
 /* ---------- Visão Mês ---------- */
 .cal-month { padding: var(--space-lg) var(--space-xl); }
-.cal-month__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--color-border); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+.cal-month__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--color-border); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
 .cal-month__dow { background: var(--color-card); padding: 8px; text-align: center; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-muted); }
-.cal-month__cell { background: var(--color-card); min-height: 96px; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.cal-month__cell { background: var(--color-card); min-width: 0; min-height: 96px; padding: 8px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
 .cal-month__cell.is-out { background: var(--color-surface); }
 .cal-month__num { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-soft); }
 .cal-month__cell.is-today .cal-month__num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: var(--color-accent); color: var(--color-text-on-dark); border-radius: 50%; }
-.cal-month__ev { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--color-text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-month__ev { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 11px; color: var(--color-text-soft); cursor: pointer; border-radius: var(--radius-sm); padding: 1px 3px; margin: 0 -3px; transition: background var(--duration-fast); }
+.cal-month__ev:hover { background: var(--color-surface-sunken); }
+.cal-month__ev.is-dragging { opacity: .4; }
+.cal-month__ev--done { opacity: .55; }
+.cal-month__ev--done .cal-month__ev-title { text-decoration: line-through; }
+.cal-month__ev--more { color: var(--color-text-muted); cursor: default; }
+.cal-month__ev--more:hover { background: transparent; }
+.cal-month__ev-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-month__cell.drag-over { background: var(--color-accent-soft); box-shadow: inset 0 0 0 2px var(--color-accent); }
 .cal-month__dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 
-.cal-legend { display: flex; align-items: center; gap: var(--space-lg); padding: var(--space-md) var(--space-xl); border-top: 1px solid var(--color-border); flex: none; }
-.cal-legend__item { display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-size-sm); color: var(--color-text-soft); }
-.cal-legend__dot { width: 10px; height: 10px; border-radius: 3px; }
+.cal-legend { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-sm) var(--space-lg); padding: var(--space-md) var(--space-xl); border-top: 1px solid var(--color-border); flex: none; }
+.cal-legend__item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; font-size: var(--font-size-sm); color: var(--color-text-soft); }
+.cal-legend__dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
 
 /* ---------- Modal de tarefa (popup centralizado) ---------- */
 .task-modal__backdrop {
@@ -163,7 +171,7 @@
 
 .task-modal__head { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-lg) var(--space-lg) var(--space-md); border-bottom: 1px solid var(--color-border); }
 .task-modal__head-cat { width: 10px; height: 10px; border-radius: 3px; flex: none; }
-.task-modal__title { flex: 1; font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: var(--weight-medium); line-height: 1.25; transition: color var(--duration-fast); }
+.task-modal__title { flex: 1; min-width: 0; overflow-wrap: anywhere; word-break: break-word; font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: var(--weight-medium); line-height: 1.25; transition: color var(--duration-fast); }
 .task-modal__title.is-done { color: var(--color-text-muted); text-decoration: line-through; text-decoration-color: var(--color-border-strong); }
 .task-modal__close { margin-left: var(--space-sm); }
 
@@ -205,10 +213,20 @@
 .task-modal__prio-opt[data-prio="normal"].is-on    { background: var(--color-priority-normal-soft); }
 .task-modal__prio-opt[data-prio="low"].is-on       { background: var(--color-priority-low-soft); }
 
-.task-modal__cat-row { display: flex; gap: 6px; }
-.task-modal__cat-opt { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-pill); border: 1px solid var(--color-border-strong); background: var(--color-card); font-size: var(--font-size-sm); font-weight: var(--weight-medium); color: var(--color-text-soft); cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast), color var(--duration-fast); }
-.task-modal__cat-opt:hover { border-color: var(--color-accent); }
-.task-modal__cat-opt.is-on { border-color: var(--color-accent); background: var(--color-accent-soft); color: var(--color-text); }
+.task-modal__cat-wrap { position: relative; display: inline-block; }
+.task-modal__cat-btn { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--color-border-strong); background: var(--color-card); font-size: var(--font-size-sm); font-weight: var(--weight-medium); color: var(--color-text-soft); cursor: pointer; transition: border-color var(--duration-fast), color var(--duration-fast); }
+.task-modal__cat-btn:hover, .task-modal__cat-btn.is-open { border-color: var(--color-accent); color: var(--color-accent); }
+.task-modal__cat-btn-name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-modal__cat-btn svg { flex: none; color: var(--color-text-muted); transition: transform var(--duration-fast); }
+.task-modal__cat-btn:hover svg, .task-modal__cat-btn.is-open svg { color: var(--color-accent); }
+.task-modal__cat-btn.is-open svg { transform: rotate(180deg); }
+.task-modal__cat-overlay { position: fixed; inset: 0; z-index: 10; }
+.task-modal__cat-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 11; min-width: 100%; max-width: 260px; max-height: 240px; overflow-y: auto; background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 6px; box-shadow: var(--shadow-raised); animation: modal-fade-in var(--duration-fast) var(--ease-out); }
+.task-modal__cat-item { width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius-sm); border: none; background: transparent; font-size: var(--font-size-sm); font-weight: var(--weight-medium); color: var(--color-text-soft); cursor: pointer; text-align: left; transition: background var(--duration-fast), color var(--duration-fast); }
+.task-modal__cat-item:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+.task-modal__cat-item.is-on { background: var(--color-accent-soft); color: var(--color-text); }
+.task-modal__cat-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-modal__cat-item svg { flex: none; color: var(--color-accent); }
 .task-modal__cat-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
 /* Date picker dropdown */
@@ -302,7 +320,7 @@
   border-bottom: 1px solid var(--color-border); flex: none;
 }
 .cal-drawer__cat { width: 10px; height: 10px; border-radius: 3px; flex: none; }
-.cal-drawer__title { flex: 1; font-family: var(--font-display); font-size: var(--font-size-md); font-weight: var(--weight-medium); line-height: 1.3; }
+.cal-drawer__title { flex: 1; min-width: 0; overflow-wrap: anywhere; word-break: break-word; font-family: var(--font-display); font-size: var(--font-size-md); font-weight: var(--weight-medium); line-height: 1.3; }
 .cal-drawer__actions { display: flex; align-items: center; gap: 4px; flex: none; }
 
 .cal-drawer__meta {

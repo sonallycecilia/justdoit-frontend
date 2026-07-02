@@ -78,7 +78,7 @@
 .nav-item__ic { display: flex; color: var(--color-text-muted); }
 .nav-item.is-active .nav-item__ic { color: var(--color-accent); }
 .nav-item__ic svg { width: 18px; height: 18px; }
-.nav-item__label { flex: 1; }
+.nav-item__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-item__count { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
 .nav-item.is-active .nav-item__count { color: var(--color-accent); }
 
