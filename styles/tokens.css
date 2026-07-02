@@ -164,6 +164,26 @@
   --color-priority-normal-soft:    #0f2a20;
   --color-priority-low-soft:       #18211f;
 
+  /* ---------- Categorias no escuro ----------
+     Os tons terrosos do tema claro (teal #014040, roxo, vinho…) são
+     escuros demais para ler sobre o card quase preto — no calendário a
+     cor da categoria vira a cor do TEXTO do bloco, então precisa brilhar.
+     Aqui cada matiz ganha uma versão luminosa, mantendo o mesmo "hue"
+     da versão clara para a identidade não mudar entre os modos. */
+  --color-cat-estudos:  #52c7bd;  /* teal claro   */
+  --color-cat-casa:     #e0b25f;  /* âmbar claro  */
+  --color-cat-generico: #9fb5b2;  /* sage claro   */
+
+  --color-cat-teal:       #52c7bd;  /* teal      */
+  --color-cat-rust:       #ec8f76;  /* ferrugem  */
+  --color-cat-green:      #5fca92;  /* verde     */
+  --color-cat-sage:       #a6bcb9;  /* sage      */
+  --color-cat-purple:     #b6a4e6;  /* lilás     */
+  --color-cat-pink:       #ef9fc4;  /* rosa      */
+  --color-cat-blue:       #82b4d8;  /* azul      */
+  --color-cat-terracotta: #e6a577;  /* terracota */
+  --color-cat-plum:       #d896ad;  /* mauve     */
+
   /* Sobre o card escuro, 13% já tinge o suficiente. */
   --block-tint: 13%;
 

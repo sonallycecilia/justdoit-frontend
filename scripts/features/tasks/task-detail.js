@@ -426,8 +426,10 @@
   if (tarefa) {
     // Título
     document.getElementById('title').textContent = tarefa.titulo;
-    // Descrição (persistida separadamente)
-    const descSalva = Storage.ler(KEY_DESC, '');
+    // Descrição: prioriza o rascunho local (KEY_DESC); se vazio, usa a que o
+    // backend guardou (tarefa.descricao) — assim ela aparece mesmo em outro
+    // dispositivo ou quando o save local foi pulado.
+    const descSalva = Storage.ler(KEY_DESC, '') || tarefa.descricao || '';
     if (descSalva) document.getElementById('desc').textContent = descSalva;
     // Done
     if (tarefa.done) detail.classList.add('is-done');

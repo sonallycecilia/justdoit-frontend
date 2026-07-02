@@ -148,6 +148,25 @@ function enriquecerComTarefa(b) {
   };
 }
 
+// Re-sincroniza os campos visuais de um evento com o cache de tarefas, sem
+// re-buscar os blocos no backend. Usado quando 'tarefas:atualizadas' avisa que
+// a tarefa mudou em outra parte da UI (ex.: categoria trocada por drag-and-drop
+// na sidebar): só título/categoria/cor/prioridade/estado precisam acompanhar,
+// a posição (dia/hora) do bloco não muda. Eventos sem taskId — ou de tarefa já
+// removida do cache — ficam intactos.
+function reaplicarTarefa(ev) {
+  const t = (window.Tarefas && ev.taskId) ? Tarefas.buscar(ev.taskId) : null;
+  if (!t) return ev;
+  return {
+    ...ev,
+    titulo:  t.titulo,
+    cat:     CAT_MAP[t.cat] || 'generico',
+    catNome: t.cat,
+    prio:    t.prioridade || 'normal',
+    done:    t.done,
+  };
+}
+
 function Icon({ d, size = 16 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -678,6 +697,19 @@ function WeeklyCalendar() {
     }
     window.addEventListener('message', onMsg);
     return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  // Sincroniza cor/categoria/título dos eventos quando a tarefa muda em outra
+  // parte da UI (ex.: arrastar entre categorias na sidebar dispara
+  // 'tarefas:atualizadas'). Re-mapeia em memória a partir do cache de tarefas,
+  // já atualizado nesse ponto — sem re-buscar os blocos no backend.
+  useEffect(() => {
+    function onTarefas() {
+      setEventos(evs => evs.map(reaplicarTarefa));
+      setEventosMes(evs => evs.map(reaplicarTarefa));
+    }
+    window.addEventListener('tarefas:atualizadas', onTarefas);
+    return () => window.removeEventListener('tarefas:atualizadas', onTarefas);
   }, []);
 
   // Navegação adapta-se à vista: "mês" passa meses; demais passam semanas.

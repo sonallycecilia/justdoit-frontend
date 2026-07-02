@@ -173,6 +173,12 @@
     });
   });
 
+  // A categoria (ou outro campo) de uma tarefa mudou em outra parte da UI — ex.:
+  // arrastar entre categorias na sidebar dispara 'tarefas:atualizadas'. O cache
+  // local já está atualizado nesse ponto, então basta repintar a lista (sem ir
+  // ao backend); a lista de categorias em si não mudou.
+  window.addEventListener('tarefas:atualizadas', pintar);
+
   // Bloco de anotações — persiste via Storage
   const notepadArea = document.getElementById('notepadArea');
   const notepadHint = document.getElementById('notepadHint');
