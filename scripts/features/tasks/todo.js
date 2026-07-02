@@ -54,6 +54,7 @@
               </div>
               <div class="todo-right">
                 <span class="badge badge--${Priority.normalizar(t.prioridade)}">${Priority.ROTULO[Priority.normalizar(t.prioridade)]}</span>
+                <button class="todo-del" data-del aria-label="Excluir tarefa" title="Excluir tarefa">${ico('<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>')}</button>
               </div>
             </div>`).join('')}
         </div>
@@ -69,6 +70,18 @@
       el.addEventListener('click', () => {
         const id = el.closest('.todo-item').getAttribute('data-id');
         window.location.href = 'task-detail.html?id=' + id;
+      });
+    });
+
+    groups.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = btn.closest('.todo-item').getAttribute('data-id');
+        btn.disabled = true;
+        Tarefas.remover(id).then(pintar).catch(err => {
+          console.error('Falha ao excluir tarefa:', err);
+          btn.disabled = false;
+        });
       });
     });
   }

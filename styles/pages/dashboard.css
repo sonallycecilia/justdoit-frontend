@@ -35,6 +35,19 @@
 .task__cat { display: inline-flex; align-items: center; gap: 5px; font-size: var(--font-size-xs); color: var(--color-text-muted); }
 .task__cat-dot { width: 7px; height: 7px; border-radius: 50%; }
 .task__time { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
+.task__right { display: flex; align-items: center; gap: var(--space-sm); flex: none; }
+
+/* Botão de excluir tarefa (após a prioridade) */
+.task__del {
+  display: grid; place-items: center; flex: none;
+  width: 28px; height: 28px; border-radius: var(--radius-sm);
+  background: transparent; border: 0; cursor: pointer;
+  color: var(--color-text-faint);
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.task__del svg { width: 15px; height: 15px; }
+.task__del:hover { background: var(--color-surface-sunken); color: var(--color-danger); }
+.task__del:disabled { opacity: .5; pointer-events: none; }
 
 /* Atalhos */
 .shortcut-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); }

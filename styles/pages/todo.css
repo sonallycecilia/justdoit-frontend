@@ -169,6 +169,18 @@
 .todo-time svg { width: 12px; height: 12px; }
 .todo-right { display: flex; align-items: center; gap: var(--space-sm); flex: none; }
 
+/* Botão de excluir tarefa (após a prioridade) */
+.todo-del {
+  display: grid; place-items: center; flex: none;
+  width: 28px; height: 28px; border-radius: var(--radius-sm);
+  background: transparent; border: 0; cursor: pointer;
+  color: var(--color-text-faint);
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.todo-del svg { width: 15px; height: 15px; }
+.todo-del:hover { background: var(--color-surface-sunken); color: var(--color-danger); }
+.todo-del:disabled { opacity: .5; pointer-events: none; }
+
 /* Estado vazio */
 .empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: var(--space-2xl) var(--space-lg); color: var(--color-text-muted); }
 .empty svg { width: 40px; height: 40px; color: var(--color-border-strong); margin-bottom: var(--space-sm); }
