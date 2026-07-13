@@ -45,16 +45,17 @@ const Tarefas = (function () {
   // ── Tradução backend ↔ frontend ─────────────────────────────
   // frontend → corpo aceito pelo backend (TaskRequest)
   function paraApi(d) {
-    const catId = (d.categoriaId && d.categoriaId !== CAT_GENERICO_ID) ? d.categoriaId : null;
-    return {
-      title:       d.titulo,
-      description: d.descricao || null,
-      categoryId:  catId,           // UUID real da categoria; null = Genérico
-      priority:    null,            // nível real fica na meta; backend usa NORMAL
-      dueDate:     d.dataIso || null,
-      dueTime:     d.hora || null,  // "HH:mm" — aceito como LocalTime
-    };
-  }
+  const catId = (d.categoriaId && d.categoriaId !== CAT_GENERICO_ID) ? d.categoriaId : null;
+  return {
+    title:       d.titulo,
+    description: d.descricao || null,
+    categoryId:  catId,
+    priority:    null,
+    dueDate:     d.dataIso || null,
+    dueTime:     d.hora || null,
+    estimatedMinutes: (d.duracaoMin != null) ? d.duracaoMin : null,   
+  };
+}
 
   // resposta do backend (TaskResponse) + meta → modelo da UI
   function daApi(t) {
@@ -85,6 +86,7 @@ const Tarefas = (function () {
       quando:      quando,
       overdue:     !concluida && quando === 'past',
       hora:        t.dueTime ? String(t.dueTime).slice(0, 5) : undefined,
+      duracaoMin:  t.estimatedMinutes != null ? t.estimatedMinutes : null, 
     };
   }
 

@@ -111,6 +111,22 @@ function ehPersistido(id) {
   return typeof id === 'string' && id.indexOf('ext-') !== 0 && id.indexOf('task-') !== 0;
 }
 
+/* ── HELPERS: TETO BIOLÓGICO ───────────────────────────── */
+const TETO_MINUTOS_DIA = 960;
+
+function minutosDoDia(iso, taskIdExcluir) {
+  if (!window.Tarefas || !iso) return 0;
+  return Tarefas.listar()
+    .filter(t => t.dataIso === iso && t.id !== taskIdExcluir)
+    .reduce((soma, t) => soma + (t.duracaoMin || 60), 0);
+}
+
+function excedeTeto(iso, taskId, duracaoMin) {
+  if (!iso) return false;
+  return minutosDoDia(iso, taskId) + (duracaoMin || 60) > TETO_MINUTOS_DIA;
+}
+/* ───────────────────────────────────────────────────────── */
+
 // Tarefas com data viram eventos "virtuais" no calendário, para que uma tarefa
 // agendada apareça no dia mesmo sem ter um bloco de tempo criado. Tarefas sem
 // hora caem no início da grade (START); no mês a hora é irrelevante (lista por
@@ -126,8 +142,10 @@ function tarefasComoEventos(blocosExistentes, posicionar) {
     if (!pos) return acc;
     const [hh, mm] = t.hora ? String(t.hora).split(':').map(Number) : [START, 0];
     const ini = (hh || 0) + (mm || 0) / 60;
+    const duracaoH = (t.duracaoMin || 60) / 60;         // ← Lê duração real
+    
     acc.push({
-      id: 'task-' + t.id, taskId: t.id, ini, fim: ini + 1, semHora: !t.hora,
+      id: 'task-' + t.id, taskId: t.id, ini, fim: ini + duracaoH, semHora: !t.hora,  // ← fim usa duracaoH
       titulo: t.titulo, cat: CAT_MAP[t.cat] || 'generico', catNome: t.cat,
       prio: t.prioridade || 'normal', done: t.done, mod: null,
       ...pos,
@@ -473,7 +491,9 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
         const task = JSON.parse(taskJson);
         const rect = e.currentTarget.getBoundingClientRect();
         const ini  = Math.max(gStart, Math.min(gEnd - 1, gStart + Math.round(((e.clientY - rect.top) / ROW_H) * 2) / 2));
-        adicionar({ id: 'ext-' + task.id + '-' + Date.now(), d: diaIdx, ini, fim: ini + 1, cat: CAT_MAP[task.cat] || 'generico', catNome: task.cat, prio: task.prioridade || 'normal', titulo: task.titulo, mod: null, taskId: task.id });
+        const duracaoH = (task.duracaoMin || 60) / 60;      
+
+        adicionar({ id: 'ext-' + task.id + '-' + Date.now(), d: diaIdx, ini, fim: ini + duracaoH, cat: CAT_MAP[task.cat] || 'generico', catNome: task.cat, prio: task.prioridade || 'normal', titulo: task.titulo, mod: null, taskId: task.id });
       } catch (_) {}
       setArrastando(null); setOver(null);
       return;
@@ -521,7 +541,7 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
               arrastandoId={arrastando && arrastando.id}
               onDragStart={setArrastando}
               onDragEnd={() => { setArrastando(null); setOver(null); }}
-              onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
+              onOpen={onOpen} onDrawer={onDrawer} onDelete={pedirRemover} />
             {d.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - gStart) * ROW_H}px` }}></div>}
           </div>
         ))}
@@ -611,7 +631,6 @@ function MonthDayPopover({ iso, num, rect, eventos, categorias, arrastandoId, on
 function MonthView({ mesData, eventos, categorias, onOpen, mover }) {
   const [arrastando, setArrastando] = useState(null); // id do evento em arraste
   const [over, setOver]             = useState(null); // iso do dia sob o cursor
-  const [expandido, setExpandido]   = useState(null); // { iso, num, rect } popover
 
   function soltar(iso, e) {
     e.preventDefault();
@@ -619,6 +638,8 @@ function MonthView({ mesData, eventos, categorias, onOpen, mover }) {
     if (arrastando) mover(arrastando, iso);
     setArrastando(null);
   }
+
+  const [expandido, setExpandido]   = useState(null); // { iso, num, rect } popover
 
   return (
     <div className="cal-month">
@@ -1093,6 +1114,18 @@ function WeeklyCalendar() {
     const atual = eventos.find(e => e.id === id);
     if (!atual) return;
     const dur = atual.fim - atual.ini;
+
+    // 👇 NOVO: Bloqueio do Teto Biológico
+    const iso  = dias[novoDia] && dias[novoDia].iso;
+    const duracaoMin = atual.taskId
+      ? (Tarefas.buscar(atual.taskId) || {}).duracaoMin || Math.round(dur * 60)
+      : Math.round(dur * 60);
+    
+    if (excedeTeto(iso, atual.taskId, duracaoMin)) {
+      if (window.Utils) Utils.toast('Teto biológico atingido: esse dia já tem 16h agendadas.', 'error');
+      return; // não altera `eventos` → card volta pra posição original
+    }
+
     // Soltar na grade define um horário: a tarefa deixa de ser "Sem horário".
     const novo = { ...atual, d: novoDia, ini: novaIni, fim: novaIni + dur, semHora: false };
     setEventos(evs => evs.map(ev => ev.id === id ? novo : ev));
@@ -1131,9 +1164,18 @@ function WeeklyCalendar() {
   // Arrastar uma tarefa da sidebar direto para a faixa "Sem horário": agenda no
   // dia (sem hora). Se já estiver no calendário, reaproveita moverParaSemHora.
   function agendarSemHora(task, novoDia) {
+    // 👇 NOVO: Bloqueio do Teto Biológico
+    const iso = dias[novoDia] && dias[novoDia].iso;
+    const duracaoMin = task.duracaoMin || 60;
+    
+    if (excedeTeto(iso, task.id, duracaoMin)) {
+      if (window.Utils) Utils.toast('Teto biológico atingido: esse dia já tem 16h agendadas.', 'error');
+      return;
+    }
+
     const existente = eventos.find(e => e.taskId === task.id);
     if (existente) { moverParaSemHora(existente.id, novoDia); return; }
-    const iso = dias[novoDia] && dias[novoDia].iso;
+    
     setEventos(evs => [...evs, {
       id: 'task-' + task.id, taskId: task.id, d: novoDia, ini: START, fim: START + 1,
       semHora: true, titulo: task.titulo, cat: CAT_MAP[task.cat] || 'generico',
@@ -1149,6 +1191,15 @@ function WeeklyCalendar() {
   function moverMes(id, novoIso) {
     const atual = eventosMes.find(e => e.id === id);
     if (!atual || atual.iso === novoIso) return;
+
+    // 👇 NOVO: Bloqueio do Teto Biológico
+    const duracaoMin = atual.taskId ? (Tarefas.buscar(atual.taskId) || {}).duracaoMin || 60 : 60;
+    
+    if (excedeTeto(novoIso, atual.taskId, duracaoMin)) {
+      if (window.Utils) Utils.toast('Teto biológico atingido: esse dia já tem 16h agendadas.', 'error');
+      return;
+    }
+
     const novo = { ...atual, iso: novoIso };
     setEventosMes(evs => evs.map(ev => ev.id === id ? novo : ev));
     if (window.Blocos && ehPersistido(id)) Blocos.atualizar({ ...novo, d: 0 }, [{ iso: novoIso }]).catch(() => {});
@@ -1171,10 +1222,18 @@ function WeeklyCalendar() {
     // agendada": se a tarefa ainda não tem data, agenda a PRÓPRIA tarefa (sem
     // duplicar); se já está agendada em outro horário, cria uma cópia para o novo
     // horário (permite o mesmo afazer em vários blocos).
-    setEventos(evs => [...evs, novoEv]); // mostra na hora (otimista)
-
     const dia  = dias[novoEv.d];
     const orig = window.Tarefas ? Tarefas.buscar(novoEv.taskId) : null;
+
+    // 👇 NOVO: Bloqueio do Teto Biológico
+    const duracaoMin = orig ? (orig.duracaoMin || 60) : 60;
+    
+    if (dia && excedeTeto(dia.iso, novoEv.taskId, duracaoMin)) {
+      if (window.Utils) Utils.toast('Teto biológico atingido: esse dia já tem 16h agendadas.', 'error');
+      return; // não adiciona nada — o card volta a não existir no grid (Revert visual)
+    }
+
+    setEventos(evs => [...evs, novoEv]); // mostra na hora (otimista)
 
     // Sem módulo de tarefas: cria só o bloco ligado à tarefa de origem (fallback).
     if (!window.Tarefas) { criarBlocoDoEvento(novoEv); return; }

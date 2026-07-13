@@ -96,6 +96,11 @@
     onSelect: (d) => {
       selectedDate = d;
       document.getElementById('dataChip').textContent = Utils.dataRelativa(d);
+      
+      // Valida o teto ao trocar a data
+      if (typeof validarTeto === 'function') {
+        validarTeto();
+      }
     },
   });
 
@@ -136,6 +141,51 @@
     onSelect:  onTimeChange,
     onClear:   onTimeClear,
   });
+
+  /* ── Duração estimada (Time-Boxing) + Teto biológico ────── */
+  const durHoras   = document.getElementById('durHoras');
+  const durMinutos = document.getElementById('durMinutos');
+  const saveBtnRef = document.getElementById('saveBtn');
+  const tetoAlert  = document.getElementById('tetoAlert');
+
+  const TETO_MINUTOS_DIA = 960; // 16h úteis
+
+  // Pré-popula com o valor existente, se estiver editando.
+  if (tarefa && tarefa.duracaoMin != null) {
+    if (durHoras) durHoras.value   = Math.floor(tarefa.duracaoMin / 60);
+    if (durMinutos) durMinutos.value = tarefa.duracaoMin % 60;
+  }
+
+  function duracaoAtualMin() {
+    if (!durHoras || !durMinutos) return 0;
+    const h = parseInt(durHoras.value, 10) || 0;
+    const m = parseInt(durMinutos.value, 10) || 0;
+    return h * 60 + m;
+  }
+
+  // Soma os minutos já ocupados no dia selecionado, ignorando a própria tarefa
+  // (importante ao editar: senão ela conta duas vezes).
+  function minutosOcupadosNoDia(iso, idExcluir) {
+    return Tarefas.listar()
+      .filter(t => t.dataIso === iso && t.id !== idExcluir)
+      .reduce((soma, t) => soma + (t.duracaoMin || 60), 0); // fallback para 60 min se vazio
+  }
+
+  function validarTeto() {
+    if (!durHoras || !durMinutos || !saveBtnRef || !tetoAlert) return false;
+    const iso     = Utils.dataIso(selectedDate);
+    const ocupado = minutosOcupadosNoDia(iso, taskId);
+    const excedeu = (ocupado + duracaoAtualMin()) > TETO_MINUTOS_DIA;
+    saveBtnRef.disabled = excedeu;
+    tetoAlert.classList.toggle('hidden', !excedeu);
+    return excedeu;
+  }
+
+  if (durHoras && durMinutos) {
+    durHoras.addEventListener('input', validarTeto);
+    durMinutos.addEventListener('input', validarTeto);
+    validarTeto();
+  }
 
   /* ── Módulos ativáveis ────────────────────────────────── */
   const grid   = document.getElementById('moduleGrid');
@@ -477,6 +527,7 @@
         dataIso:     Utils.dataIso(selectedDate),
         hora:        horaValor,
         recorrencia,
+        duracaoMin:  duracaoAtualMin(), // 👈 Tempo estimado enviado ao backend
       })
         // Status (concluída/aberta) é persistido por endpoint próprio.
         .then(() => doneMudou ? Tarefas.toggleDone(taskId) : null)
@@ -488,7 +539,13 @@
         .catch((err) => {
           btn.disabled = false;
           btn.textContent = 'Erro ao salvar';
+          
+          // 👇 NOVO: Chamada do Toast para erro 400
+          if (err && err.status === 400) {
+            Utils.toast(err.error || err.message || 'Limite de tempo do dia excedido.', 'error');
+          }
           console.error('Falha ao salvar tarefa:', err);
+          
           setTimeout(() => { btn.textContent = rotuloPadrao; }, 1800);
         });
     } else {
@@ -506,6 +563,7 @@
         dataIso:     Utils.dataIso(selectedDate),
         hora:        horaValor,
         recorrencia,
+        duracaoMin:  duracaoAtualMin(), // 👈 Tempo estimado enviado ao backend
       })
         .then((nova) => {
           const novoId = nova && nova.id;
@@ -531,7 +589,13 @@
         .catch((err) => {
           btn.disabled = false;
           btn.textContent = 'Erro ao salvar';
+          
+          // 👇 NOVO: Chamada do Toast para erro 400
+          if (err && err.status === 400) {
+            Utils.toast(err.error || err.message || 'Limite de tempo do dia excedido.', 'error');
+          }
           console.error('Falha ao criar tarefa:', err);
+          
           setTimeout(() => { btn.textContent = 'Registrar tarefa'; }, 1800);
         });
     }
