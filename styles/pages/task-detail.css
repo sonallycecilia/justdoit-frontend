@@ -84,7 +84,7 @@
 .edit-desc:empty::before { content: attr(data-placeholder); color: var(--color-text-faint); }
 
 /* Chips de meta (categoria, data, prioridade) */
-.detail__chips { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: 0 0 var(--space-xl) 0px; }
+.detail__chips { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin: 0 0 var(--space-xl) 0px; }
 
 /* ---------- Painel de módulos ativáveis (RF05) ---------- */
 .modules { margin-bottom: var(--space-xl); }
@@ -227,3 +227,49 @@
 .is-embed .detail__back { display: none; }
 .is-embed .app { display: block; }
 .is-embed .app__main { padding: 0; }
+
+/* ---------- Duração estimada (Time-Boxing) ---------- */
+/* Mesmo "molde" dos badges vizinhos (.chip / .badge--info): pílula de
+   24px de altura, mesma borda e mesma tipografia — só que com <input>
+   editável no lugar de texto fixo. */
+.dur-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-soft);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  line-height: 1;
+}
+.dur-pick svg { width: 13px; height: 13px; flex: none; color: var(--color-text-muted); margin-right: 2px; }
+.dur-pick input {
+  width: 18px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+  font-family: inherit;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+.dur-pick input:first-of-type { margin-left: 2px; }
+.dur-pick input:focus { outline: none; color: var(--color-accent); }
+.dur-pick input::-webkit-outer-spin-button,
+.dur-pick input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.dur-alert {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+  margin-right: 8px;
+}
+.dur-alert.hidden { display: none; }

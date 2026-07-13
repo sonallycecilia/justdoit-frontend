@@ -1,5 +1,3 @@
-<!-- @dsCard group="JustDoIt Frontend" viewport="1100x900" name="Detalhe da tarefa" subtitle="Especificações, módulos, Pomodoro e subtarefas" -->
-<!-- @startingPoint section="JustDoIt Frontend" subtitle="Detalhe / especificações de tarefa — módulos, Pomodoro, subtarefas" viewport="1240x900" -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -32,6 +30,7 @@
             Ir para To Do
           </a>
           <div class="detail__topbar-actions">
+            <span class="dur-alert hidden" id="tetoAlert">Teto biológico atingido</span>
             <button class="btn btn--primary btn--md" id="saveBtn">Registrar tarefa</button>
           </div>
         </div>
@@ -60,6 +59,12 @@
               <span id="horaChip">Hora</span>
               <svg class="time-pick__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px"><path d="m6 9 6 6 6-6"/></svg>
             </button>
+          </div>
+          <!-- Duração estimada -->
+          <div class="dur-pick" id="durPick">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <input type="number" id="durHoras" min="0" max="16" value="0" aria-label="Horas estimadas">h
+            <input type="number" id="durMinutos" min="0" max="55" step="5" value="0" aria-label="Minutos estimados">min
           </div>
           <button class="chip chip--pick" id="catChip" data-cat="Estudos">
             <span class="chip__dot" id="catDot" style="background:var(--color-cat-estudos)"></span>

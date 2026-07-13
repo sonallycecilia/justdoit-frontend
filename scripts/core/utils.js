@@ -20,57 +20,50 @@ const Utils = (function () {
     const h = data.getHours();
     if (h >= 5 && h < 12) return 'Bom dia';
     if (h >= 12 && h < 18) return 'Boa tarde';
-    return 'Boa noite'; // 18h–4h59 (inclui madrugada)
+    return 'Boa noite'; // 18h+ e madrugada
   }
 
-  // "Qui, 7 jun"
-  function dataCurta(data = new Date()) {
-    const dia = DIAS_CURTOS[data.getDay()];
-    return `${dia[0] + dia.slice(1).toLowerCase()}, ${data.getDate()} ${MESES[data.getMonth()]}`;
+  // "14 de jun"
+  function dataCurta(data) {
+    if (!data) return '';
+    return `${data.getDate()} de ${MESES[data.getMonth()]}`;
   }
 
-  // Intervalo da semana atual: "8 – 14 jun"
-  function intervaloSemana(data = new Date()) {
-    const inicio = new Date(data);
-    inicio.setDate(data.getDate() - ((data.getDay() + 6) % 7)); // segunda
-    const fim = new Date(inicio);
-    fim.setDate(inicio.getDate() + 6);
-    const mesIgual = inicio.getMonth() === fim.getMonth();
-    return mesIgual
-      ? `${inicio.getDate()} – ${fim.getDate()} ${MESES[fim.getMonth()]}`
-      : `${inicio.getDate()} ${MESES[inicio.getMonth()]} – ${fim.getDate()} ${MESES[fim.getMonth()]}`;
-  }
-
-  // "Hoje", "Amanhã" ou "Qua, 10 jun"
+  // "Hoje", "Amanhã", "Ontem" ou "14 jun"
   function dataRelativa(data) {
+    if (!data) return '';
     const h = hoje();
-    const amanha = new Date(h);
-    amanha.setDate(h.getDate() + 1);
-    if (data.toDateString() === h.toDateString()) return 'Hoje';
-    if (data.toDateString() === amanha.toDateString()) return 'Amanhã';
-    return dataCurta(data);
+    const d = new Date(data); d.setHours(0,0,0,0);
+    const diff = Math.round((d - h) / 86400000);
+    if (diff === 0) return 'Hoje';
+    if (diff === 1) return 'Amanhã';
+    if (diff === -1) return 'Ontem';
+    return `${d.getDate()} ${MESES[d.getMonth()]}`;
   }
 
-  // Classifica uma data: 'past' | 'today' | 'week' | 'all'
+  // Classificação da tarefa em relação a hoje: 'past', 'today', 'future'
   function calcQuando(data) {
+    if (!data) return 'future'; // sem data -> backlog
     const h = hoje();
-    const fim = new Date(h);
-    fim.setDate(h.getDate() + 7);
-    if (data < h) return 'past';
-    if (data.toDateString() === h.toDateString()) return 'today';
-    if (data <= fim) return 'week';
-    return 'all';
+    const d = new Date(data); d.setHours(0,0,0,0);
+    if (d < h) return 'past';
+    if (d.getTime() === h.getTime()) return 'today';
+    return 'future';
   }
 
-  // "2026-06-09"
+  // Formato AAAA-MM-DD local (evita bug de fuso do toISOString)
   function dataIso(data) {
-    return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+    if (!data) return null;
+    const m = String(data.getMonth() + 1).padStart(2, '0');
+    const d = String(data.getDate()).padStart(2, '0');
+    return `${data.getFullYear()}-${m}-${d}`;
   }
 
-  // Inverso de dataRelativa: "Hoje" / "Amanhã" / "Atrasada" / "Qua, 10 jun" → Date (ou null)
+  // Parse flexível de string salva no cache ("Hoje", "14 jun") -> Date object
   function parseData(str) {
-    const h = hoje();
     if (!str || str === 'Sem data') return null;
+    const h = hoje();
+    if (str === 'Ontem')    { const d = new Date(h); d.setDate(h.getDate() - 1); return d; }
     if (str === 'Hoje')     return new Date(h);
     if (str === 'Atrasada') { const d = new Date(h); d.setDate(h.getDate() - 1); return d; }
     if (str === 'Amanhã')   { const d = new Date(h); d.setDate(h.getDate() + 1); return d; }
@@ -100,15 +93,36 @@ const Utils = (function () {
     return Math.max(0, Math.min(100, Math.round((parte / total) * 100)));
   }
 
-  // Capitaliza cada palavra do nome: "ana silva" → "Ana Silva"
-  function capitalizarNome(nome) {
-    if (!nome) return '';
-    return nome.trim().split(/\s+/).map(function (parte) {
-      return parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase();
-    }).join(' ');
+  function intervaloSemana(dataBase) {
+    const d = dataBase ? new Date(dataBase) : new Date();
+    const dow = d.getDay(); // 0=Dom
+    // Assumindo semana começa na Segunda (1)
+    const recuo = dow === 0 ? 6 : dow - 1;
+    const seg = new Date(d); seg.setDate(d.getDate() - recuo);
+    const dom = new Date(seg); dom.setDate(seg.getDate() + 6);
+    return {
+      inicio: dataIso(seg), fim: dataIso(dom),
+      rotulo: `${seg.getDate()} ${MESES[seg.getMonth()]} – ${dom.getDate()} ${MESES[dom.getMonth()]}`
+    };
   }
 
-  return { DIAS, DIAS_CURTOS, MESES, MESES_LONGOS, hoje, saudacao, dataCurta, dataRelativa, calcQuando, dataIso, parseData, intervaloSemana, horas, pct, capitalizarNome };
-})();
+  function capitalizarNome(nomeStr) {
+    if (!nomeStr) return '';
+    return nomeStr.trim().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+  }
 
-window.Utils = Utils;
+  // 👇 NOVO: Toast simples no canto inferior, some sozinho depois de alguns segundos.
+  let _toastEl = null;
+  function toast(mensagem, tipo) {
+    if (!_toastEl) {
+      _toastEl = document.createElement('div');
+      document.body.appendChild(_toastEl);
+    }
+    _toastEl.textContent = mensagem;
+    _toastEl.className = `jdi-toast jdi-toast--${tipo || 'error'} is-visible`;
+    clearTimeout(_toastEl._timer);
+    _toastEl._timer = setTimeout(() => _toastEl.classList.remove('is-visible'), 4000);
+  }
+
+  return { DIAS, DIAS_CURTOS, MESES, MESES_LONGOS, hoje, saudacao, dataCurta, dataRelativa, calcQuando, dataIso, parseData, intervaloSemana, horas, pct, capitalizarNome, toast };
+})();
