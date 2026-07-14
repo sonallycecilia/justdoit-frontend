@@ -82,6 +82,33 @@
 .nav-item__count { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
 .nav-item.is-active .nav-item__count { color: var(--color-accent); }
 
+/* ── Nova tarefa (ação principal, acima das categorias) ─────
+   Cantos retos e rótulo em caixa-alta espaçada, ecoando os títulos
+   de seção do próprio sidebar. Em repouso é só o contorno, na cor do
+   sidebar; no hover as cores se invertem e o accent preenche. */
+.sidebar__new-task {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: var(--space-md) 4px 0;
+  height: 36px;
+  border: 1px solid var(--color-accent);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.sidebar__new-task:hover {
+  background: var(--color-accent);
+  color: var(--color-text-on-dark);
+}
+.sidebar__new-task-ic { display: flex; flex: none; }
+.sidebar__new-task-ic svg { width: 15px; height: 15px; stroke-width: 2.5; }
+
 .sidebar__section {
   display: flex; align-items: center; justify-content: space-between;
   font-size: var(--font-size-xs); font-weight: var(--weight-semibold);
@@ -323,6 +350,8 @@ a.sidebar-task { text-decoration: none; }
 .sidebar--collapsed .sidebar__name,
 .sidebar--collapsed .sidebar__logout-label,
 .sidebar--collapsed .cat-dot { display: none; }
+.sidebar--collapsed .sidebar__new-task-label { display: none; }
+.sidebar--collapsed .sidebar__new-task { margin-left: auto; margin-right: auto; width: 40px; height: 40px; }
 .sidebar--collapsed .sidebar__user { flex: none; }
 .sidebar--collapsed .sidebar__logout { margin-top: 0; }
 .sidebar--collapsed .sidebar__section { justify-content: center; }
@@ -354,6 +383,8 @@ a.sidebar-task { text-decoration: none; }
   .sidebar__word, .nav-item__label, .nav-item__count,
   .sidebar__section span, .sidebar__name, .sidebar__logout-label,
   .cat-dot + .nav-item__label { display: none; }
+  .sidebar__new-task-label { display: none; }
+  .sidebar__new-task { margin-left: auto; margin-right: auto; width: 40px; height: 40px; }
   .sidebar__user { flex: none; }
   .sidebar__logout { margin-top: 0; }
   .sidebar__section { justify-content: center; }

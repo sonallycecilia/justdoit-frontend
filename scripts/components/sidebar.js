@@ -372,6 +372,10 @@
       </div>
       <div class="sidebar__scroll">
         <nav class="sidebar__nav">${navHtml}</nav>
+        <a class="sidebar__new-task" href="${BASE}pages/tasks/task-detail.html" aria-label="Nova tarefa" title="Nova tarefa">
+          <span class="sidebar__new-task-ic">${ICONS.plus}</span>
+          <span class="sidebar__new-task-label">Nova tarefa</span>
+        </a>
         <div class="sidebar__section">
           <span>Categorias</span>
           <div class="sidebar__section-actions">
