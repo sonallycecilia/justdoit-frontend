@@ -46,15 +46,25 @@
     if (body) config.body = JSON.stringify(body);
 
     return fetch(url, config).then(function (res) {
-      if (res.status === 401 && sessao && sessao.refreshToken && !_renovando) {
+      // Token expirado/ausente: o auth-service responde 401, mas task/schedule/
+      // notification-service respondem 403. Tratamos AMBOS como "renovar o access
+      // token" — senão o refresh nunca dispara e o app trava em 403.
+      var precisaRenovar = res.status === 401 || res.status === 403;
+
+      if (precisaRenovar && sessao && sessao.refreshToken && !_renovando) {
         _renovando = true;
         return fetch(SVC.auth + '/auth/refresh', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: sessao.refreshToken })
         })
-          .then(function (r) { return r.json(); })
+          .then(function (r) {
+            // Refresh token inválido/expirado → não adianta seguir: derruba a sessão.
+            if (!r.ok) throw new Error('refresh falhou (' + r.status + ')');
+            return r.json();
+          })
           .then(function (tokens) {
+            if (!tokens || !tokens.accessToken) throw new Error('refresh sem accessToken');
             _gravarSessao({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
             _renovando = false;
             _fila.forEach(function (cb) { cb(tokens.accessToken); });
@@ -63,14 +73,17 @@
             return fetch(url, config).then(_tratarResposta);
           })
           .catch(function () {
-            _limparSessao();
             _renovando = false;
+            _fila = [];
+            _limparSessao();
             window.location.replace('../auth/login.html');
             return Promise.reject('Sessão expirada');
           });
       }
 
-      if (res.status === 401 && _renovando) {
+      // Requisição chegou enquanto outra já está renovando: enfileira para refazer
+      // com o token novo assim que o refresh terminar.
+      if (precisaRenovar && sessao && sessao.refreshToken && _renovando) {
         return new Promise(function (resolve) {
           _fila.push(function (novoToken) {
             headers['Authorization'] = 'Bearer ' + novoToken;
@@ -91,10 +104,11 @@
       login:    SVC.auth + '/auth/login',
       register: SVC.auth + '/auth/register',
       check:    function (email) { return SVC.auth + '/auth/check?email=' + encodeURIComponent(email); },
-      profile:  {
-        get:    SVC.auth + '/users/profile',
-        update: SVC.auth + '/users/profile',
-      }
+      // Próprio usuário — perfil (GET), atualização/avatar (PUT) e excluir conta
+      // (DELETE). Backend expõe /auth/me. Consumido como Api.endpoints.auth.me
+      // por sidebar.js e settings.js. (Era isto antes de uma refatoração trocá-lo
+      // por 'profile: /users/profile', que nem existe no backend e quebrou tudo.)
+      me: SVC.auth + '/auth/me',
     },
 
     // ── todo.html / task-detail.html / dashboard.html ────────────────────────
@@ -105,6 +119,8 @@
       remove: function (id) { return SVC.tasks + '/tasks/' + id; },
       complete: function (id) { return SVC.tasks + '/tasks/' + id + '/complete'; },
       reopen:   function (id) { return SVC.tasks + '/tasks/' + id + '/reopen'; },
+      timer:    function (id) { return SVC.tasks + '/tasks/' + id + '/timer'; },
+      cycleConfig: function (id) { return SVC.tasks + '/tasks/' + id + '/cycle-config'; },
     },
 
     // ── calendar.html / weekly-plan.html / day-plan.html ─────────────────────

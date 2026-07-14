@@ -66,7 +66,7 @@ const Blocos = (function () {
   // Busca crua de blocos num intervalo de datas (uma única chamada ao backend:
   // GET /time-blocks?from=…&to=…). Retorna os TimeBlockResponse.
   function buscarIntervalo(from, to) {
-    return Api.get(Api.endpoints.timeBlocks.range(from, to))
+    return Api.get(Api.endpoints.schedule.range(from, to))
       .then(function (lista) { return Array.isArray(lista) ? lista : []; })
       .catch(function () { return []; });
   }
@@ -93,17 +93,17 @@ const Blocos = (function () {
   }
 
   function criar(ev, dias) {
-    return Api.post(Api.endpoints.timeBlocks.create, paraApi(ev, dias))
+    return Api.post(Api.endpoints.schedule.create, paraApi(ev, dias))
       .then(function (resp) { return resp && resp.id ? daApi(resp, dias) : ev; });
   }
 
   function atualizar(ev, dias) {
-    return Api.put(Api.endpoints.timeBlocks.update(ev.id), paraApi(ev, dias))
+    return Api.put(Api.endpoints.schedule.update(ev.id), paraApi(ev, dias))
       .then(function (resp) { return resp && resp.id ? daApi(resp, dias) : ev; });
   }
 
   function remover(id) {
-    return Api.remove(Api.endpoints.timeBlocks.remove(id));
+    return Api.remove(Api.endpoints.schedule.remove(id));
   }
 
   return { carregarSemana, carregarIntervalo, criar, atualizar, remover };

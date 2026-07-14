@@ -541,7 +541,7 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
               arrastandoId={arrastando && arrastando.id}
               onDragStart={setArrastando}
               onDragEnd={() => { setArrastando(null); setOver(null); }}
-              onOpen={onOpen} onDrawer={onDrawer} onDelete={pedirRemover} />
+              onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
             {d.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - gStart) * ROW_H}px` }}></div>}
           </div>
         ))}

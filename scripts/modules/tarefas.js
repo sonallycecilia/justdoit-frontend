@@ -42,6 +42,37 @@ const Tarefas = (function () {
   // representada por categoryId null nas tarefas.
   const CAT_GENERICO_ID = 'generico';
 
+  // ── Recorrência (ciclicidade) ───────────────────────────────
+  // A UI usa rótulos em minúsculas; o backend usa o enum CycleType em maiúsculas.
+  // Ao contrário dos demais campos de "meta", a recorrência TAMBÉM é persistida no
+  // task-service (PUT/DELETE /tasks/{id}/cycle-config) para que o job de geração
+  // de instâncias cíclicas funcione. O cache "meta" continua sendo a fonte de
+  // exibição (a listagem GET /tasks não devolve o cycle-config).
+  const CICLO_API = {
+    daily: 'DAILY', weekly: 'WEEKLY', biweekly: 'BIWEEKLY',
+    monthly: 'MONTHLY', annual: 'ANNUAL',
+  };
+  // Inverso: CycleType do backend → rótulo da UI (usado ao ler GET /tasks).
+  const CICLO_UI = {
+    DAILY: 'daily', WEEKLY: 'weekly', BIWEEKLY: 'biweekly',
+    MONTHLY: 'monthly', ANNUAL: 'annual',
+  };
+
+  // Reconcilia o cycle-config no backend. nova = recorrência escolhida (ou
+  // undefined); antiga = a que estava antes (para saber se deve apagar).
+  // Best-effort: a tarefa já foi salva, não derruba o fluxo se o config falhar.
+  function salvarRecorrencia(id, nova, antiga) {
+    const url = Api.endpoints.tasks.cycleConfig(id);
+    const logErr = function (err) { console.error('Falha ao salvar recorrência:', err); return null; };
+    if (nova && CICLO_API[nova]) {
+      return Api.put(url, { cycleType: CICLO_API[nova] }).catch(logErr);
+    }
+    if (antiga) { // tinha recorrência e o usuário removeu → apaga o config
+      return Api.remove(url).catch(logErr);
+    }
+    return Promise.resolve(null);
+  }
+
   // ── Tradução backend ↔ frontend ─────────────────────────────
   // frontend → corpo aceito pelo backend (TaskRequest)
   function paraApi(d) {
@@ -53,9 +84,54 @@ const Tarefas = (function () {
     priority:    null,
     dueDate:     d.dataIso || null,
     dueTime:     d.hora || null,
-    estimatedMinutes: (d.duracaoMin != null) ? d.duracaoMin : null,   
   };
 }
+
+  // Campos da meta lateral gravados em toda criação/atualização. duracaoMin só
+  // entra quando veio no payload: Object.assign copia chaves com undefined, então
+  // incluí-la sempre apagaria o valor salvo em chamadas que não a informam
+  // (ex.: mudarCategoria).
+  function metaDe(dados) {
+    const m = {
+      cat: dados.cat, categoriaId: dados.categoriaId,
+      prioridade: dados.prioridade, recorrencia: dados.recorrencia,
+    };
+    if (dados.duracaoMin != null) m.duracaoMin = dados.duracaoMin;
+    return m;
+  }
+
+  // O tempo estimado NÃO faz parte do TaskRequest — o task-service o guarda no
+  // timer da tarefa (PUT /tasks/{id}/timer). Mandá-lo junto do corpo da tarefa
+  // não dá erro, o Spring só descarta o campo desconhecido — por isso o valor
+  // "sumia" ao reabrir a tarefa.
+  function salvarTempoEstimado(id, duracaoMin) {
+    if (duracaoMin == null) return Promise.resolve(null);
+    return Api.put(Api.endpoints.tasks.timer(id), { estimatedMinutes: duracaoMin })
+      .catch(function (err) {
+        // A tarefa em si já foi salva; não derruba o fluxo por causa do timer.
+        console.error('Falha ao salvar tempo estimado:', err);
+        return null;
+      });
+  }
+
+  // Busca o tempo estimado no backend e o reflete no cache (a listagem
+  // GET /tasks não traz esse campo). 404 = tarefa ainda sem timer.
+  function carregarTempoEstimado(id) {
+    return Api.get(Api.endpoints.tasks.timer(id))
+      .then(function (t) {
+        const min = (t && t.estimatedMinutes != null) ? t.estimatedMinutes : null;
+        if (min == null) return null;
+        gravarMeta(id, { duracaoMin: min });
+        const lista = listar();
+        const i = lista.findIndex(x => x.id === id);
+        if (i >= 0) {
+          lista[i] = Object.assign({}, lista[i], { duracaoMin: min });
+          salvar(lista);
+        }
+        return min;
+      })
+      .catch(function () { return null; });
+  }
 
   // resposta do backend (TaskResponse) + meta → modelo da UI
   function daApi(t) {
@@ -79,14 +155,19 @@ const Tarefas = (function () {
       cat:         catNome || 'Genérico',
       categoriaId: t.categoryId || CAT_GENERICO_ID,
       prioridade:  meta.prioridade || 'normal',
-      recorrencia: meta.recorrencia,
+      // O backend agora devolve cycleType no GET /tasks: essa é a fonte da verdade
+      // da recorrência (reflete ciclos criados em outro dispositivo/direto na API).
+      // Cai no cache "meta" só quando a resposta não traz o campo (ex.: offline).
+      recorrencia: (t.cycleType && CICLO_UI[t.cycleType]) || meta.recorrencia,
       done:        concluida,
       dataIso:     t.dueDate || null,
       data:        dataObj ? Utils.dataRelativa(dataObj) : 'Sem data',
       quando:      quando,
       overdue:     !concluida && quando === 'past',
       hora:        t.dueTime ? String(t.dueTime).slice(0, 5) : undefined,
-      duracaoMin:  t.estimatedMinutes != null ? t.estimatedMinutes : null, 
+      // Tempo estimado vive no timer da tarefa, não no TaskResponse: aqui vem do
+      // cache lateral, atualizado por carregarTempoEstimado() no detalhe.
+      duracaoMin:  meta.duracaoMin != null ? meta.duracaoMin : null,
     };
   }
 
@@ -99,15 +180,14 @@ const Tarefas = (function () {
 
     return Api.post(Api.endpoints.tasks.create, paraApi(dados)).then(function (resp) {
       if (resp && resp.id) {
-        gravarMeta(resp.id, {
-          cat: dados.cat, categoriaId: dados.categoriaId,
-          prioridade: dados.prioridade, recorrencia: dados.recorrencia,
-        });
+        gravarMeta(resp.id, metaDe(dados));
         const nova = daApi(resp);
         const lista = listar();
         lista.unshift(nova);
         salvar(lista);
-        return nova;
+        return salvarTempoEstimado(nova.id, dados.duracaoMin)
+          .then(function () { return salvarRecorrencia(nova.id, dados.recorrencia); })
+          .then(function () { return nova; });
       }
 
       // Sem corpo no retorno (ex.: 201 só com Location): recarrega a lista e
@@ -117,10 +197,7 @@ const Tarefas = (function () {
       return carregarDaApi().then(function (lista) {
         const nova = lista.find(function (t) { return !idsAntes[t.id]; });
         if (!nova) return null;
-        gravarMeta(nova.id, {
-          cat: dados.cat, categoriaId: dados.categoriaId,
-          prioridade: dados.prioridade, recorrencia: dados.recorrencia,
-        });
+        gravarMeta(nova.id, metaDe(dados));
         // Reaplica a meta ao cache para refletir prioridade/categoria escolhidas
         // (carregarDaApi remapeou a tarefa antes da meta existir).
         const atual = listar();
@@ -129,25 +206,30 @@ const Tarefas = (function () {
         atual[i] = Object.assign({}, atual[i], {
           cat: dados.cat, categoriaId: dados.categoriaId,
           prioridade: dados.prioridade || 'normal', recorrencia: dados.recorrencia,
+          duracaoMin: dados.duracaoMin != null ? dados.duracaoMin : atual[i].duracaoMin,
         });
         salvar(atual);
-        return atual[i];
+        return salvarTempoEstimado(nova.id, dados.duracaoMin)
+          .then(function () { return salvarRecorrencia(nova.id, dados.recorrencia); })
+          .then(function () { return atual[i]; });
       });
     });
   }
 
   function atualizar(id, dados) {
+    // Captura a recorrência anterior ANTES de gravarMeta sobrescrever, para saber
+    // se o usuário a removeu (e então apagar o cycle-config no backend).
+    const recorrenciaAntiga = (lerMeta()[id] || {}).recorrencia;
     return Api.put(Api.endpoints.tasks.update(id), paraApi(dados)).then(function (resp) {
-      gravarMeta(id, {
-        cat: dados.cat, categoriaId: dados.categoriaId,
-        prioridade: dados.prioridade, recorrencia: dados.recorrencia,
-      });
+      gravarMeta(id, metaDe(dados));
       const lista = listar();
       const i = lista.findIndex(x => x.id === id);
       const atualizada = daApi(resp);
       if (i >= 0) lista[i] = atualizada; else lista.unshift(atualizada);
       salvar(lista);
-      return atualizada;
+      return salvarTempoEstimado(id, dados.duracaoMin)
+        .then(function () { return salvarRecorrencia(id, dados.recorrencia, recorrenciaAntiga); })
+        .then(function () { return atualizada; });
     });
   }
 
@@ -266,7 +348,7 @@ const Tarefas = (function () {
     });
   }
 
-  return { listar, buscar, salvar, criar, atualizar, mudarCategoria, toggleDone, remover, moverParaGenerico, renomearCategoria, carregarDaApi };
+  return { listar, buscar, salvar, criar, atualizar, mudarCategoria, toggleDone, remover, moverParaGenerico, renomearCategoria, carregarDaApi, carregarTempoEstimado };
 })();
 
 window.Tarefas = Tarefas;

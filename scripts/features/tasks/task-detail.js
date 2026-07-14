@@ -150,10 +150,24 @@
 
   const TETO_MINUTOS_DIA = 960; // 16h úteis
 
-  // Pré-popula com o valor existente, se estiver editando.
-  if (tarefa && tarefa.duracaoMin != null) {
-    if (durHoras) durHoras.value   = Math.floor(tarefa.duracaoMin / 60);
-    if (durMinutos) durMinutos.value = tarefa.duracaoMin % 60;
+  function preencherDuracao(min) {
+    if (min == null || !durHoras || !durMinutos) return;
+    durHoras.value   = Math.floor(min / 60);
+    durMinutos.value = min % 60;
+  }
+
+  // Pré-popula com o valor do cache, se estiver editando…
+  if (tarefa) preencherDuracao(tarefa.duracaoMin);
+
+  // …e confirma com o backend (o tempo estimado vem do timer da tarefa, não da
+  // listagem de tarefas — sem isso, o valor some em outro dispositivo/cache novo).
+  if (taskId) {
+    Tarefas.carregarTempoEstimado(taskId).then(function (min) {
+      if (min == null) return;
+      if (tarefa) tarefa.duracaoMin = min;
+      preencherDuracao(min);
+      validarTeto();
+    });
   }
 
   function duracaoAtualMin() {
@@ -246,7 +260,9 @@
   const cycleOpts = document.getElementById('cycleOpts');
   const tipos     = ['none', ...Object.keys(Cycle.TIPOS)];
   const rotuloTipo = t => t === 'none' ? 'Não repete' : Cycle.rotulo(t);
-  let cicloAtual = (KEY_CICLO && Storage.ler(KEY_CICLO, null)) || 'none';
+  // Preferimos o rascunho local (KEY_CICLO); se vazio (ex.: outro dispositivo),
+  // caímos na recorrência que veio da tarefa (meta/backend); senão "none".
+  let cicloAtual = (KEY_CICLO && Storage.ler(KEY_CICLO, null)) || (tarefa && tarefa.recorrencia) || 'none';
 
   cycleOpts.innerHTML = tipos.map(t =>
     `<button class="cycle-opt ${t === cicloAtual ? 'is-on' : ''}" data-cycle="${t}">${rotuloTipo(t)}</button>`

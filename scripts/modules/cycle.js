@@ -1,38 +1,27 @@
 /* ============================================================
    JustDoIt — modules/cycle.js  (RF08)
-   Lógica de recorrência cíclica. Dada uma recorrência e a data
-   atual, calcula a próxima ocorrência de uma tarefa.
+   Registro dos tipos de recorrência da UI (rótulos exibidos no
+   seletor de ciclo do detalhe da tarefa).
+
+   IMPORTANTE: a recorrência real é do BACKEND (task-service):
+   PUT/DELETE /tasks/{id}/cycle-config define o ciclo e um job
+   diário gera as próximas instâncias. Este módulo NÃO calcula
+   próximas ocorrências nem cria instâncias localmente — fazer
+   isso duplicaria o job do backend. Aqui ficam só tipos e rótulos.
+   O mapeamento rótulo↔CycleType vive em modules/tarefas.js.
    ============================================================ */
 const Cycle = (function () {
   const TIPOS = {
-    daily: { rotulo: 'Diária', dias: 1 },
-    weekly: { rotulo: 'Semanal', dias: 7 },
-    biweekly: { rotulo: 'Quinzenal', dias: 14 },
-    monthly: { rotulo: 'Mensal', dias: null }, // tratado à parte
+    daily: { rotulo: 'Diária' },
+    weekly: { rotulo: 'Semanal' },
+    biweekly: { rotulo: 'Quinzenal' },
+    monthly: { rotulo: 'Mensal' },
+    annual: { rotulo: 'Anual' },
   };
 
   function rotulo(tipo) { return TIPOS[tipo] ? TIPOS[tipo].rotulo : 'Sem recorrência'; }
 
-  // Próxima ocorrência a partir de uma data base
-  function proxima(tipo, base = new Date()) {
-    const d = new Date(base);
-    if (tipo === 'monthly') { d.setMonth(d.getMonth() + 1); return d; }
-    const t = TIPOS[tipo];
-    if (!t) return null;
-    d.setDate(d.getDate() + t.dias);
-    return d;
-  }
-
-  // Ao concluir uma tarefa recorrente, gera a próxima instância
-  function aoConcluir(tarefa, base = new Date()) {
-    if (!tarefa.recorrencia) return null;
-    return Object.assign({}, tarefa, {
-      done: false,
-      proximaData: proxima(tarefa.recorrencia, base),
-    });
-  }
-
-  return { TIPOS, rotulo, proxima, aoConcluir };
+  return { TIPOS, rotulo };
 })();
 
 window.Cycle = Cycle;
