@@ -392,26 +392,44 @@ function ColunaDoDia({ evs, categorias, rowH, startHour, arrastandoId, onDragSta
    clicáveis (abrem o modal) e arrastáveis para a grade — ao soltar num horário
    elas ganham hora e descem para o calendário. `colunas` já vem filtrado por
    dia (um array de eventos por coluna). */
-function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onSoltar, arrastando }) {
+function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onDrawer, onDelete, onDeletePack, onSoltar, arrastando }) {
   const arrastou = useRef(false);
   const [aberto, setAberto] = useState({}); // { indiceDaColuna: true }
   const [over, setOver] = useState(null);   // coluna sob o cursor no arraste
 
   // Chip arrastável de uma tarefa sem horário (arrastar para a grade dá hora).
+  // É uma <div role="button"> (não <button>) para poder aninhar os botões de
+  // seta/excluir — mesma estrutura do TimeBlock.
   function chip(ev) {
     const cor = corCategoria(categorias, ev);
     return (
-      <button key={ev.id}
+      <div key={ev.id}
         className={`cal-allday__chip${ev.done ? ' is-done' : ''}`}
+        role="button"
         draggable="true"
         style={{ background: `color-mix(in srgb, ${cor} 12%, var(--color-card))`, borderColor: `color-mix(in srgb, ${cor} 40%, transparent)`, color: cor }}
+        // Zera no início de cada gesto: um dragstart abortado (o chip re-renderiza
+        // quando o pacote abre/fecha e o dragend não dispara) deixava arrastou
+        // preso em true, bloqueando todos os cliques seguintes. O mousedown roda
+        // antes do dragstart, então um arraste real ainda marca true a tempo.
+        onMouseDown={() => { arrastou.current = false; }}
         onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); arrastou.current = true; }}
         onDragEnd={() => { onDragEnd(); setTimeout(() => { arrastou.current = false; }, 0); }}
         onClick={() => { if (!arrastou.current && onOpen) onOpen(ev); }}
         title={ev.titulo}>
         <span className="cal-allday__dot" style={{ background: cor }} />
         <span className="cal-allday__chip-title">{ev.titulo}</span>
-      </button>
+        {onDrawer && (
+          <button className="cal-allday__arrow" onClick={e => { e.stopPropagation(); onDrawer(ev); }} title="Abrir painel lateral">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        )}
+        {onDelete && (
+          <button className="cal-allday__trash" onClick={e => { e.stopPropagation(); onDelete(ev); }} title="Excluir tarefa">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        )}
+      </div>
     );
   }
 
@@ -429,7 +447,11 @@ function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onSo
           {col.length <= 1 && col.map(chip)}
 
           {col.length > 1 && !aberto[i] && (
-            <button className="cal-allday__pack" onClick={() => setAberto(a => ({ ...a, [i]: true }))}
+            // <div role="button"> (não <button>) para poder aninhar o botão de
+            // excluir. A seta (chevron) expande o pacote; a lixeira remove todas
+            // as tarefas sem horário do dia de uma vez.
+            <div className="cal-allday__pack" role="button"
+              onClick={() => setAberto(a => ({ ...a, [i]: true }))}
               title={`Expandir ${col.length} tarefas sem horário`}>
               <span className="cal-allday__pack-chips" aria-hidden="true">
                 {col.slice(0, 3).map(ev => (
@@ -438,7 +460,14 @@ function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onSo
               </span>
               <span className="cal-allday__pack-count">{col.length} tarefas</span>
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </button>
+              {onDeletePack && (
+                <button className="cal-allday__trash cal-allday__pack-trash"
+                  onClick={e => { e.stopPropagation(); onDeletePack(col); }}
+                  title={`Excluir ${col.length} tarefas sem horário`}>
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              )}
+            </div>
           )}
 
           {col.length > 1 && aberto[i] && (
@@ -457,7 +486,7 @@ function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onSo
 }
 
 /* ── WeekView ─────────────────────────────────────────────── */
-function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHora, adicionar, onOpen, onDrawer, onDelete }) {
+function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHora, adicionar, onOpen, onDrawer, onDelete, onDeletePack }) {
   const [arrastando, setArrastando] = useState(null);
   const [over, setOver]             = useState(null);
 
@@ -519,7 +548,7 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
         </div>
         {(semHoraEvs.length > 0 || arrastando) && (
           <LaneSemHora colunas={dias.map((d, di) => semHoraEvs.filter(ev => ev.d === di))}
-            categorias={categorias} onOpen={onOpen} onSoltar={soltarSemHora}
+            categorias={categorias} onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onDeletePack={onDeletePack} onSoltar={soltarSemHora}
             arrastando={!!arrastando}
             onDragStart={setArrastando}
             onDragEnd={() => { setArrastando(null); setOver(null); }} />
@@ -551,7 +580,7 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
 }
 
 /* ── DayView ──────────────────────────────────────────────── */
-function DayView({ dia, eventos, categorias, mover, onOpen, onDrawer, onDelete }) {
+function DayView({ dia, eventos, categorias, mover, onOpen, onDrawer, onDelete, onDeletePack }) {
   const doDia = eventos.filter(ev => ev.d === dia.idx);
   const semHoraEvs = doDia.filter(ev => ev.semHora);
   const timedEvs   = doDia.filter(ev => !ev.semHora);
@@ -570,6 +599,7 @@ function DayView({ dia, eventos, categorias, mover, onOpen, onDrawer, onDelete }
         </div>
         {semHoraEvs.length > 0 && (
           <LaneSemHora colunas={[semHoraEvs]} categorias={categorias} onOpen={onOpen}
+            onDrawer={onDrawer} onDelete={onDelete} onDeletePack={onDeletePack}
             onDragStart={() => {}} onDragEnd={() => {}} />
         )}
       </div>
@@ -1277,7 +1307,16 @@ function WeeklyCalendar() {
 
   // Pede confirmação (caixa estilizada) antes de excluir de fato.
   function pedirRemover(ev) { setModalEv(null); setConfirmarEv(ev); }
-  function confirmarRemocao() { if (confirmarEv) removerEvento(confirmarEv); setConfirmarEv(null); }
+  // Exclusão do pacote "Sem horário" recolhido: remove todas as tarefas da pilha
+  // de uma vez, com uma única confirmação.
+  function pedirRemoverVarios(evs) { setModalEv(null); setConfirmarEv({ itens: evs.slice() }); }
+  function confirmarRemocao() {
+    if (confirmarEv) {
+      if (confirmarEv.itens) confirmarEv.itens.forEach(removerEvento);
+      else removerEvento(confirmarEv);
+    }
+    setConfirmarEv(null);
+  }
 
   function openModal(ev) { setDrawerEv(null); setModalEv(ev); }
   function openDrawer(ev) { setModalEv(null); setDrawerEv(ev); }
@@ -1385,8 +1424,8 @@ function WeeklyCalendar() {
         </div>
 
         <div className="cal-scroll">
-          {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} moverSemHora={moverParaSemHora} agendarSemHora={agendarSemHora} adicionar={adicionar} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} />}
-          {vista === 'dia'    && <DayView dia={diaAtual} eventos={eventos} categorias={categorias} mover={mover} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} />}
+          {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} moverSemHora={moverParaSemHora} agendarSemHora={agendarSemHora} adicionar={adicionar} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} />}
+          {vista === 'dia'    && <DayView dia={diaAtual} eventos={eventos} categorias={categorias} mover={mover} onOpen={openModal} onDrawer={openDrawer} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} />}
           {vista === 'mes'    && <MonthView mesData={mesData} eventos={eventosMes} categorias={categorias} onOpen={openModal} mover={moverMes} />}
         </div>
 
@@ -1408,7 +1447,9 @@ function WeeklyCalendar() {
       {confirmarEv && (
         <ConfirmDialog titulo="Excluir tarefa" confirmar="Excluir"
           onConfirm={confirmarRemocao} onCancel={() => setConfirmarEv(null)}>
-          Tem certeza que deseja excluir <strong>{confirmarEv.titulo}</strong>? Essa ação não pode ser desfeita.
+          {confirmarEv.itens
+            ? <>Tem certeza que deseja excluir as <strong>{confirmarEv.itens.length} tarefas sem horário</strong> deste dia? Essa ação não pode ser desfeita.</>
+            : <>Tem certeza que deseja excluir <strong>{confirmarEv.titulo}</strong>? Essa ação não pode ser desfeita.</>}
         </ConfirmDialog>
       )}
     </>

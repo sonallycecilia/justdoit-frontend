@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JustDoIt — Detalhe da tarefa</title>
+<title>JustDoIt - Detalhe da tarefa</title>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 <link rel="stylesheet" href="../../styles/tokens.css?v=2">
 <link rel="stylesheet" href="../../styles/reset.css?v=2">
@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="../../styles/components/card.css?v=2">
 <link rel="stylesheet" href="../../styles/components/badge.css?v=2">
 <link rel="stylesheet" href="../../styles/components/date-picker.css?v=2">
-<link rel="stylesheet" href="../../styles/pages/task-detail.css?v=5">
+<link rel="stylesheet" href="../../styles/pages/task-detail.css?v=6">
 <script>if (new URLSearchParams(location.search).get('embed')) document.documentElement.classList.add('is-embed');</script>
 </head>
 <body>
@@ -66,10 +66,16 @@
             <input type="number" id="durHoras" min="0" max="16" value="0" aria-label="Horas estimadas">h
             <input type="number" id="durMinutos" min="0" max="55" step="5" value="0" aria-label="Minutos estimados">min
           </div>
-          <button class="chip chip--pick" id="catChip" data-cat="Estudos">
-            <span class="chip__dot" id="catDot" style="background:var(--color-cat-estudos)"></span>
-            <span id="catLabel">Estudos</span>
-          </button>
+          <!-- Categoria: menu suspenso (preenchido em runtime a partir do backend) -->
+          <div class="cat-pick" id="catPick">
+            <button class="chip chip--pick cat-pick__btn" id="catChip" type="button" aria-haspopup="listbox" aria-expanded="false" data-cat="Estudos">
+              <span class="chip__dot" id="catDot" style="background:var(--color-cat-estudos)"></span>
+              <span id="catLabel">Estudos</span>
+              <svg class="cat-pick__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="cat-pick__overlay" id="catOverlay" hidden></div>
+            <div class="cat-pick__menu" id="catMenu" role="listbox" hidden></div>
+          </div>
           <span class="badge badge--normal" id="prioBadge">Normal</span>
           <div class="chips-progress hidden" id="chipsProgress">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;flex:none"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
@@ -272,6 +278,6 @@
   <script src="../../scripts/components/date-picker.js?v=2"></script>
   <script src="../../scripts/components/time-picker.js?v=2"></script>
   <script src="../../scripts/features/tasks/tasks.js?v=2"></script>
-  <script src="../../scripts/features/tasks/task-detail.js?v=19"></script>
+  <script src="../../scripts/features/tasks/task-detail.js?v=20"></script>
 </body>
 </html>

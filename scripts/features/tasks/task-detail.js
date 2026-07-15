@@ -45,10 +45,32 @@
   // CATS aponta para a lista viva do módulo (Genérico + categorias do usuário).
   // Categorias.carregar() a preenche com os dados do backend mais abaixo.
   const CATS = Categorias.TODAS;
-  const catChip  = document.getElementById('catChip');
-  const catDot   = document.getElementById('catDot');
-  const catLabel = document.getElementById('catLabel');
+  const catPick    = document.getElementById('catPick');
+  const catChip    = document.getElementById('catChip');
+  const catDot     = document.getElementById('catDot');
+  const catLabel   = document.getElementById('catLabel');
+  const catMenu    = document.getElementById('catMenu');
+  const catOverlay = document.getElementById('catOverlay');
   let catIdx = 0;
+
+  function fecharMenuCat() {
+    catMenu.hidden = true;
+    catOverlay.hidden = true;
+    catChip.classList.remove('is-open');
+    catChip.setAttribute('aria-expanded', 'false');
+  }
+
+  function pintarMenuCat() {
+    catMenu.innerHTML = CATS.map((c, i) => `
+      <button class="cat-pick__item ${i === catIdx ? 'is-on' : ''}" type="button" role="option"
+              aria-selected="${i === catIdx}" data-idx="${i}">
+        <span class="cat-pick__dot" style="background:${c.cor}"></span>
+        <span class="cat-pick__name">${c.nome}</span>
+        ${i === catIdx ? `<span class="cat-pick__check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </span>` : ''}
+      </button>`).join('');
+  }
 
   function setCat(idx) {
     catIdx = ((idx % CATS.length) + CATS.length) % CATS.length;
@@ -56,8 +78,32 @@
     catChip.setAttribute('data-cat', cat.nome);
     catDot.style.background = cat.cor;
     catLabel.textContent = cat.nome;
+    pintarMenuCat();
   }
-  catChip.addEventListener('click', () => setCat(catIdx + 1));
+
+  // Delegação no contêiner: o menu é re-renderizado a cada seleção.
+  catPick.addEventListener('click', e => {
+    if (e.target.closest('.cat-pick__overlay')) { fecharMenuCat(); return; }
+
+    const item = e.target.closest('.cat-pick__item');
+    if (item) {
+      setCat(Number(item.getAttribute('data-idx')));
+      fecharMenuCat();
+      return;
+    }
+
+    if (e.target.closest('.cat-pick__btn')) {
+      const abrir = catMenu.hidden;
+      catMenu.hidden = !abrir;
+      catOverlay.hidden = !abrir;
+      catChip.classList.toggle('is-open', abrir);
+      catChip.setAttribute('aria-expanded', String(abrir));
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !catMenu.hidden) fecharMenuCat();
+  });
 
   // Carrega as categorias do usuário e seleciona a da tarefa (ou Genérico).
   Categorias.carregar().then(() => {
@@ -419,6 +465,7 @@
         Storage.gravar(KEY_SUBS, subs);
         pintarSubs();
         atualizarSpec();
+        sincronizarConclusaoPorSubs();
       });
     });
     subList.querySelectorAll('.subtask__del').forEach(btn => {
@@ -430,6 +477,36 @@
         atualizarSpec();
       });
     });
+  }
+
+  // Conclusão em cascata (RF03): quando TODAS as subtarefas ficam concluídas, a
+  // tarefa é marcada como concluída — e persistida no backend na hora (não só ao
+  // clicar "Salvar"). Se uma subtarefa é reaberta, a tarefa volta a ficar aberta.
+  // Só dispara quando o estado realmente muda, evitando toggles redundantes.
+  function sincronizarConclusaoPorSubs() {
+    if (subs.length === 0) return;               // sem subtarefas: não interfere
+    const todasFeitas = subs.every(s => s.done);
+    const estaDone    = detail.classList.contains('is-done');
+    if (todasFeitas === estaDone) return;        // já está no estado desejado
+
+    detail.classList.toggle('is-done', todasFeitas);
+    atualizarSpec();
+
+    // Mantém a referência local em sincronia para o "Salvar" não re-alternar o
+    // status (ele compara detail.is-done com tarefa.done).
+    if (tarefa) tarefa.done = todasFeitas;
+
+    // Persiste no banco na hora (só faz sentido p/ tarefa já existente).
+    // toggleDone alterna com base no cache; só chamamos se o cache diverge do
+    // alvo, senão inverteríamos o estado por engano.
+    if (taskId) {
+      const cache = Tarefas.buscar(taskId);
+      if (cache && cache.done !== todasFeitas) {
+        Tarefas.toggleDone(taskId).catch(err => {
+          console.error('Falha ao sincronizar conclusão por subtarefas:', err);
+        });
+      }
+    }
   }
 
   subInput.addEventListener('keydown', (e) => {
