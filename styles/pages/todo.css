@@ -64,6 +64,19 @@
 }
 .notepad__area::placeholder { color: var(--color-text-faint); }
 .notepad__area:focus-visible { box-shadow: none; }
+.notepad__foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  padding: 0 var(--space-lg) var(--space-md);
+}
+.notepad__foot-tip {
+  margin-right: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-faint);
+}
 
 /* Ação rápida (+ Nova tarefa) — respiro entre anotações e filtros */
 .page__head-actions { margin-bottom: var(--space-lg); }

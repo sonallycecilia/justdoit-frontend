@@ -15,6 +15,7 @@
     dashboard:   ic('<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>'),
     calendar:    ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
     todo:        ic('<path d="M11 12H3M16 6H3M21 18H3"/><path d="m15 9 2 2 4-4"/>'),
+    notes:       ic('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
     analytics:   ic('<path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="13" y="6" width="3" height="11"/>'),
     settings:    ic('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.6 14H3.5a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 5 8.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 10 4.6h.1A1.65 1.65 0 0 0 11.4 3.6V3.5a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1.82 1.17 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 10H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>'),
     moon:        ic('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>'),
@@ -39,6 +40,7 @@
     { id: 'dashboard', label: 'Visão geral', href: BASE + 'pages/dashboard/dashboard.html' },
     { id: 'calendar',  label: 'Calendário',  href: BASE + 'pages/tasks/calendar.html' },
     { id: 'todo',      label: 'To Do',        href: BASE + 'pages/tasks/todo.html' },
+    { id: 'notes',     label: 'Anotações',    href: BASE + 'pages/tasks/notes.html' },
     { id: 'analytics', label: 'Análise',      href: BASE + 'pages/dashboard/analytics.html' },
   ];
 

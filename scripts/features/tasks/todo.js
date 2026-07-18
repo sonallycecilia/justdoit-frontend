@@ -192,15 +192,6 @@
   // ao backend); a lista de categorias em si não mudou.
   window.addEventListener('tarefas:atualizadas', pintar);
 
-  // Bloco de anotações — persiste via Storage
-  const notepadArea = document.getElementById('notepadArea');
-  const notepadHint = document.getElementById('notepadHint');
-  notepadArea.value = Storage.ler(Storage.KEYS.NOTAS, '');
-  let hintTimer;
-  notepadArea.addEventListener('input', () => {
-    Storage.gravar(Storage.KEYS.NOTAS, notepadArea.value);
-    notepadHint.classList.add('is-visible');
-    clearTimeout(hintTimer);
-    hintTimer = setTimeout(() => notepadHint.classList.remove('is-visible'), 2000);
-  });
+  // O bloco de anotações do topo agora é um compositor de notas, cuidado por
+  // components/note-composer.js (grava em /notes via Notas.criar).
 })();

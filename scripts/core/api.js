@@ -123,6 +123,18 @@
       cycleConfig: function (id) { return SVC.tasks + '/tasks/' + id + '/cycle-config'; },
     },
 
+    // ── todo.html / notes.html — aba "Anotações" (multi-notas) ────────────────
+    // task-service: CRUD em /notes + fixar (PATCH /notes/{id}/pin). A nota fixada
+    // é única por usuário (o backend despina a anterior). GET /notes já devolve a
+    // fixada primeiro, depois por updatedAt desc.
+    notes: {
+      list:   SVC.tasks + '/notes',
+      create: SVC.tasks + '/notes',
+      update: function (id) { return SVC.tasks + '/notes/' + id; },
+      remove: function (id) { return SVC.tasks + '/notes/' + id; },
+      pin:    function (id) { return SVC.tasks + '/notes/' + id + '/pin'; },
+    },
+
     // ── calendar.html / weekly-plan.html / day-plan.html ─────────────────────
     schedule: {
       week:   function (date)      { return SVC.sched + '/weekly-plans?date=' + date; },

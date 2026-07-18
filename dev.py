@@ -3,15 +3,19 @@
 Automação de desenvolvimento local — sobe backend + frontend de uma vez.
 
 Uso:
-  python dev.py start    — sobe banco + 4 serviços (backend) e serve o frontend em :3000
+  python dev.py start    — sobe infra (MySQL+Redis) + 4 serviços (backend) e serve o frontend em :3000
   python dev.py front    — serve só o frontend em http://localhost:3000
-  python dev.py back      — sobe só o backend (banco + serviços)
-  python dev.py restart   — reinicia só os serviços do backend (banco e frontend seguem no ar)
-  python dev.py stop      — para o backend (banco + serviços)
+  python dev.py back      — sobe só o backend (infra + serviços)
+  python dev.py restart   — sobe a infra e relança os 4 serviços (feche as janelas antigas antes)
+  python dev.py stop      — para a infra (MySQL+Redis). Feche as janelas dos serviços manualmente.
 
 Observação: o backend só aceita CORS de http://localhost:3000, por isso o frontend
 é sempre servido nessa porta. Não abra os HTML direto (file://) — as requisições
 seriam bloqueadas e o api.js apontaria para produção.
+
+Nota (2026-07): o refactor da arquitetura do backend removeu o antigo
+docs/automações/local.py. Agora a infra sobe via docker-compose e cada serviço
+via ./gradlew :services:<svc>:bootRun — este script orquestra os dois.
 """
 import os
 import sys
@@ -23,8 +27,11 @@ FRONT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Backend: projeto irmão. Ajuste aqui se estiver em outro lugar.
 BACKEND_DIR = os.path.abspath(os.path.join(FRONT_DIR, "..", "JustDoIt"))
-BACKEND_LOCAL = os.path.join(BACKEND_DIR, "docs", "automações", "local.py")
 ENV_FILE = os.path.join(BACKEND_DIR, "infra", ".env")
+COMPOSE_FILE = os.path.join(BACKEND_DIR, "infra", "docker-compose.yml")
+
+# Serviços Spring (módulos do settings.gradle.kts). Cada um sobe em janela própria.
+SERVICES = ["auth-service", "task-service", "schedule-service", "notification-service"]
 
 PORT = 3000  # CORS do backend só aceita http://localhost:3000
 
@@ -47,6 +54,34 @@ def load_env():
     print(f"[ENV] Carregado {ENV_FILE}")
 
 
+def compose(*args):
+    """Roda `docker compose -f infra/docker-compose.yml <args>` na raiz do backend."""
+    if not os.path.isfile(COMPOSE_FILE):
+        print(f"[ERRO] Não encontrei o docker-compose em:\n  {COMPOSE_FILE}")
+        print("Ajuste BACKEND_DIR no topo do dev.py.")
+        sys.exit(1)
+    cmd = ["docker", "compose", "-f", COMPOSE_FILE, *args]
+    print(f"[INFRA] {' '.join(args)}")
+    subprocess.run(cmd, cwd=BACKEND_DIR, check=True)
+
+
+def start_services():
+    """Sobe cada serviço Spring em uma janela própria (bootRun), para não travar o
+    terminal e deixar os logs visíveis. As variáveis do .env já estão em os.environ,
+    então as janelas-filhas as herdam."""
+    gradlew = "gradlew.bat" if sys.platform == "win32" else "./gradlew"
+    for svc in SERVICES:
+        task = f":services:{svc}:bootRun"
+        print(f"[BACK] {svc} -> {task}")
+        if sys.platform == "win32":
+            subprocess.Popen(
+                f'start "jdi-{svc}" cmd /k "{gradlew} {task}"',
+                cwd=BACKEND_DIR, shell=True
+            )
+        else:
+            subprocess.Popen([gradlew, task], cwd=BACKEND_DIR)
+
+
 def serve_front():
     print(f"\n[FRONT] Servindo {FRONT_DIR} em http://localhost:{PORT}")
     if sys.platform == "win32":
@@ -60,15 +95,13 @@ def serve_front():
     webbrowser.open(f"http://localhost:{PORT}")
 
 
-def backend(cmd):
-    if not os.path.isfile(BACKEND_LOCAL):
-        print(f"[ERRO] Não encontrei o script do backend em:\n  {BACKEND_LOCAL}")
-        print("Ajuste BACKEND_DIR no topo do dev.py.")
-        sys.exit(1)
-    if cmd != "stop":
-        load_env()
-    print(f"\n[BACK] {cmd} -> {BACKEND_LOCAL}")
-    subprocess.run([sys.executable, BACKEND_LOCAL, cmd], check=True)
+def backend_up():
+    """Infra (containers) + os 4 serviços Spring."""
+    load_env()
+    compose("up", "-d")
+    start_services()
+    print("\n[BACK] Infra no ar e serviços subindo (cada um na sua janela). "
+          "Eles levam alguns segundos até responder.")
 
 
 def main():
@@ -79,20 +112,24 @@ def main():
 
     cmd = sys.argv[1]
     if cmd == "start":
-        backend("start")
+        backend_up()
         serve_front()
         print("\nTudo no ar. Acesse http://localhost:3000")
     elif cmd == "front":
         serve_front()
     elif cmd == "back":
-        backend("start")
+        backend_up()
     elif cmd == "restart":
-        backend("restart")
-        print("\nServiços do backend reiniciados. O frontend (se já estava no ar) "
-              "segue em http://localhost:3000")
+        print("[BACK] Relançando serviços. Feche as janelas antigas (jdi-*) se ainda "
+              "estiverem abertas, para não conflitar nas portas 8080-8083.")
+        load_env()
+        compose("up", "-d")
+        start_services()
     elif cmd == "stop":
-        backend("stop")
-        print("Backend parado. Feche a janela do frontend manualmente (ou Ctrl+C nela).")
+        load_env()
+        compose("stop")
+        print("Infra parada. Feche as janelas dos serviços (jdi-*) e do frontend "
+              "manualmente (ou Ctrl+C em cada uma).")
 
 
 if __name__ == "__main__":
