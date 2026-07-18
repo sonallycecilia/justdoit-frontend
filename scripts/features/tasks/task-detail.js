@@ -304,11 +304,114 @@
 
   /* ── Recorrência (RF08) ───────────────────────────────── */
   const cycleOpts = document.getElementById('cycleOpts');
-  const tipos     = ['none', ...Object.keys(Cycle.TIPOS)];
-  const rotuloTipo = t => t === 'none' ? 'Não repete' : Cycle.rotulo(t);
+  const tipos     = ['none', ...Object.keys(Cycle.TIPOS), 'custom'];
+  const rotuloTipo = t => t === 'none' ? 'Não repete'
+                        : t === 'custom' ? 'Personalizado'
+                        : Cycle.rotulo(t);
   // Preferimos o rascunho local (KEY_CICLO); se vazio (ex.: outro dispositivo),
   // caímos na recorrência que veio da tarefa (meta/backend); senão "none".
   let cicloAtual = (KEY_CICLO && Storage.ler(KEY_CICLO, null)) || (tarefa && tarefa.recorrencia) || 'none';
+
+  // ── Ciclo personalizado (intervalo × repetições) ──────────────
+  const KEY_CICLO_CUSTOM = KEY_CICLO ? KEY_CICLO + '-custom' : null;
+  const CICLO_CUSTOM_PADRAO = { count: 12, unit: 'horas', occurrences: 7, startIso: null, startTime: null };
+  let cicloCustom = (tarefa && tarefa.recorrenciaCustom)
+                 || (KEY_CICLO_CUSTOM && Storage.ler(KEY_CICLO_CUSTOM, null))
+                 || Object.assign({}, CICLO_CUSTOM_PADRAO);
+
+  const cycleCustom   = document.getElementById('cycleCustom');
+  const cycleInterval = document.getElementById('cycleInterval');
+  const cycleUnitBtn  = document.getElementById('cycleUnit');
+  const cycleUnitLabel = document.getElementById('cycleUnitLabel');
+  const cycleUnitMenu = document.getElementById('cycleUnitMenu');
+  const cycleUnitOverlay = document.getElementById('cycleUnitOverlay');
+  const cycleReps     = document.getElementById('cycleReps');
+  const cycleSummary  = document.getElementById('cycleSummary');
+  const cycleStartChip = document.getElementById('cycleStartChip');
+
+  // Data-âncora do ciclo: começa na data da própria tarefa (ou na guardada).
+  let cycleStartDate = cicloCustom.startIso
+    ? new Date(cicloCustom.startIso + 'T00:00:00')
+    : new Date(selectedDate);
+
+  // Preenche os controles com o rascunho atual.
+  cycleInterval.value = cicloCustom.count;
+  cycleReps.value     = cicloCustom.occurrences;
+  cycleUnitBtn.setAttribute('data-unit', cicloCustom.unit);
+  cycleUnitLabel.textContent = cicloCustom.unit; // 'horas' | 'dias'
+  cycleStartChip.textContent = Utils.dataRelativa(cycleStartDate);
+
+  DatePicker.criar({
+    container:   document.getElementById('cycleStartPick'),
+    botao:       document.getElementById('cycleStartBtn'),
+    selecionada: cycleStartDate,
+    onSelect: (d) => { cycleStartDate = d; cycleStartChip.textContent = Utils.dataRelativa(d); sincronizarCustom(); },
+  });
+
+  // Data prevista da última ocorrência (informativo do resumo).
+  function fimPrevisto(c, inicio) {
+    const n = Math.max(0, Number(c.occurrences) - 1);
+    const step = Number(c.count) * n;
+    const d = new Date(inicio);
+    if (c.unit === 'horas') d.setHours(d.getHours() + step);
+    else d.setDate(d.getDate() + step);
+    return d;
+  }
+
+  // Lê os controles → objeto cicloCustom; atualiza resumo, rascunho local e spec.
+  function sincronizarCustom() {
+    const unit = cycleUnitBtn.getAttribute('data-unit');
+    const tv = timePicker.valor();
+    cicloCustom = {
+      count:       Math.max(1, parseInt(cycleInterval.value, 10) || 1),
+      unit:        unit,
+      occurrences: Math.max(2, parseInt(cycleReps.value, 10) || 2),
+      startIso:    Utils.dataIso(cycleStartDate),
+      startTime:   (unit === 'horas' && tv.hora !== null) ? fmtHora(tv.hora, tv.min) : null,
+    };
+    if (KEY_CICLO_CUSTOM) Storage.gravar(KEY_CICLO_CUSTOM, cicloCustom);
+
+    const u = cicloCustom.unit === 'horas' ? 'h' : (cicloCustom.count === 1 ? ' dia' : ' dias');
+    const fim = fimPrevisto(cicloCustom, cycleStartDate);
+    cycleSummary.textContent =
+      cicloCustom.occurrences + ' ocorrências · a cada ' + cicloCustom.count + u +
+      ' · termina ' + Utils.dataRelativa(fim);
+    atualizarSpec();
+  }
+
+  function toggleCustomVisivel() {
+    cycleCustom.hidden = cicloAtual !== 'custom';
+    if (cicloAtual === 'custom') sincronizarCustom();
+  }
+
+  cycleInterval.addEventListener('input', sincronizarCustom);
+  cycleReps.addEventListener('input', sincronizarCustom);
+
+  // Dropdown de unidade (horas ⇄ dias) — menu com chevron, padrão do sistema.
+  function abrirMenuUnidade(abrir) {
+    cycleUnitMenu.hidden = !abrir;
+    cycleUnitOverlay.hidden = !abrir;
+    cycleUnitBtn.setAttribute('aria-expanded', String(abrir));
+    cycleUnitBtn.classList.toggle('is-open', abrir);
+  }
+  function selecionarUnidade(u) {
+    cycleUnitBtn.setAttribute('data-unit', u);
+    cycleUnitLabel.textContent = u;
+    cycleUnitMenu.querySelectorAll('.cycle-unit__opt')
+      .forEach(o => o.classList.toggle('is-on', o.getAttribute('data-unit') === u));
+    abrirMenuUnidade(false);
+    sincronizarCustom();
+  }
+  cycleUnitBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    abrirMenuUnidade(cycleUnitMenu.hidden);
+  });
+  cycleUnitOverlay.addEventListener('click', () => abrirMenuUnidade(false));
+  cycleUnitMenu.querySelectorAll('.cycle-unit__opt').forEach(opt => {
+    opt.addEventListener('click', (e) => { e.stopPropagation(); selecionarUnidade(opt.getAttribute('data-unit')); });
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') abrirMenuUnidade(false); });
+  selecionarUnidade(cicloCustom.unit); // marca a opção ativa inicial (sem abrir menu)
 
   cycleOpts.innerHTML = tipos.map(t =>
     `<button class="cycle-opt ${t === cicloAtual ? 'is-on' : ''}" data-cycle="${t}">${rotuloTipo(t)}</button>`
@@ -319,9 +422,11 @@
       opt.classList.add('is-on');
       cicloAtual = opt.getAttribute('data-cycle');
       if (KEY_CICLO) Storage.gravar(KEY_CICLO, cicloAtual);
+      toggleCustomVisivel();
       atualizarSpec();
     });
   });
+  toggleCustomVisivel(); // estado inicial (mostra o painel se já era custom)
 
   /* ── Cronômetro de execução (RF13) ───────────────────── */
   const timerDisplay = document.getElementById('timerDisplay');
@@ -531,7 +636,9 @@
     const isDone = detail.classList.contains('is-done');
     document.getElementById('specStatus').textContent   = isDone ? 'Concluída' : 'Aberta';
     document.getElementById('specStatus').style.color   = isDone ? 'var(--color-success)' : '';
-    document.getElementById('specCiclo').textContent    = cicloAtual !== 'none' ? Cycle.rotulo(cicloAtual) : '—';
+    document.getElementById('specCiclo').textContent    =
+      cicloAtual === 'custom' ? Cycle.rotuloCustom(cicloCustom)
+      : cicloAtual !== 'none' ? Cycle.rotulo(cicloAtual) : '—';
 
     const feitas = subs.filter(s => s.done).length;
     document.getElementById('specSubs').textContent = `${feitas} / ${subs.length}`;
@@ -602,6 +709,9 @@
 
     const descricao = document.getElementById('desc').textContent.trim();
     const recorrencia = cicloAtual !== 'none' ? cicloAtual : undefined;
+    // Objeto do ciclo custom quando ativo; null limpa o rascunho salvo ao trocar
+    // para um preset/"não repete".
+    const recorrenciaCustom = cicloAtual === 'custom' ? cicloCustom : null;
     const btn = document.getElementById('saveBtn');
 
     if (tarefa) {
@@ -620,6 +730,7 @@
         dataIso:     Utils.dataIso(selectedDate),
         hora:        horaValor,
         recorrencia,
+        recorrenciaCustom,
         duracaoMin:  duracaoAtualMin(), // 👈 Tempo estimado enviado ao backend
       })
         // Status (concluída/aberta) é persistido por endpoint próprio.
@@ -656,6 +767,7 @@
         dataIso:     Utils.dataIso(selectedDate),
         hora:        horaValor,
         recorrencia,
+        recorrenciaCustom,
         duracaoMin:  duracaoAtualMin(), // 👈 Tempo estimado enviado ao backend
       })
         .then((nova) => {
@@ -673,6 +785,9 @@
               .map(b => b.getAttribute('data-mod'));
             Storage.gravar(Storage.KEYS.detalheMods(novoId), modsAtivos);
             Storage.gravar(Storage.KEYS.detalheCiclo(novoId), cicloAtual);
+            if (cicloAtual === 'custom') {
+              Storage.gravar(Storage.KEYS.detalheCiclo(novoId) + '-custom', cicloCustom);
+            }
           }
           Storage.remover(KEY_SUBS);
           Storage.remover(KEY_NOTAS);

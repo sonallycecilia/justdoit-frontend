@@ -173,6 +173,66 @@
 .cycle-opt { padding: 7px 14px; border-radius: var(--radius-pill); border: 1px solid var(--color-border-strong); background: var(--color-card); font-size: var(--font-size-sm); color: var(--color-text-soft); cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast), color var(--duration-fast); }
 .cycle-opt.is-on { border-color: var(--color-accent); background: var(--color-accent-soft); color: var(--color-text); }
 
+/* ── Ciclo personalizado (intervalo × repetições) ───────────────── */
+.cycle-custom { margin-top: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+.cycle-custom[hidden] { display: none; }
+.cycle-custom__row { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+.cycle-custom__label { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.cycle-custom__interval, .cycle-custom__reps { height: 28px; }
+/* Dropdown de unidade (horas ⇄ dias) embutido na pill do intervalo. */
+.cycle-unit-pick { position: relative; margin-left: 4px; }
+.cycle-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.cycle-unit:hover { filter: brightness(0.96); }
+.cycle-unit__chevron { width: 11px; height: 11px; transition: transform var(--duration-fast); }
+.cycle-unit.is-open .cycle-unit__chevron { transform: rotate(180deg); }
+
+.cycle-unit__overlay { position: fixed; inset: 0; z-index: 50; }
+.cycle-unit__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 51;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  box-shadow: var(--shadow-raised);
+  min-width: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cycle-unit__opt {
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-soft);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.cycle-unit__opt:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+.cycle-unit__opt.is-on { background: var(--color-accent-soft); color: var(--color-accent); font-weight: var(--weight-medium); }
+.cycle-custom__times { color: var(--color-text-muted); margin-left: 2px; font-size: var(--font-size-sm); }
+.cycle-custom__reps input { width: 26px; }
+.cycle-custom__summary { margin: 2px 0 0; font-size: var(--font-size-sm); color: var(--color-text-soft); }
+
 /* Notas */
 .notes-area { width: 100%; min-height: 90px; resize: vertical; border: none; padding: var(--space-md); font-family: var(--font-body); font-size: var(--font-size-md); color: var(--color-text); background: transparent; outline: none; }
 

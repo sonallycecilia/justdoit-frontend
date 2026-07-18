@@ -50,20 +50,48 @@ const Tarefas = (function () {
   // exibição (a listagem GET /tasks não devolve o cycle-config).
   const CICLO_API = {
     daily: 'DAILY', weekly: 'WEEKLY', biweekly: 'BIWEEKLY',
-    monthly: 'MONTHLY', annual: 'ANNUAL',
+    monthly: 'MONTHLY', annual: 'ANNUAL', custom: 'CUSTOM',
   };
   // Inverso: CycleType do backend → rótulo da UI (usado ao ler GET /tasks).
   const CICLO_UI = {
     DAILY: 'daily', WEEKLY: 'weekly', BIWEEKLY: 'biweekly',
-    MONTHLY: 'monthly', ANNUAL: 'annual',
+    MONTHLY: 'monthly', ANNUAL: 'annual', CUSTOM: 'custom',
   };
 
+  // Valida um objeto de ciclo custom sem depender do módulo Cycle (tarefas.js roda
+  // em páginas onde cycle.js não está carregado, ex.: calendário).
+  function customValido(c) {
+    return !!c && Number(c.count) > 0 && Number(c.occurrences) > 0
+        && (c.unit === 'horas' || c.unit === 'dias');
+  }
+
+  // Objeto custom da UI → campos do CycleConfigRequest (backend).
+  function customParaApi(c) {
+    return {
+      cycleType:        'CUSTOM',
+      intervalUnit:     c.unit === 'horas' ? 'HOURS' : 'DAYS',
+      intervalCount:    Number(c.count),
+      totalOccurrences: Number(c.occurrences),
+      startDate:        c.startIso || null,
+      startTime:        c.unit === 'horas' ? (c.startTime || null) : null,
+    };
+  }
+
   // Reconcilia o cycle-config no backend. nova = recorrência escolhida (ou
-  // undefined); antiga = a que estava antes (para saber se deve apagar).
+  // undefined); antiga = a que estava antes (para saber se deve apagar);
+  // custom = objeto do ciclo personalizado (usado só quando nova === 'custom';
+  // se omitido, cai no cache "meta" da tarefa).
   // Best-effort: a tarefa já foi salva, não derruba o fluxo se o config falhar.
-  function salvarRecorrencia(id, nova, antiga) {
+  function salvarRecorrencia(id, nova, antiga, custom) {
     const url = Api.endpoints.tasks.cycleConfig(id);
     const logErr = function (err) { console.error('Falha ao salvar recorrência:', err); return null; };
+    if (nova === 'custom') {
+      const c = custom || (lerMeta()[id] || {}).recorrenciaCustom;
+      if (customValido(c)) {
+        return Api.put(url, customParaApi(c)).catch(logErr);
+      }
+      return Promise.resolve(null); // custom incompleto → não envia
+    }
     if (nova && CICLO_API[nova]) {
       return Api.put(url, { cycleType: CICLO_API[nova] }).catch(logErr);
     }
@@ -97,6 +125,10 @@ const Tarefas = (function () {
       prioridade: dados.prioridade, recorrencia: dados.recorrencia,
     };
     if (dados.duracaoMin != null) m.duracaoMin = dados.duracaoMin;
+    // Detalhes do ciclo custom (o backend guarda no cycle-config, mas o GET /tasks
+    // não os devolve — cache local reexibe intervalo/repetições). Só toca a chave
+    // quando o save informa (undefined = update parcial → preserva; null = limpa).
+    if (dados.recorrenciaCustom !== undefined) m.recorrenciaCustom = dados.recorrenciaCustom;
     return m;
   }
 
@@ -159,6 +191,8 @@ const Tarefas = (function () {
       // da recorrência (reflete ciclos criados em outro dispositivo/direto na API).
       // Cai no cache "meta" só quando a resposta não traz o campo (ex.: offline).
       recorrencia: (t.cycleType && CICLO_UI[t.cycleType]) || meta.recorrencia,
+      // Detalhes do ciclo custom (só existem no cache local; ver metaDe).
+      recorrenciaCustom: meta.recorrenciaCustom || null,
       done:        concluida,
       dataIso:     t.dueDate || null,
       data:        dataObj ? Utils.dataRelativa(dataObj) : 'Sem data',
@@ -186,7 +220,7 @@ const Tarefas = (function () {
         lista.unshift(nova);
         salvar(lista);
         return salvarTempoEstimado(nova.id, dados.duracaoMin)
-          .then(function () { return salvarRecorrencia(nova.id, dados.recorrencia); })
+          .then(function () { return salvarRecorrencia(nova.id, dados.recorrencia, undefined, dados.recorrenciaCustom); })
           .then(function () { return nova; });
       }
 
@@ -210,7 +244,7 @@ const Tarefas = (function () {
         });
         salvar(atual);
         return salvarTempoEstimado(nova.id, dados.duracaoMin)
-          .then(function () { return salvarRecorrencia(nova.id, dados.recorrencia); })
+          .then(function () { return salvarRecorrencia(nova.id, dados.recorrencia, undefined, dados.recorrenciaCustom); })
           .then(function () { return atual[i]; });
       });
     });
@@ -228,7 +262,7 @@ const Tarefas = (function () {
       if (i >= 0) lista[i] = atualizada; else lista.unshift(atualizada);
       salvar(lista);
       return salvarTempoEstimado(id, dados.duracaoMin)
-        .then(function () { return salvarRecorrencia(id, dados.recorrencia, recorrenciaAntiga); })
+        .then(function () { return salvarRecorrencia(id, dados.recorrencia, recorrenciaAntiga, dados.recorrenciaCustom); })
         .then(function () { return atualizada; });
     });
   }

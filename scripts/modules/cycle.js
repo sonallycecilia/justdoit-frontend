@@ -21,7 +21,22 @@ const Cycle = (function () {
 
   function rotulo(tipo) { return TIPOS[tipo] ? TIPOS[tipo].rotulo : 'Sem recorrência'; }
 
-  return { TIPOS, rotulo };
+  // ── Ciclo personalizado (cycleType == CUSTOM no backend) ──────────────────
+  // Objeto: { count, unit: 'horas'|'dias', occurrences, startIso, startTime }.
+  // Um custom só é válido com intervalo e nº de repetições > 0.
+  function customValido(c) {
+    return !!c && Number(c.count) > 0 && Number(c.occurrences) > 0
+        && (c.unit === 'horas' || c.unit === 'dias');
+  }
+
+  // Rótulo curto p/ o painel de especificações. Ex.: "A cada 12h · 7×".
+  function rotuloCustom(c) {
+    if (!customValido(c)) return 'Personalizado';
+    const u = c.unit === 'horas' ? 'h' : (Number(c.count) === 1 ? ' dia' : ' dias');
+    return 'A cada ' + c.count + u + ' · ' + c.occurrences + '×';
+  }
+
+  return { TIPOS, rotulo, customValido, rotuloCustom };
 })();
 
 window.Cycle = Cycle;
