@@ -111,19 +111,20 @@ function ehPersistido(id) {
   return typeof id === 'string' && id.indexOf('ext-') !== 0 && id.indexOf('task-') !== 0;
 }
 
-/* ── HELPERS: TETO BIOLÓGICO ───────────────────────────── */
-const TETO_MINUTOS_DIA = 960;
-
-function minutosDoDia(iso, taskIdExcluir) {
-  if (!window.Tarefas || !iso) return 0;
-  return Tarefas.listar()
-    .filter(t => t.dataIso === iso && t.id !== taskIdExcluir)
-    .reduce((soma, t) => soma + (t.duracaoMin || 60), 0);
-}
-
-function excedeTeto(iso, taskId, duracaoMin) {
-  if (!iso) return false;
-  return minutosDoDia(iso, taskId) + (duracaoMin || 60) > TETO_MINUTOS_DIA;
+/* ── TETO BIOLÓGICO ────────────────────────────────────────
+   O limite de horas por dia é validado pelo BACKEND (task-service), que é a
+   fonte da verdade: ao mover/agendar, o PUT/POST devolve 400 se o dia estourar.
+   O calendário NÃO recalcula o teto localmente — os moves são otimistas
+   (UI + cache atualizados na hora) e, quando o 400 chega, `aoFalharPorTeto`
+   desfaz a mudança visual e mostra o motivo vindo do backend. Outros erros
+   (rede etc.) seguem otimistas, como antes.
+   ────────────────────────────────────────────────────────── */
+function aoFalharPorTeto(err, reverter) {
+  if (!err || err.status !== 400) return;
+  if (typeof reverter === 'function') reverter();
+  if (window.Utils) {
+    Utils.toast(err.error || err.message || 'Teto biológico atingido: esse dia já está cheio.', 'error');
+  }
 }
 /* ───────────────────────────────────────────────────────── */
 
@@ -1122,13 +1123,14 @@ function WeeklyCalendar() {
   // calendário (PUT /tasks no task-service). Chamado ao arrastar do sidebar
   // (cria bloco) e ao mover um bloco já existente.
   function sincronizarAgendaTarefa(taskId, iso, ini) {
-    if (!taskId || !window.Tarefas) return;
+    if (!taskId || !window.Tarefas) return Promise.resolve();
     const tarefa = Tarefas.buscar(taskId);
-    if (!tarefa || !iso) return;
+    if (!tarefa || !iso) return Promise.resolve();
     const hora = fmtHora(ini);
     // Atualiza o cache local na hora (otimista): abrir o detalhe logo após
     // arrastar já mostra a nova data/hora, sem esperar o PUT responder.
-    const lista = Tarefas.listar();
+    const listaAntes = Tarefas.listar();          // snapshot p/ reverter no 400
+    const lista = listaAntes.slice();
     const i = lista.findIndex(x => x.id === taskId);
     if (i >= 0) {
       const dataObj = new Date(iso + 'T00:00:00');
@@ -1137,7 +1139,12 @@ function WeeklyCalendar() {
         quando: window.Utils ? Utils.calcQuando(dataObj)  : lista[i].quando };
       Tarefas.salvar(lista);
     }
-    Tarefas.atualizar(taskId, { ...tarefa, dataIso: iso, hora }).catch(() => {});
+    // Retorna a promise p/ o caller reverter a UI se o backend recusar (teto).
+    return Tarefas.atualizar(taskId, { ...tarefa, dataIso: iso, hora })
+      .catch(err => {
+        if (err && err.status === 400) Tarefas.salvar(listaAntes); // desfaz cache
+        throw err;
+      });
   }
 
   function mover(id, novoDia, novaIni) {
@@ -1145,36 +1152,33 @@ function WeeklyCalendar() {
     if (!atual) return;
     const dur = atual.fim - atual.ini;
 
-    // 👇 NOVO: Bloqueio do Teto Biológico
-    const iso  = dias[novoDia] && dias[novoDia].iso;
-    const duracaoMin = atual.taskId
-      ? (Tarefas.buscar(atual.taskId) || {}).duracaoMin || Math.round(dur * 60)
-      : Math.round(dur * 60);
-    
-    if (excedeTeto(iso, atual.taskId, duracaoMin)) {
-      if (window.Utils) Utils.toast('Teto biológico atingido: esse dia já tem 16h agendadas.', 'error');
-      return; // não altera `eventos` → card volta pra posição original
-    }
-
+    // Move otimista; se o backend recusar por teto (400), reverte pra posição
+    // original. `prevEventos` guarda o estado de antes da mudança.
+    const prevEventos = eventos;
     // Soltar na grade define um horário: a tarefa deixa de ser "Sem horário".
     const novo = { ...atual, d: novoDia, ini: novaIni, fim: novaIni + dur, semHora: false };
     setEventos(evs => evs.map(ev => ev.id === id ? novo : ev));
     if (window.Blocos && ehPersistido(id)) Blocos.atualizar(novo, dias).catch(() => {});
-    sincronizarAgendaTarefa(atual.taskId, dias[novoDia] && dias[novoDia].iso, novaIni);
+    sincronizarAgendaTarefa(atual.taskId, dias[novoDia] && dias[novoDia].iso, novaIni)
+      .catch(err => aoFalharPorTeto(err, () => setEventos(prevEventos)));
   }
 
   // Zera a hora da tarefa (mantendo a data) — usado ao mover para "Sem horário".
   // Reflete no cache local (otimista) e persiste no task-service (dueTime = null).
   function limparHoraTarefa(taskId, iso) {
-    if (!taskId || !window.Tarefas) return;
+    if (!taskId || !window.Tarefas) return Promise.resolve();
     const tarefa = Tarefas.buscar(taskId);
-    if (!tarefa) return;
-    const lista = Tarefas.listar();
+    if (!tarefa) return Promise.resolve();
+    const listaAntes = Tarefas.listar();          // snapshot p/ reverter no 400
+    const lista = listaAntes.slice();
     const i = lista.findIndex(x => x.id === taskId);
     if (i >= 0) { lista[i] = { ...lista[i], hora: undefined, dataIso: iso || lista[i].dataIso }; Tarefas.salvar(lista); }
-    Tarefas.atualizar(taskId, { ...tarefa, hora: null, dataIso: iso || tarefa.dataIso })
+    return Tarefas.atualizar(taskId, { ...tarefa, hora: null, dataIso: iso || tarefa.dataIso })
       .then(() => window.dispatchEvent(new CustomEvent('tarefas:atualizadas')))
-      .catch(() => {});
+      .catch(err => {
+        if (err && err.status === 400) Tarefas.salvar(listaAntes); // desfaz cache
+        throw err;
+      });
   }
 
   // Move um evento do calendário para a faixa "Sem horário" do dia destino:
@@ -1188,30 +1192,27 @@ function WeeklyCalendar() {
     const novo = { ...atual, id: novoId, d: novoDia, semHora: true };
     setEventos(evs => evs.map(ev => ev.id === id ? novo : ev));
     if (window.Blocos && ehPersistido(id)) Blocos.remover(id).catch(() => {});
-    limparHoraTarefa(atual.taskId, iso);
+    // Mover para "Sem horário" não era travado pelo teto antes; segue otimista.
+    limparHoraTarefa(atual.taskId, iso).catch(() => {});
   }
 
   // Arrastar uma tarefa da sidebar direto para a faixa "Sem horário": agenda no
   // dia (sem hora). Se já estiver no calendário, reaproveita moverParaSemHora.
   function agendarSemHora(task, novoDia) {
-    // 👇 NOVO: Bloqueio do Teto Biológico
     const iso = dias[novoDia] && dias[novoDia].iso;
-    const duracaoMin = task.duracaoMin || 60;
-    
-    if (excedeTeto(iso, task.id, duracaoMin)) {
-      if (window.Utils) Utils.toast('Teto biológico atingido: esse dia já tem 16h agendadas.', 'error');
-      return;
-    }
 
     const existente = eventos.find(e => e.taskId === task.id);
     if (existente) { moverParaSemHora(existente.id, novoDia); return; }
-    
+
+    // Agenda otimista; reverte (remove o card) se o backend recusar por teto.
+    const prevEventos = eventos;
     setEventos(evs => [...evs, {
       id: 'task-' + task.id, taskId: task.id, d: novoDia, ini: START, fim: START + 1,
       semHora: true, titulo: task.titulo, cat: CAT_MAP[task.cat] || 'generico',
       catNome: task.cat, prio: task.prioridade || 'normal', done: false, mod: null,
     }]);
-    limparHoraTarefa(task.id, iso);
+    limparHoraTarefa(task.id, iso)
+      .catch(err => aoFalharPorTeto(err, () => setEventos(prevEventos)));
   }
 
   // Move um evento da vista "mês" para outro dia (só muda a data ISO; a hora é
@@ -1222,18 +1223,13 @@ function WeeklyCalendar() {
     const atual = eventosMes.find(e => e.id === id);
     if (!atual || atual.iso === novoIso) return;
 
-    // 👇 NOVO: Bloqueio do Teto Biológico
-    const duracaoMin = atual.taskId ? (Tarefas.buscar(atual.taskId) || {}).duracaoMin || 60 : 60;
-    
-    if (excedeTeto(novoIso, atual.taskId, duracaoMin)) {
-      if (window.Utils) Utils.toast('Teto biológico atingido: esse dia já tem 16h agendadas.', 'error');
-      return;
-    }
-
+    // Move otimista; reverte pro dia original se o backend recusar por teto.
+    const prevEventosMes = eventosMes;
     const novo = { ...atual, iso: novoIso };
     setEventosMes(evs => evs.map(ev => ev.id === id ? novo : ev));
     if (window.Blocos && ehPersistido(id)) Blocos.atualizar({ ...novo, d: 0 }, [{ iso: novoIso }]).catch(() => {});
-    sincronizarAgendaTarefa(atual.taskId, novoIso, atual.ini);
+    sincronizarAgendaTarefa(atual.taskId, novoIso, atual.ini)
+      .catch(err => aoFalharPorTeto(err, () => setEventosMes(prevEventosMes)));
   }
 
   // Cria o bloco no schedule-service para um evento já vinculado a uma tarefa.
@@ -1255,14 +1251,8 @@ function WeeklyCalendar() {
     const dia  = dias[novoEv.d];
     const orig = window.Tarefas ? Tarefas.buscar(novoEv.taskId) : null;
 
-    // 👇 NOVO: Bloqueio do Teto Biológico
-    const duracaoMin = orig ? (orig.duracaoMin || 60) : 60;
-    
-    if (dia && excedeTeto(dia.iso, novoEv.taskId, duracaoMin)) {
-      if (window.Utils) Utils.toast('Teto biológico atingido: esse dia já tem 16h agendadas.', 'error');
-      return; // não adiciona nada — o card volta a não existir no grid (Revert visual)
-    }
-
+    // Adiciona otimista; se o backend recusar por teto (400), remove o card.
+    const prevEventos = eventos;
     setEventos(evs => [...evs, novoEv]); // mostra na hora (otimista)
 
     // Sem módulo de tarefas: cria só o bloco ligado à tarefa de origem (fallback).
@@ -1270,9 +1260,12 @@ function WeeklyCalendar() {
 
     // Tarefa de origem ainda sem data → agenda ela mesma (não duplica).
     if (orig && !orig.dataIso) {
-      sincronizarAgendaTarefa(orig.id, dia && dia.iso, novoEv.ini); // PUT data/hora
-      criarBlocoDoEvento(novoEv);                             // bloco ligado a orig.id
-      window.dispatchEvent(new CustomEvent('tarefas:atualizadas'));
+      sincronizarAgendaTarefa(orig.id, dia && dia.iso, novoEv.ini) // PUT data/hora
+        .then(() => {
+          criarBlocoDoEvento(novoEv);                        // bloco ligado a orig.id
+          window.dispatchEvent(new CustomEvent('tarefas:atualizadas'));
+        })
+        .catch(err => aoFalharPorTeto(err, () => setEventos(prevEventos)));
       return;
     }
 
@@ -1292,7 +1285,7 @@ function WeeklyCalendar() {
       criarBlocoDoEvento(evNovo);
       // Avisa a sidebar (e demais ouvintes) para refletir a nova tarefa.
       window.dispatchEvent(new CustomEvent('tarefas:atualizadas'));
-    }).catch(() => {});
+    }).catch(err => aoFalharPorTeto(err, () => setEventos(prevEventos)));
   }
 
   function removerEvento(ev) {

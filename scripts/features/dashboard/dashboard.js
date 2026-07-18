@@ -9,9 +9,26 @@
   const greeting = document.getElementById('greeting');
   const eyebrow = document.getElementById('eyebrow');
   if (greeting && window.Utils) {
-    const sessao = Storage.ler('sessao');
-    const primeiroNome = sessao && sessao.name ? sessao.name.split(' ')[0] : '';
-    greeting.innerHTML = `${Utils.saudacao()}${primeiroNome ? `, <em>${primeiroNome}.</em>` : '.'}`;
+    // Pinta a saudação a partir de um nome (primeiro nome, capitalizado).
+    function pintarSaudacao(nome) {
+      const primeiroNome = nome ? Utils.capitalizarNome(nome).split(' ')[0] : '';
+      greeting.innerHTML = `${Utils.saudacao()}${primeiroNome ? `, <em>${primeiroNome}.</em>` : '.'}`;
+    }
+
+    // Render imediato com o que já temos em sessão (pode estar vazio no login).
+    const sessao = window.Auth ? Auth.lerSessao() : Storage.ler('sessao');
+    pintarSaudacao(sessao && sessao.name);
+
+    // Busca o nome real no backend (auth/me) e atualiza — igual ao sidebar.js.
+    // Sem isto, a saudação ficaria presa no nome gravado localmente (ex.: de um
+    // cadastro anterior), já que o login.js não grava o nome na sessão.
+    if (window.Api && sessao && sessao.accessToken) {
+      Api.get(Api.endpoints.auth.me).then(function (user) {
+        if (!user || !user.name) return;
+        if (window.Auth) Auth.gravarSessao({ name: user.name, email: user.email });
+        pintarSaudacao(user.name);
+      }).catch(function () { /* mantém a saudação que já está na tela */ });
+    }
   }
   if (eyebrow && window.Utils) {
     eyebrow.textContent = `${Utils.dataCurta()} · semana de ${Utils.intervaloSemana()}`;

@@ -142,11 +142,10 @@
     onSelect: (d) => {
       selectedDate = d;
       document.getElementById('dataChip').textContent = Utils.dataRelativa(d);
-      
-      // Valida o teto ao trocar a data
-      if (typeof validarTeto === 'function') {
-        validarTeto();
-      }
+      // O teto é decidido pelo backend no save; ao trocar a data só limpamos um
+      // eventual alerta de teto que sobrou de uma tentativa de salvar anterior.
+      const ta = document.getElementById('tetoAlert');
+      if (ta) ta.classList.add('hidden');
     },
   });
 
@@ -188,13 +187,17 @@
     onClear:   onTimeClear,
   });
 
-  /* ── Duração estimada (Time-Boxing) + Teto biológico ────── */
+  /* ── Duração estimada (Time-Boxing) ─────────────────────── */
+  // O teto biológico (limite de horas por dia) é validado pelo BACKEND, que é a
+  // fonte da verdade: ao salvar, o task-service devolve 400 se o dia estourar, e
+  // a UI reflete isso (toast + alerta) no handler de save. O front NÃO mantém
+  // regra própria de teto — antes ele recomputava 960min localmente e travava o
+  // botão já no load, inclusive contra "Hoje" quando o usuário nem tinha
+  // escolhido data. Isso divergia do backend (contava concluídas, assumia 60min
+  // p/ tarefa sem estimativa) e parecia o date picker bugando o teto.
   const durHoras   = document.getElementById('durHoras');
   const durMinutos = document.getElementById('durMinutos');
-  const saveBtnRef = document.getElementById('saveBtn');
   const tetoAlert  = document.getElementById('tetoAlert');
-
-  const TETO_MINUTOS_DIA = 960; // 16h úteis
 
   function preencherDuracao(min) {
     if (min == null || !durHoras || !durMinutos) return;
@@ -212,7 +215,6 @@
       if (min == null) return;
       if (tarefa) tarefa.duracaoMin = min;
       preencherDuracao(min);
-      validarTeto();
     });
   }
 
@@ -221,30 +223,6 @@
     const h = parseInt(durHoras.value, 10) || 0;
     const m = parseInt(durMinutos.value, 10) || 0;
     return h * 60 + m;
-  }
-
-  // Soma os minutos já ocupados no dia selecionado, ignorando a própria tarefa
-  // (importante ao editar: senão ela conta duas vezes).
-  function minutosOcupadosNoDia(iso, idExcluir) {
-    return Tarefas.listar()
-      .filter(t => t.dataIso === iso && t.id !== idExcluir)
-      .reduce((soma, t) => soma + (t.duracaoMin || 60), 0); // fallback para 60 min se vazio
-  }
-
-  function validarTeto() {
-    if (!durHoras || !durMinutos || !saveBtnRef || !tetoAlert) return false;
-    const iso     = Utils.dataIso(selectedDate);
-    const ocupado = minutosOcupadosNoDia(iso, taskId);
-    const excedeu = (ocupado + duracaoAtualMin()) > TETO_MINUTOS_DIA;
-    saveBtnRef.disabled = excedeu;
-    tetoAlert.classList.toggle('hidden', !excedeu);
-    return excedeu;
-  }
-
-  if (durHoras && durMinutos) {
-    durHoras.addEventListener('input', validarTeto);
-    durMinutos.addEventListener('input', validarTeto);
-    validarTeto();
   }
 
   /* ── Módulos ativáveis ────────────────────────────────── */
@@ -704,6 +682,10 @@
     const titulo = document.getElementById('title').textContent.trim();
     if (!titulo) { document.getElementById('title').focus(); return; }
 
+    // Limpa o alerta de teto de uma tentativa anterior; ele reaparece só se o
+    // backend voltar 400 (fonte da verdade do teto biológico).
+    if (tetoAlert) tetoAlert.classList.add('hidden');
+
     const tv = timePicker.valor();
     const horaValor = tv.hora !== null ? fmtHora(tv.hora, tv.min) : undefined;
 
@@ -744,9 +726,11 @@
           btn.disabled = false;
           btn.textContent = 'Erro ao salvar';
           
-          // 👇 NOVO: Chamada do Toast para erro 400
+          // Teto biológico: o backend é a fonte da verdade e devolve 400 quando
+          // o dia estoura. Reflete na UI (toast + alerta persistente).
           if (err && err.status === 400) {
             Utils.toast(err.error || err.message || 'Limite de tempo do dia excedido.', 'error');
+            if (tetoAlert) tetoAlert.classList.remove('hidden');
           }
           console.error('Falha ao salvar tarefa:', err);
           
@@ -798,9 +782,11 @@
           btn.disabled = false;
           btn.textContent = 'Erro ao salvar';
           
-          // 👇 NOVO: Chamada do Toast para erro 400
+          // Teto biológico: o backend é a fonte da verdade e devolve 400 quando
+          // o dia estoura. Reflete na UI (toast + alerta persistente).
           if (err && err.status === 400) {
             Utils.toast(err.error || err.message || 'Limite de tempo do dia excedido.', 'error');
+            if (tetoAlert) tetoAlert.classList.remove('hidden');
           }
           console.error('Falha ao criar tarefa:', err);
           
