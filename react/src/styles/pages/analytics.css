@@ -1,0 +1,49 @@
+/* ============================================================
+   JustDoIt — analytics.css
+   Dashboard analítico semanal: gráficos, taxa de conclusão,
+   insights. Gráficos são React islands em SVG puro.
+   ============================================================ */
+
+.an-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); }
+.an-grid .an-wide { grid-column: span 2; }
+
+.an-card { padding: var(--space-lg); }
+.an-card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-lg); }
+.an-card__title { font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: var(--weight-medium); }
+.an-card__hint { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+
+/* Legenda dos gráficos */
+.an-legend { display: flex; gap: var(--space-lg); flex-wrap: wrap; }
+.an-legend__item { display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-size-sm); color: var(--color-text-soft); }
+.an-legend__sw { width: 12px; height: 12px; border-radius: 3px; }
+
+/* SVG responsivo */
+.an-chart { width: 100%; height: auto; display: block; }
+.an-chart text { font-family: var(--font-mono); fill: var(--color-text-muted); }
+
+/* Taxa de conclusão (anel) */
+.an-rate { display: flex; align-items: center; gap: var(--space-xl); }
+.an-rate__ring { width: 140px; height: 140px; flex: none; }
+.an-rate__info { flex: 1; }
+.an-rate__big { font-family: var(--font-display); font-size: var(--font-size-3xl); font-weight: var(--weight-medium); color: var(--color-text); line-height: 1; }
+.an-rate__sub { font-size: var(--font-size-sm); color: var(--color-text-muted); margin-top: 4px; }
+.an-rate__stats { display: flex; gap: var(--space-xl); margin-top: var(--space-md); }
+.an-rate__stat-v { font-family: var(--font-display); font-size: var(--font-size-xl); font-weight: var(--weight-medium); color: var(--color-text); }
+.an-rate__stat-l { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+/* Insights textuais */
+.an-insights { display: flex; flex-direction: column; gap: var(--space-md); }
+.an-insight { display: flex; gap: var(--space-md); align-items: flex-start; }
+.an-insight__ic { width: 36px; height: 36px; flex: none; border-radius: var(--radius-md); display: grid; place-items: center; }
+.an-insight__ic svg { width: 18px; height: 18px; }
+.an-insight__ic--up { background: var(--color-priority-normal-soft); color: var(--color-success); }
+.an-insight__ic--down { background: var(--color-priority-urgent-soft); color: var(--color-danger); }
+.an-insight__ic--info { background: var(--color-accent-soft); color: var(--color-accent); }
+.an-insight__text { font-size: var(--font-size-md); color: var(--color-text-soft); line-height: var(--leading-relaxed); }
+.an-insight__text strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+
+@media (max-width: 880px) {
+  .an-grid { grid-template-columns: 1fr; }
+  .an-grid .an-wide { grid-column: span 1; }
+  .an-rate { flex-direction: column; align-items: flex-start; }
+}

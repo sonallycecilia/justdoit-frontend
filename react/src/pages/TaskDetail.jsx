@@ -1,0 +1,622 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import Ic, { ICONS } from '../components/Ic';
+import Sidebar from '../components/Sidebar';
+import DatePicker from '../components/DatePicker';
+import TimePicker from '../components/TimePicker';
+import { api } from '../api/client';
+import { endpoints } from '../api/endpoints';
+import { useCategorias } from '../hooks/useCategories';
+import { useAtualizarTarefa, useCriarTarefa, useTarefa, useToggleDone } from '../hooks/useTasks';
+import {
+  MODULOS_PADRAO,
+  useCiclo, useCriarSubtarefa, useLogarTempo, useModulos, useNota,
+  useRegistrarCicloFoco, useRemoverSubtarefa, useSalvarCiclo, useSalvarModulos,
+  useSalvarNota, useSessoesFoco, useSubtarefas, useTimer, useToggleSubtarefa,
+  useZerarTempo,
+} from '../hooks/useTaskDetail';
+import * as Priority from '../lib/priority';
+import { TIPOS, rotuloCiclo } from '../lib/cycle';
+import { dataIso, dataRelativa, deIso, formatarMinSeg, formatarTempo, hoje, pct } from '../lib/utils';
+
+const FOCO_MIN = 25;
+const PAUSA_MIN = 5;
+const LABEL_MOD = { foco: 'Foco', ciclo: 'Ciclo', prioridade: 'Prioridade', tempo: 'Tempo', notas: 'Notas', subtarefas: 'Subtarefas' };
+const MOD_ICONE = {
+  foco: ICONS.target, ciclo: ICONS.cycle, prioridade: ICONS.flag,
+  tempo: ICONS.clock, notas: ICONS.notes, subtarefas: ICONS.list,
+};
+
+const fmtHora = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+export default function TaskDetail() {
+  const { id: taskId } = useParams(); // undefined em /tasks/nova
+  const navigate = useNavigate();
+
+  const { data: categorias } = useCategorias();
+  const { data: tarefa, isLoading: carregandoTarefa } = useTarefa(taskId, categorias);
+
+  // ── Dados dos módulos (só em modo edição; em criação ficam locais) ────────
+  const { data: subsServidor } = useSubtarefas(taskId);
+  const { data: notaServidor } = useNota(taskId);
+  const { data: modsServidor } = useModulos(taskId);
+  const { data: cicloServidor } = useCiclo(taskId);
+  const { data: segundosServidor } = useTimer(taskId);
+  const { data: sessoesFoco } = useSessoesFoco(taskId);
+
+  const criarTarefa = useCriarTarefa();
+  const atualizarTarefa = useAtualizarTarefa();
+  const toggleDone = useToggleDone();
+  const criarSub = useCriarSubtarefa(taskId);
+  const toggleSub = useToggleSubtarefa(taskId);
+  const removerSub = useRemoverSubtarefa(taskId);
+  const salvarNota = useSalvarNota(taskId);
+  const salvarMods = useSalvarModulos(taskId);
+  const salvarCiclo = useSalvarCiclo(taskId);
+  const logarTempo = useLogarTempo(taskId);
+  const zerarTempo = useZerarTempo(taskId);
+  const registrarFoco = useRegistrarCicloFoco(taskId);
+
+  // ── Estado do formulário ───────────────────────────────────────────────────
+  const tituloRef = useRef(null);
+  const descRef = useRef(null);
+  const [done, setDone] = useState(false);
+  const [dataSel, setDataSel] = useState(hoje());
+  const [dataAberta, setDataAberta] = useState(false);
+  const [hora, setHora] = useState(null); // { h, m } | null
+  const [horaAberta, setHoraAberta] = useState(false);
+  const [catIdx, setCatIdx] = useState(0);
+  const [prioridade, setPrioridade] = useState('normal');
+  const [salvo, setSalvo] = useState(''); // '', 'ok', 'erro'
+
+  // Estado local dos módulos (novo) / espelho editável (edição)
+  const [modsLocal, setModsLocal] = useState({ ...MODULOS_PADRAO });
+  const [subTogglelocal, setSubToggleLocal] = useState(false); // módulo "subtarefas" (sem flag no backend)
+  const [cicloLocal, setCicloLocal] = useState('none');
+  const [nota, setNota] = useState('');
+  const [subsLocal, setSubsLocal] = useState([]); // modo criação
+  const [subInput, setSubInput] = useState('');
+
+  const preenchido = useRef(false);
+
+  // Pré-popular campos quando a tarefa (modo edição) chegar do backend.
+  useEffect(() => {
+    if (!taskId || !tarefa || preenchido.current) return;
+    preenchido.current = true;
+    if (tituloRef.current) tituloRef.current.textContent = tarefa.titulo;
+    if (descRef.current) descRef.current.textContent = tarefa.descricao || '';
+    setDone(tarefa.done);
+    if (tarefa.dataIso) setDataSel(deIso(tarefa.dataIso));
+    if (tarefa.hora) {
+      const [h, m] = tarefa.hora.split(':').map(Number);
+      setHora({ h, m });
+    }
+    setPrioridade(tarefa.prioridade || 'normal');
+  }, [taskId, tarefa]);
+
+  useEffect(() => {
+    if (tarefa && categorias) {
+      const i = categorias.findIndex((c) => c.id === tarefa.categoriaId || c.nome === tarefa.cat);
+      setCatIdx(i >= 0 ? i : 0);
+    }
+  }, [tarefa, categorias]);
+
+  // Sincroniza estado local com o que veio do servidor (edição).
+  useEffect(() => { if (modsServidor) setModsLocal(modsServidor); }, [modsServidor]);
+  useEffect(() => { if (cicloServidor !== undefined) setCicloLocal(cicloServidor); }, [cicloServidor]);
+  useEffect(() => { if (notaServidor !== undefined) setNota(notaServidor); }, [notaServidor]);
+  // Módulo "subtarefas" liga sozinho quando a tarefa já tem subtarefas.
+  useEffect(() => { if ((subsServidor || []).length > 0) setSubToggleLocal(true); }, [subsServidor]);
+
+  const subs = taskId ? (subsServidor || []) : subsLocal;
+  const cats = categorias || [];
+  const cat = cats[catIdx] || cats[0];
+
+  // ── Nota: salva com debounce no backend (modo edição) ─────────────────────
+  const notaTimer = useRef(null);
+  function aoDigitarNota(valor) {
+    setNota(valor);
+    if (!taskId) return; // em criação, persiste após o POST da tarefa
+    clearTimeout(notaTimer.current);
+    if (!valor.trim()) return; // backend exige content não-vazio
+    notaTimer.current = setTimeout(() => salvarNota.mutate(valor), 800);
+  }
+  useEffect(() => () => clearTimeout(notaTimer.current), []);
+
+  // ── Módulos: PUT imediato em edição, local em criação ─────────────────────
+  function toggleModulo(mod) {
+    if (mod === 'subtarefas') { setSubToggleLocal((v) => !v); return; }
+    const novos = { ...modsLocal, [mod]: !modsLocal[mod] };
+    setModsLocal(novos);
+    if (taskId) salvarMods.mutate(novos);
+  }
+
+  function escolherCiclo(tipo) {
+    setCicloLocal(tipo);
+    if (taskId) salvarCiclo.mutate(tipo);
+  }
+
+  // ── Cronômetro de execução ─────────────────────────────────────────────────
+  const [cronSegundos, setCronSegundos] = useState(0);
+  const [cronRodando, setCronRodando] = useState(false);
+  const deltaNaoLogado = useRef(0);
+  const baseServidor = useRef(0);
+
+  useEffect(() => {
+    if (segundosServidor !== undefined && !cronRodando) {
+      baseServidor.current = segundosServidor;
+      setCronSegundos(segundosServidor + deltaNaoLogado.current);
+    }
+  }, [segundosServidor]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!cronRodando) return;
+    const h = setInterval(() => {
+      deltaNaoLogado.current += 1;
+      setCronSegundos((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(h);
+  }, [cronRodando]);
+
+  function logarDelta() {
+    const delta = deltaNaoLogado.current;
+    if (taskId && delta > 0) {
+      deltaNaoLogado.current = 0;
+      logarTempo.mutate(delta);
+    }
+  }
+
+  function toggleCron() {
+    if (cronRodando) { setCronRodando(false); logarDelta(); }
+    else setCronRodando(true);
+  }
+
+  function resetCron() {
+    setCronRodando(false);
+    deltaNaoLogado.current = 0;
+    setCronSegundos(0);
+    if (taskId) zerarTempo.mutate();
+  }
+
+  // Ao sair da página com tempo não logado, envia o delta (fire-and-forget).
+  useEffect(() => () => {
+    const delta = deltaNaoLogado.current;
+    if (taskId && delta > 0) api.patch(endpoints.tasks.timerLog(taskId), { seconds: delta }).catch(() => {});
+  }, [taskId]);
+
+  // ── Pomodoro ───────────────────────────────────────────────────────────────
+  const [pomo, setPomo] = useState({ fase: 'foco', ciclo: 1, restante: FOCO_MIN * 60, rodando: false });
+  const inicioFocoRef = useRef(null);
+  const ciclosServidor = useMemo(
+    () => (sessoesFoco || []).filter((s) => s.completed && s.sessionType === 'FOCUS').length,
+    [sessoesFoco],
+  );
+  const [ciclosLocais, setCiclosLocais] = useState(0);
+  const ciclosPomodoro = ciclosServidor + (taskId ? 0 : ciclosLocais);
+
+  useEffect(() => {
+    if (!pomo.rodando) return;
+    const h = setInterval(() => {
+      setPomo((p) => {
+        if (p.restante > 0) return { ...p, restante: p.restante - 1 };
+        // Troca de fase
+        if (p.fase === 'foco') {
+          // Ciclo de foco concluído → registra a sessão no backend.
+          const startedAt = inicioFocoRef.current || new Date(Date.now() - FOCO_MIN * 60_000);
+          if (taskId) {
+            registrarFoco.mutate({
+              focusMinutes: FOCO_MIN,
+              startedAt: startedAt.toISOString().slice(0, 19),
+              endedAt: new Date().toISOString().slice(0, 19),
+            });
+          } else {
+            setCiclosLocais((c) => c + 1);
+          }
+          return { ...p, fase: 'pausa', restante: PAUSA_MIN * 60 };
+        }
+        inicioFocoRef.current = new Date();
+        return { fase: 'foco', ciclo: Math.min(p.ciclo + 1, 4), restante: FOCO_MIN * 60, rodando: p.rodando };
+      });
+    }, 1000);
+    return () => clearInterval(h);
+  }, [pomo.rodando, taskId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function togglePomo() {
+    setPomo((p) => {
+      if (!p.rodando && p.fase === 'foco' && p.restante === FOCO_MIN * 60) inicioFocoRef.current = new Date();
+      return { ...p, rodando: !p.rodando };
+    });
+  }
+  function pularFase() {
+    setPomo((p) => (p.fase === 'foco'
+      ? { ...p, fase: 'pausa', restante: PAUSA_MIN * 60 }
+      : { ...p, fase: 'foco', ciclo: Math.min(p.ciclo + 1, 4), restante: FOCO_MIN * 60 }));
+  }
+  function resetPomo() {
+    setPomo({ fase: 'foco', ciclo: 1, restante: FOCO_MIN * 60, rodando: false });
+  }
+
+  const pomoDur = (pomo.fase === 'foco' ? FOCO_MIN : PAUSA_MIN) * 60;
+  const pomoPct = ((pomoDur - pomo.restante) / pomoDur) * 100;
+
+  // ── Subtarefas ─────────────────────────────────────────────────────────────
+  const feitas = subs.filter((s) => s.done).length;
+  const pctSubs = pct(feitas, subs.length);
+
+  function adicionarSub() {
+    const titulo = subInput.trim();
+    if (!titulo) return;
+    setSubInput('');
+    setSubToggleLocal(true);
+    if (taskId) criarSub.mutate({ titulo, position: subs.length });
+    else setSubsLocal((l) => [...l, { id: `tmp-${Date.now()}`, titulo, done: false }]);
+  }
+
+  function alternarSub(s) {
+    if (taskId) toggleSub.mutate(s.id);
+    else setSubsLocal((l) => l.map((x) => (x.id === s.id ? { ...x, done: !x.done } : x)));
+  }
+
+  function excluirSub(s) {
+    if (taskId) removerSub.mutate(s.id);
+    else setSubsLocal((l) => l.filter((x) => x.id !== s.id));
+  }
+
+  // ── Salvar ─────────────────────────────────────────────────────────────────
+  const salvando = criarTarefa.isPending || atualizarTarefa.isPending;
+
+  async function salvar() {
+    const titulo = (tituloRef.current?.textContent || '').trim();
+    if (!titulo) { tituloRef.current?.focus(); return; }
+    const descricao = (descRef.current?.textContent || '').trim();
+
+    const dados = {
+      titulo,
+      descricao,
+      categoriaId: cat?.id,
+      prioridade,
+      dataIso: dataIso(dataSel),
+      hora: hora ? fmtHora(hora.h, hora.m) : null,
+    };
+
+    setSalvo('');
+    try {
+      if (taskId) {
+        await atualizarTarefa.mutateAsync({ id: taskId, dados });
+        if (done !== tarefa.done) await toggleDone.mutateAsync({ id: taskId, concluir: done });
+        setSalvo('ok');
+        setTimeout(() => setSalvo(''), 1800);
+      } else {
+        // Criação: POST da tarefa e, com o id definitivo, persiste os módulos
+        // configurados ANTES de navegar — nada fica só neste navegador.
+        const resp = await criarTarefa.mutateAsync(dados);
+        const novoId = resp?.id;
+        if (novoId) {
+          const pendencias = [];
+          for (const [i, s] of subsLocal.entries()) {
+            pendencias.push(
+              api.post(endpoints.tasks.subtasks.create(novoId), { title: s.titulo, position: i })
+                .then((criada) => (s.done && criada?.id
+                  ? api.patch(endpoints.tasks.subtasks.toggle(novoId, criada.id))
+                  : null)),
+            );
+          }
+          if (nota.trim()) pendencias.push(api.put(endpoints.tasks.note(novoId), { content: nota }));
+          if (cicloLocal !== 'none') pendencias.push(api.put(endpoints.tasks.cycleConfig(novoId), { cycleType: cicloLocal }));
+          const algumMod = Object.values(modsLocal).some(Boolean);
+          if (algumMod) {
+            pendencias.push(api.put(endpoints.tasks.moduleConfig(novoId), {
+              focusEnabled: modsLocal.foco,
+              cycleEnabled: modsLocal.ciclo,
+              priorityEnabled: modsLocal.prioridade,
+              timerEnabled: modsLocal.tempo,
+              notesEnabled: modsLocal.notas,
+            }));
+          }
+          await Promise.all(pendencias);
+        }
+        navigate('/todo');
+      }
+    } catch (e) {
+      console.error('Falha ao salvar tarefa:', e);
+      setSalvo('erro');
+      setTimeout(() => setSalvo(''), 2500);
+    }
+  }
+
+  const modAtivo = (m) => (m === 'subtarefas' ? subTogglelocal : Boolean(modsLocal[m]));
+  const modsAtivosRotulos = Object.keys(LABEL_MOD).filter(modAtivo).map((m) => LABEL_MOD[m]);
+
+  if (taskId && carregandoTarefa) {
+    return (
+      <div className="app">
+        <Sidebar ativa="todo" />
+        <main className="app__main"><div className="detail"><div className="empty"><p>Carregando tarefa…</p></div></div></main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      <Sidebar ativa="todo" />
+
+      <main className="app__main">
+        <div className={`detail ${done ? 'is-done' : ''}`}>
+
+          <div className="detail__topbar">
+            <Link className="detail__back" to="/todo">
+              <Ic d={ICONS.back} /> Ir para To Do
+            </Link>
+            <div className="detail__topbar-actions">
+              <button className="btn btn--primary btn--md" onClick={salvar} disabled={salvando}>
+                {salvo === 'ok' ? 'Salvo ✓'
+                  : salvo === 'erro' ? 'Erro ao salvar'
+                  : salvando ? 'Salvando…'
+                  : taskId ? 'Salvar alterações' : 'Registrar tarefa'}
+              </button>
+            </div>
+          </div>
+
+          <div className="detail__head">
+            <button className="detail__check" aria-label="Concluir tarefa" onClick={() => setDone((v) => !v)}>
+              <Ic d={ICONS.check} strokeWidth={3} />
+            </button>
+            <h1
+              ref={tituloRef}
+              className="edit-title"
+              contentEditable
+              suppressContentEditableWarning
+              spellCheck={false}
+              data-placeholder="Nome da tarefa…"
+            />
+          </div>
+          <div
+            ref={descRef}
+            className="edit-desc"
+            contentEditable
+            suppressContentEditableWarning
+            data-placeholder="Adicione uma descrição…"
+          />
+
+          <div className="detail__chips">
+            <div className="date-pick">
+              <button className={`badge badge--info date-pick__btn ${dataAberta ? 'is-open' : ''}`} type="button" onClick={() => setDataAberta((v) => !v)}>
+                <Ic d={ICONS.calendar} />
+                <span>{dataRelativa(dataSel)}</span>
+                <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} className="date-pick__chevron" />
+              </button>
+              <DatePicker aberto={dataAberta} onFechar={() => setDataAberta(false)} onSelect={setDataSel} selecionada={dataSel} />
+            </div>
+
+            <div className="time-pick">
+              <button
+                className={`badge badge--info time-pick__btn ${horaAberta ? 'is-open' : ''}`}
+                type="button"
+                data-empty={hora ? undefined : ''}
+                onClick={() => setHoraAberta((v) => !v)}
+              >
+                <Ic d={ICONS.clock} />
+                <span>{hora ? fmtHora(hora.h, hora.m) : 'Hora'}</span>
+                <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} className="time-pick__chevron" />
+              </button>
+              <TimePicker
+                aberto={horaAberta}
+                onFechar={() => setHoraAberta(false)}
+                hora={hora?.h ?? null}
+                min={hora?.m ?? 0}
+                onChange={(h, m) => { if (h !== null && h !== undefined) setHora({ h, m }); }}
+                onClear={() => setHora(null)}
+              />
+            </div>
+
+            {cat && (
+              <button className="chip chip--pick" onClick={() => setCatIdx((i) => (i + 1) % cats.length)}>
+                <span className="chip__dot" style={{ background: cat.cor }} />
+                <span>{cat.nome}</span>
+              </button>
+            )}
+
+            <span className={`badge badge--${prioridade}`}>{Priority.ROTULO[prioridade]}</span>
+
+            {subs.length > 0 && (
+              <div className="chips-progress">
+                <Ic d={ICONS.list} size={12} style={{ flex: 'none' }} />
+                <div className="chips-progress__bar">
+                  <div className={`chips-progress__fill ${pctSubs === 100 ? 'chips-progress__fill--success' : ''}`} style={{ width: `${pctSubs}%` }} />
+                </div>
+                <span className="chips-progress__count">{pctSubs}%</span>
+              </div>
+            )}
+          </div>
+
+          {taskId && (
+            <div className="detail__spec">
+              <SpecItem icone={ICONS.checkCircle} label="Status">
+                <span style={done ? { color: 'var(--color-success)' } : undefined}>{done ? 'Concluída' : 'Aberta'}</span>
+              </SpecItem>
+              <SpecItem icone={ICONS.cycle} label="Recorrência">{cicloLocal !== 'none' ? rotuloCiclo(cicloLocal) : '—'}</SpecItem>
+              <SpecItem icone={ICONS.clock} label="Tempo gasto" mono>{formatarTempo(cronSegundos)}</SpecItem>
+              <SpecItem icone={ICONS.target} label="Ciclos Pomodoro" mono>{String(ciclosPomodoro)}</SpecItem>
+              <SpecItem icone={ICONS.list} label="Subtarefas" mono>{feitas} / {subs.length}</SpecItem>
+              <SpecItem icone={ICONS.pencil} label="Módulos ativos">{modsAtivosRotulos.length ? modsAtivosRotulos.join(', ') : '—'}</SpecItem>
+            </div>
+          )}
+
+          <div className="modules">
+            <div className="modules__title">Módulos</div>
+            <div className="modules__grid">
+              {Object.keys(LABEL_MOD).map((mod) => (
+                <button key={mod} className={`module-toggle ${modAtivo(mod) ? 'is-on' : ''}`} onClick={() => toggleModulo(mod)}>
+                  <span className="module-toggle__ic"><Ic d={MOD_ICONE[mod]} /></span>
+                  <span className="module-toggle__name">{LABEL_MOD[mod]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="module-panels">
+            {modAtivo('foco') && (
+              <div className="card module-panel">
+                <div className="module-panel__head">
+                  <Ic d={ICONS.target} />
+                  <span className="module-panel__title">Foco — Pomodoro</span>
+                </div>
+                <div className="pomo">
+                  <div
+                    className="pomo__ring"
+                    style={{
+                      '--pct': pomoPct.toFixed(1),
+                      ...(pomo.fase === 'pausa' ? { '--color-accent': 'var(--color-success)' } : {}),
+                    }}
+                  >
+                    <div className="pomo__inner">
+                      <div className="pomo__time">{formatarMinSeg(pomo.restante)}</div>
+                      <div className="pomo__phase">{pomo.fase === 'foco' ? 'Foco' : 'Pausa'} · ciclo {pomo.ciclo}/4</div>
+                    </div>
+                  </div>
+                  <div className="pomo__side">
+                    <p className="text-soft" style={{ margin: 0 }}>
+                      Trabalhe em blocos de 25 minutos com pausas curtas. Os ciclos concluídos contam para o seu tempo de foco do dia.
+                    </p>
+                    <div className="pomo__actions">
+                      <button className="btn btn--primary btn--md" onClick={togglePomo}>
+                        {pomo.rodando ? 'Pausar' : pomo.restante === FOCO_MIN * 60 && pomo.fase === 'foco' && pomo.ciclo === 1 ? 'Iniciar' : 'Continuar'}
+                      </button>
+                      <button className="btn btn--ghost btn--md" onClick={pularFase}>Pular fase</button>
+                      <button className="btn btn--ghost btn--md" onClick={resetPomo}>Reiniciar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {modAtivo('prioridade') && (
+              <div className="card module-panel">
+                <div className="module-panel__head">
+                  <Ic d={ICONS.flag} />
+                  <span className="module-panel__title">Prioridade</span>
+                </div>
+                <div className="prio-picker">
+                  {Priority.NIVEIS.map((n) => (
+                    <button
+                      key={n}
+                      className={`prio-opt ${n === prioridade ? 'is-on' : ''}`}
+                      style={{ color: Priority.COR[n] }}
+                      onClick={() => setPrioridade(n)}
+                    >
+                      <span className="prio-opt__dot" style={{ background: Priority.COR[n] }} />
+                      <span style={{ color: 'var(--color-text-soft)' }}>{Priority.ROTULO[n]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {modAtivo('ciclo') && (
+              <div className="card module-panel">
+                <div className="module-panel__head">
+                  <Ic d={ICONS.cycle} />
+                  <span className="module-panel__title">Recorrência</span>
+                </div>
+                <div className="cycle-opts">
+                  {TIPOS.map((t) => (
+                    <button key={t} className={`cycle-opt ${t === cicloLocal ? 'is-on' : ''}`} onClick={() => escolherCiclo(t)}>
+                      {rotuloCiclo(t)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {modAtivo('tempo') && (
+              <div className="card module-panel">
+                <div className="module-panel__head">
+                  <Ic d={ICONS.clock} />
+                  <span className="module-panel__title">Cronômetro de execução</span>
+                </div>
+                <div className="timer">
+                  <div className="timer__display">{formatarTempo(cronSegundos)}</div>
+                  <div className="timer__actions">
+                    <button className="btn btn--primary btn--md" onClick={toggleCron}>
+                      {cronRodando ? 'Pausar' : cronSegundos > 0 ? 'Continuar' : 'Iniciar'}
+                    </button>
+                    <button className="btn btn--secondary btn--md" onClick={resetCron}>Zerar</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {modAtivo('notas') && (
+              <div className="card module-panel">
+                <div className="module-panel__head">
+                  <Ic d={ICONS.notes} />
+                  <span className="module-panel__title">Notas</span>
+                </div>
+                <textarea
+                  className="notes-area"
+                  placeholder="Anote lembretes, links ou ideias para esta tarefa…"
+                  value={nota}
+                  onChange={(e) => aoDigitarNota(e.target.value)}
+                />
+              </div>
+            )}
+
+            {modAtivo('subtarefas') && (
+              <div className="card module-panel">
+                <div className="module-panel__head">
+                  <Ic d={ICONS.list} />
+                  <span className="module-panel__title">Subtarefas</span>
+                </div>
+                <div className="subtasks__progress">
+                  <div className="progress">
+                    <div className="progress__track">
+                      <div
+                        className={`progress__fill ${pctSubs === 100 && subs.length > 0 ? 'progress__fill--success' : ''}`}
+                        style={{ width: `${pctSubs}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="subtasks__count">{feitas}/{subs.length}</span>
+                </div>
+                <div>
+                  {subs.map((s) => (
+                    <div className={`subtask ${s.done ? 'is-done' : ''}`} key={s.id}>
+                      <button className="subtask__check" aria-label="Concluir subtarefa" onClick={() => alternarSub(s)}>
+                        <Ic d={ICONS.check} strokeWidth={3} />
+                      </button>
+                      <span className="subtask__label">{s.titulo}</span>
+                      <button className="subtask__del" aria-label="Remover subtarefa" onClick={() => excluirSub(s)}>
+                        <Ic d={ICONS.close} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="subtask__add">
+                  <Ic d={ICONS.plus} size={18} style={{ color: 'var(--color-text-muted)' }} />
+                  <input
+                    placeholder="Adicionar subtarefa… pressione Enter"
+                    value={subInput}
+                    onChange={(e) => setSubInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') adicionarSub(); }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function SpecItem({ icone, label, mono, children }) {
+  return (
+    <div className="spec-item">
+      <span className="spec-item__ic"><Ic d={icone} /></span>
+      <div className="spec-item__body">
+        <span className="spec-item__label">{label}</span>
+        <span className={`spec-item__value ${mono ? 'spec-item__value--mono' : ''}`}>{children}</span>
+      </div>
+    </div>
+  );
+}

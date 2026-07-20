@@ -7,3 +7,5 @@ dev.
 __pycache__/
 *.pyc
 dev.py
+react/node_modules/
+react/dist/
