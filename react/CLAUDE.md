@@ -1,8 +1,15 @@
 # justdoit-react
 
-Front React do JustDoIt (gerenciador de tarefas). Substitui gradualmente o front antigo
-(`../justdoit-frontend`, vanilla JS) consumindo o backend em `../JustDoIt` (4 serviços Spring).
-Histórico completo da migração: ver `RELATORIO.md`.
+Front React do JustDoIt (gerenciador de tarefas). Vive em `react/` DENTRO do repo
+`justdoit-frontend` (branch feature-react) e substitui gradualmente o app vanilla da raiz,
+consumindo o backend em `../../JustDoIt` (4 serviços Spring).
+Histórico da migração inicial: ver `RELATORIO.md`.
+
+ATENÇÃO porta 3000: o CORS do backend só aceita http://localhost:3000, e tanto o
+`python dev.py front` (vanilla) quanto o `npm run dev` (Vite) usam essa porta —
+**um por vez**. Por isso a sidebar do vanilla ainda NÃO aponta para as rotas React
+(e vice-versa o item "Visão geral" da sidebar React segue desabilitado): os links
+cruzados só fazem sentido após o deploy unificado (build do Vite servido junto).
 
 ## Regra de ouro
 
@@ -53,10 +60,55 @@ com as variáveis de `infra/.env` carregadas no ambiente. schedule=8082, notific
 - Título/descrição do detalhe são `contentEditable` não controlados (refs); ler
   `.textContent` na hora de salvar.
 
+## Pegadinhas das features novas (jul/2026)
+
+- **Tempo estimado**: recurso do `/timer` (`estimatedMinutes`), NÃO do TaskRequest (o
+  backend descarta o campo lá). O PUT do timer faz merge parcial — enviar só
+  `estimatedMinutes` não zera `actualSeconds` (verificado). O `GET /tasks` devolve
+  `estimatedMinutes` → vira `duracaoMin` no modelo da UI (usado pelo calendário).
+- **Teto biológico**: NUNCA validar no cliente. O task-service devolve 400 no save
+  quando o dia estoura → toast + alerta "Teto biológico atingido" (TaskDetail) ou
+  revert otimista (calendário, `aoFalharPorTeto`).
+- **Ciclo personalizado**: `PUT /cycle-config` com `{cycleType:'CUSTOM', intervalUnit:
+  HOURS|DAYS, intervalCount, totalOccurrences, startDate, startTime}`. Os detalhes são
+  RELIDOS do `GET /cycle-config` (sem cache espelho). `startTime` só quando a unidade é
+  horas (âncora = hora da tarefa). O enum tem BIWEEKLY (Quinzenal) — o comentário antigo
+  dizendo que não existia estava errado.
+  ⚠ Banco local: a coluna `cycle_config.cycle_type` precisa do ALTER para aceitar
+  BIWEEKLY/CUSTOM (ver seção "Banco local" abaixo) — sem ele o PUT CUSTOM dá 500.
+- **Notas livres** (aba Anotações): `/notes` no task-service (GET/POST/PUT/DELETE +
+  PATCH `/notes/{id}/pin`). Só 1 fixada por usuário — regra server-side; o GET devolve a
+  fixada primeiro, então fixar NÃO usa optimistic update de ordenação (refetch).
+  Rascunho do compositor: única exceção de localStorage (chave `jdi.todo-notas`,
+  compartilhada com o app antigo).
+- **Calendário**: blocos do schedule-service (`/time-blocks`) enriquecidos com as
+  tarefas. O `WeeklyCalendar` mantém estado local `eventos` semeado das queries e
+  otimista nos arrastes (desvio deliberado do padrão puro — documentado no arquivo).
+  Toda escrita dupla (bloco + tarefa) usa `usePatchTarefa`, que monta o PUT /tasks a
+  partir do TaskResponse cru do cache para não zerar campos.
+- Preferência "início da semana" é lida de `localStorage['jdi.inicio-semana']`
+  (gravada pelas Configurações, ainda vanilla — mesmo origin, chave compartilhada).
+
+## Banco local (dev)
+
+A coluna `cycle_type` foi criada antes de BIWEEKLY/CUSTOM existirem no enum Java.
+Uma vez por banco, rodar:
+
+```sql
+ALTER TABLE justdoit_db.cycle_config
+  MODIFY cycle_type ENUM('DAILY','WEEKLY','BIWEEKLY','MONTHLY','ANNUAL','CUSTOM') NOT NULL;
+```
+
 ## Status da migração
 
-Migrado: Login, Signup, To Do, Task Detail. Sidebar funcional (sem drag-drop entre categorias
-e sem resize). Falta: Dashboard, Calendário (usa schedule-service `/time-blocks`), Análise,
-Configurações, Onboarding —  fontes em `../justdoit-frontend/pages/` + `scripts/features/`.
-Ao migrar uma página: portar o HTML pra JSX reusando as classes CSS, mover o estado para
-hooks (query/mutation), adicionar a rota no `App.jsx` e habilitar o item na `Sidebar.jsx`.
+Migrado: Login, Signup, To Do, Task Detail (com tempo estimado + ciclo personalizado),
+**Calendário** (`/calendario` — vistas dia/semana/mês, drag-and-drop, faixa Sem horário,
+pacotes, modal, drawer lateral com EventSummary) e **Anotações** (`/anotacoes` + compositor
+no To Do). Sidebar com botão "Nova tarefa" e tarefas arrastáveis para o calendário
+(payload `application/jdi-task` = `{id}`).
+Falta: Dashboard, Análise, Configurações, Onboarding — fontes em `../pages/` +
+`../scripts/features/`. Ao migrar uma página: portar o HTML pra JSX reusando as classes
+CSS (SEMPRE re-copiar o CSS da raiz antes — a raiz é a fonte mais nova), mover o estado
+para hooks (query/mutation), adicionar a rota no `App.jsx` e habilitar o item na
+`Sidebar.jsx`. Deploy unificado (GH Pages com build em subpasta + fallback SPA) ainda
+pendente.
