@@ -87,6 +87,11 @@ export default function Sidebar({ ativa = 'todo' }) {
           </Link>
         </nav>
 
+        <Link className="sidebar__new-task" to="/tasks/nova" aria-label="Nova tarefa" title="Nova tarefa">
+          <span className="sidebar__new-task-ic"><Ic d={ICONS.plus} /></span>
+          <span className="sidebar__new-task-label">Nova tarefa</span>
+        </Link>
+
         <div className="sidebar__section">
           <span>Categorias</span>
           <div className="sidebar__section-actions">

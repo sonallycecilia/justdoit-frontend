@@ -46,6 +46,16 @@ export const endpoints = {
     focusSessionComplete: (taskId, sessionId) => `${SVC.tasks}/tasks/${taskId}/focus-sessions/${sessionId}/complete`,
   },
 
+  // Anotações livres do usuário (não ligadas a tarefas) — task-service.
+  // Só 1 nota fixada por usuário (regra server-side); GET devolve a fixada primeiro.
+  notes: {
+    list: `${SVC.tasks}/notes`,
+    create: `${SVC.tasks}/notes`,
+    update: (id) => `${SVC.tasks}/notes/${id}`,
+    remove: (id) => `${SVC.tasks}/notes/${id}`,
+    pin: (id) => `${SVC.tasks}/notes/${id}/pin`,
+  },
+
   categories: {
     list: `${SVC.tasks}/categories`,
     create: `${SVC.tasks}/categories`,
