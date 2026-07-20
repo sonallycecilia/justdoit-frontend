@@ -132,13 +132,42 @@ export function useSalvarModulos(taskId) {
 }
 
 // ─── Recorrência (cycle-config) ───────────────────────────────────────────────
+// Modelo da UI: { tipo: 'none'|'DAILY'|…|'custom', custom: {count, unit,
+// occurrences, startIso} | null }. Os detalhes do personalizado vêm do próprio
+// GET /cycle-config — sem cache espelho local (diferente do app antigo).
+function cicloDaApi(cfg) {
+  if (!cfg?.cycleType) return { tipo: 'none', custom: null };
+  if (cfg.cycleType !== 'CUSTOM') return { tipo: cfg.cycleType, custom: null };
+  return {
+    tipo: 'custom',
+    custom: {
+      count: cfg.intervalCount ?? 1,
+      unit: cfg.intervalUnit === 'DAYS' ? 'dias' : 'horas',
+      occurrences: cfg.totalOccurrences ?? 2,
+      startIso: cfg.startDate || null,
+    },
+  };
+}
+
+// UI → CycleConfigRequest. `valor` = 'none' | tipo do enum | { tipo:'custom',
+// custom, startTime } (startTime "HH:mm" só quando a unidade é horas).
+export function cicloParaApi(valor) {
+  if (typeof valor === 'string') return { cycleType: valor };
+  const c = valor.custom;
+  return {
+    cycleType: 'CUSTOM',
+    intervalUnit: c.unit === 'dias' ? 'DAYS' : 'HOURS',
+    intervalCount: Number(c.count) || 1,
+    totalOccurrences: Number(c.occurrences) || 2,
+    startDate: c.startIso || null,
+    startTime: c.unit === 'horas' ? (valor.startTime || null) : null,
+  };
+}
+
 export function useCiclo(taskId) {
   return useQuery({
     queryKey: ['ciclo', taskId],
-    queryFn: async () => {
-      const cfg = await getOuNull(endpoints.tasks.cycleConfig(taskId));
-      return cfg?.cycleType ?? 'none';
-    },
+    queryFn: async () => cicloDaApi(await getOuNull(endpoints.tasks.cycleConfig(taskId))),
     enabled: Boolean(taskId),
   });
 }
@@ -147,28 +176,38 @@ export function useSalvarCiclo(taskId) {
   const qc = useQueryClient();
   return useMutation({
     // 'none' = remover recorrência → DELETE; qualquer tipo → PUT (upsert)
-    mutationFn: (tipo) => (tipo === 'none'
+    mutationFn: (valor) => (valor === 'none'
       ? api.remove(endpoints.tasks.cycleConfig(taskId))
-      : api.put(endpoints.tasks.cycleConfig(taskId), { cycleType: tipo })),
-    onMutate: async (tipo) => {
+      : api.put(endpoints.tasks.cycleConfig(taskId), cicloParaApi(valor))),
+    onMutate: async (valor) => {
       await qc.cancelQueries({ queryKey: ['ciclo', taskId] });
       const anterior = qc.getQueryData(['ciclo', taskId]);
-      qc.setQueryData(['ciclo', taskId], tipo);
+      const novo = valor === 'none' ? { tipo: 'none', custom: null }
+        : typeof valor === 'string' ? { tipo: valor, custom: null }
+        : { tipo: 'custom', custom: valor.custom };
+      qc.setQueryData(['ciclo', taskId], novo);
       return { anterior };
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.anterior !== undefined) qc.setQueryData(['ciclo', taskId], ctx.anterior);
     },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['ciclo', taskId] }),
   });
 }
 
-// ─── Cronômetro de execução (timer) ──────────────────────────────────────────
+// ─── Cronômetro de execução + tempo estimado (timer) ─────────────────────────
+// O recurso /timer guarda os dois: actualSeconds (cronômetro) e
+// estimatedMinutes (duração estimada — base do teto biológico no backend).
+// O PUT faz merge parcial: enviar só um campo não zera o outro (verificado).
 export function useTimer(taskId) {
   return useQuery({
     queryKey: ['timer', taskId],
     queryFn: async () => {
       const t = await getOuNull(endpoints.tasks.timer(taskId));
-      return Number(t?.actualSeconds ?? 0);
+      return {
+        segundos: Number(t?.actualSeconds ?? 0),
+        estimadoMin: t?.estimatedMinutes != null ? Number(t.estimatedMinutes) : null,
+      };
     },
     enabled: Boolean(taskId),
   });
@@ -180,7 +219,9 @@ export function useLogarTempo(taskId) {
   return useMutation({
     mutationFn: (seconds) => api.patch(endpoints.tasks.timerLog(taskId), { seconds }),
     onSuccess: (resp) => {
-      if (resp?.actualSeconds != null) qc.setQueryData(['timer', taskId], Number(resp.actualSeconds));
+      if (resp?.actualSeconds != null) {
+        qc.setQueryData(['timer', taskId], (t) => ({ ...(t || {}), segundos: Number(resp.actualSeconds) }));
+      }
     },
   });
 }
@@ -190,7 +231,23 @@ export function useZerarTempo(taskId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.put(endpoints.tasks.timer(taskId), { actualSeconds: 0 }),
-    onSuccess: () => qc.setQueryData(['timer', taskId], 0),
+    onSuccess: () => qc.setQueryData(['timer', taskId], (t) => ({ ...(t || {}), segundos: 0 })),
+  });
+}
+
+// Duração estimada (PUT /timer com estimatedMinutes). NUNCA vai no TaskRequest —
+// o backend descarta o campo lá; o recurso é o /timer.
+export function useSalvarTempoEstimado(taskId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (estimatedMinutes) => api.put(endpoints.tasks.timer(taskId), { estimatedMinutes }),
+    onSuccess: (resp) => {
+      if (resp?.estimatedMinutes !== undefined) {
+        qc.setQueryData(['timer', taskId], (t) => ({ ...(t || {}), estimadoMin: resp.estimatedMinutes != null ? Number(resp.estimatedMinutes) : null }));
+      }
+      // A lista de tarefas expõe duracaoMin (via estimatedMinutes) p/ o calendário.
+      qc.invalidateQueries({ queryKey: ['tarefas'] });
+    },
   });
 }
 

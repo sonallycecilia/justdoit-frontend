@@ -9,15 +9,16 @@ import { endpoints } from '../api/endpoints';
 import { useCategorias } from '../hooks/useCategories';
 import { useAtualizarTarefa, useCriarTarefa, useTarefa, useToggleDone } from '../hooks/useTasks';
 import {
-  MODULOS_PADRAO,
+  MODULOS_PADRAO, cicloParaApi,
   useCiclo, useCriarSubtarefa, useLogarTempo, useModulos, useNota,
   useRegistrarCicloFoco, useRemoverSubtarefa, useSalvarCiclo, useSalvarModulos,
-  useSalvarNota, useSessoesFoco, useSubtarefas, useTimer, useToggleSubtarefa,
-  useZerarTempo,
+  useSalvarNota, useSalvarTempoEstimado, useSessoesFoco, useSubtarefas, useTimer,
+  useToggleSubtarefa, useZerarTempo,
 } from '../hooks/useTaskDetail';
 import * as Priority from '../lib/priority';
-import { TIPOS, rotuloCiclo } from '../lib/cycle';
+import { TIPOS, customValido, fimPrevisto, rotuloCiclo, rotuloCustom } from '../lib/cycle';
 import { dataIso, dataRelativa, deIso, formatarMinSeg, formatarTempo, hoje, pct } from '../lib/utils';
+import { toast } from '../lib/toast';
 
 const FOCO_MIN = 25;
 const PAUSA_MIN = 5;
@@ -41,7 +42,8 @@ export default function TaskDetail() {
   const { data: notaServidor } = useNota(taskId);
   const { data: modsServidor } = useModulos(taskId);
   const { data: cicloServidor } = useCiclo(taskId);
-  const { data: segundosServidor } = useTimer(taskId);
+  const { data: timerServidor } = useTimer(taskId);
+  const segundosServidor = timerServidor?.segundos;
   const { data: sessoesFoco } = useSessoesFoco(taskId);
 
   const criarTarefa = useCriarTarefa();
@@ -55,6 +57,7 @@ export default function TaskDetail() {
   const salvarCiclo = useSalvarCiclo(taskId);
   const logarTempo = useLogarTempo(taskId);
   const zerarTempo = useZerarTempo(taskId);
+  const salvarTempoEstimado = useSalvarTempoEstimado(taskId);
   const registrarFoco = useRegistrarCicloFoco(taskId);
 
   // ── Estado do formulário ───────────────────────────────────────────────────
@@ -73,6 +76,12 @@ export default function TaskDetail() {
   const [modsLocal, setModsLocal] = useState({ ...MODULOS_PADRAO });
   const [subTogglelocal, setSubToggleLocal] = useState(false); // módulo "subtarefas" (sem flag no backend)
   const [cicloLocal, setCicloLocal] = useState('none');
+  // Ciclo personalizado: "a cada N (horas|dias), X vezes, a partir de <data>".
+  const [cicloCustom, setCicloCustom] = useState({ count: 12, unit: 'horas', occurrences: 7, startIso: null });
+  // Duração estimada (horas/minutos) — persiste no /timer, não no TaskRequest.
+  const [dur, setDur] = useState({ h: 0, m: 0 });
+  // Teto biológico: decidido pelo BACKEND no save (400); aqui só refletimos.
+  const [tetoAtingido, setTetoAtingido] = useState(false);
   const [nota, setNota] = useState('');
   const [subsLocal, setSubsLocal] = useState([]); // modo criação
   const [subInput, setSubInput] = useState('');
@@ -103,7 +112,15 @@ export default function TaskDetail() {
 
   // Sincroniza estado local com o que veio do servidor (edição).
   useEffect(() => { if (modsServidor) setModsLocal(modsServidor); }, [modsServidor]);
-  useEffect(() => { if (cicloServidor !== undefined) setCicloLocal(cicloServidor); }, [cicloServidor]);
+  useEffect(() => {
+    if (!cicloServidor) return;
+    setCicloLocal(cicloServidor.tipo);
+    if (cicloServidor.custom) setCicloCustom(cicloServidor.custom);
+  }, [cicloServidor]);
+  useEffect(() => {
+    const min = timerServidor?.estimadoMin;
+    if (min != null) setDur({ h: Math.floor(min / 60), m: min % 60 });
+  }, [timerServidor?.estimadoMin]);
   useEffect(() => { if (notaServidor !== undefined) setNota(notaServidor); }, [notaServidor]);
   // Módulo "subtarefas" liga sozinho quando a tarefa já tem subtarefas.
   useEffect(() => { if ((subsServidor || []).length > 0) setSubToggleLocal(true); }, [subsServidor]);
@@ -131,10 +148,34 @@ export default function TaskDetail() {
     if (taskId) salvarMods.mutate(novos);
   }
 
+  // Monta o valor aceito por useSalvarCiclo/cicloParaApi a partir do estado.
+  // startTime (âncora "a cada N horas") vem da hora da própria tarefa.
+  function valorCiclo(tipo = cicloLocal, custom = cicloCustom) {
+    if (tipo === 'none') return 'none';
+    if (tipo !== 'custom') return tipo;
+    return { tipo: 'custom', custom, startTime: hora ? fmtHora(hora.h, hora.m) : null };
+  }
+
   function escolherCiclo(tipo) {
     setCicloLocal(tipo);
-    if (taskId) salvarCiclo.mutate(tipo);
+    if (!taskId) return;
+    if (tipo === 'custom') {
+      if (customValido(cicloCustom)) salvarCiclo.mutate(valorCiclo('custom'));
+      return;
+    }
+    salvarCiclo.mutate(valorCiclo(tipo));
   }
+
+  // Edição: mudanças nos controles do personalizado persistem com debounce.
+  const customTimer = useRef(null);
+  function mudarCustom(mudancas) {
+    const novo = { ...cicloCustom, ...mudancas };
+    setCicloCustom(novo);
+    if (!taskId || cicloLocal !== 'custom' || !customValido(novo)) return;
+    clearTimeout(customTimer.current);
+    customTimer.current = setTimeout(() => salvarCiclo.mutate(valorCiclo('custom', novo)), 600);
+  }
+  useEffect(() => () => clearTimeout(customTimer.current), []);
 
   // ── Cronômetro de execução ─────────────────────────────────────────────────
   const [cronSegundos, setCronSegundos] = useState(0);
@@ -280,10 +321,16 @@ export default function TaskDetail() {
     };
 
     setSalvo('');
+    // Limpa o alerta de teto de uma tentativa anterior; ele reaparece só se o
+    // backend voltar 400 (fonte da verdade do teto biológico).
+    setTetoAtingido(false);
+    const durMin = dur.h * 60 + dur.m;
     try {
       if (taskId) {
         await atualizarTarefa.mutateAsync({ id: taskId, dados });
         if (done !== tarefa.done) await toggleDone.mutateAsync({ id: taskId, concluir: done });
+        // Duração estimada vive no /timer (o TaskRequest descarta o campo).
+        if (durMin !== (timerServidor?.estimadoMin ?? 0)) await salvarTempoEstimado.mutateAsync(durMin);
         setSalvo('ok');
         setTimeout(() => setSalvo(''), 1800);
       } else {
@@ -302,7 +349,10 @@ export default function TaskDetail() {
             );
           }
           if (nota.trim()) pendencias.push(api.put(endpoints.tasks.note(novoId), { content: nota }));
-          if (cicloLocal !== 'none') pendencias.push(api.put(endpoints.tasks.cycleConfig(novoId), { cycleType: cicloLocal }));
+          if (cicloLocal !== 'none' && (cicloLocal !== 'custom' || customValido(cicloCustom))) {
+            pendencias.push(api.put(endpoints.tasks.cycleConfig(novoId), cicloParaApi(valorCiclo())));
+          }
+          if (durMin > 0) pendencias.push(api.put(endpoints.tasks.timer(novoId), { estimatedMinutes: durMin }));
           const algumMod = Object.values(modsLocal).some(Boolean);
           if (algumMod) {
             pendencias.push(api.put(endpoints.tasks.moduleConfig(novoId), {
@@ -318,6 +368,12 @@ export default function TaskDetail() {
         navigate('/todo');
       }
     } catch (e) {
+      // 400 = teto biológico: o task-service recusa salvar quando a duração
+      // estimada estoura o limite de horas do dia. Toast + alerta persistente.
+      if (e?.status === 400) {
+        toast(e.error || e.message || 'Limite de tempo do dia excedido.', 'error');
+        setTetoAtingido(true);
+      }
       console.error('Falha ao salvar tarefa:', e);
       setSalvo('erro');
       setTimeout(() => setSalvo(''), 2500);
@@ -348,6 +404,7 @@ export default function TaskDetail() {
               <Ic d={ICONS.back} /> Ir para To Do
             </Link>
             <div className="detail__topbar-actions">
+              {tetoAtingido && <span className="dur-alert">Teto biológico atingido</span>}
               <button className="btn btn--primary btn--md" onClick={salvar} disabled={salvando}>
                 {salvo === 'ok' ? 'Salvo ✓'
                   : salvo === 'erro' ? 'Erro ao salvar'
@@ -385,7 +442,14 @@ export default function TaskDetail() {
                 <span>{dataRelativa(dataSel)}</span>
                 <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} className="date-pick__chevron" />
               </button>
-              <DatePicker aberto={dataAberta} onFechar={() => setDataAberta(false)} onSelect={setDataSel} selecionada={dataSel} />
+              <DatePicker
+                aberto={dataAberta}
+                onFechar={() => setDataAberta(false)}
+                // Trocar a data só limpa um eventual alerta de teto anterior;
+                // o teto em si é decidido pelo backend no save.
+                onSelect={(d) => { setDataSel(d); setTetoAtingido(false); }}
+                selecionada={dataSel}
+              />
             </div>
 
             <div className="time-pick">
@@ -407,6 +471,19 @@ export default function TaskDetail() {
                 onChange={(h, m) => { if (h !== null && h !== undefined) setHora({ h, m }); }}
                 onClear={() => setHora(null)}
               />
+            </div>
+
+            {/* Duração estimada — persiste no /timer; base do teto biológico */}
+            <div className="dur-pick">
+              <Ic d={ICONS.clock} size={14} />
+              <input
+                type="number" min={0} max={16} value={dur.h} aria-label="Horas estimadas"
+                onChange={(e) => setDur((d) => ({ ...d, h: Math.max(0, Math.min(16, parseInt(e.target.value, 10) || 0)) }))}
+              />h
+              <input
+                type="number" min={0} max={55} step={5} value={dur.m} aria-label="Minutos estimados"
+                onChange={(e) => setDur((d) => ({ ...d, m: Math.max(0, Math.min(55, parseInt(e.target.value, 10) || 0)) }))}
+              />min
             </div>
 
             {cat && (
@@ -434,7 +511,9 @@ export default function TaskDetail() {
               <SpecItem icone={ICONS.checkCircle} label="Status">
                 <span style={done ? { color: 'var(--color-success)' } : undefined}>{done ? 'Concluída' : 'Aberta'}</span>
               </SpecItem>
-              <SpecItem icone={ICONS.cycle} label="Recorrência">{cicloLocal !== 'none' ? rotuloCiclo(cicloLocal) : '—'}</SpecItem>
+              <SpecItem icone={ICONS.cycle} label="Recorrência">
+                {cicloLocal === 'none' ? '—' : cicloLocal === 'custom' ? rotuloCustom(cicloCustom) : rotuloCiclo(cicloLocal)}
+              </SpecItem>
               <SpecItem icone={ICONS.clock} label="Tempo gasto" mono>{formatarTempo(cronSegundos)}</SpecItem>
               <SpecItem icone={ICONS.target} label="Ciclos Pomodoro" mono>{String(ciclosPomodoro)}</SpecItem>
               <SpecItem icone={ICONS.list} label="Subtarefas" mono>{feitas} / {subs.length}</SpecItem>
@@ -525,6 +604,7 @@ export default function TaskDetail() {
                     </button>
                   ))}
                 </div>
+                {cicloLocal === 'custom' && <CicloCustom custom={cicloCustom} onChange={mudarCustom} />}
               </div>
             )}
 
@@ -605,6 +685,78 @@ export default function TaskDetail() {
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+// Controles do ciclo personalizado: data de início, "a cada N horas|dias" e
+// número de repetições, com resumo do fim previsto. `onChange` recebe patches
+// parciais do objeto custom ({count, unit, occurrences, startIso}).
+function CicloCustom({ custom, onChange }) {
+  const [dataAberta, setDataAberta] = useState(false);
+  const [unitAberta, setUnitAberta] = useState(false);
+
+  const inicio = custom.startIso ? deIso(custom.startIso) : hoje();
+  const u = custom.unit === 'horas' ? 'h' : (Number(custom.count) === 1 ? ' dia' : ' dias');
+  const fim = fimPrevisto(custom, inicio);
+
+  return (
+    <div className="cycle-custom">
+      <div className="cycle-custom__row">
+        <span className="cycle-custom__label">Início</span>
+        <div className="date-pick">
+          <button className={`badge badge--info date-pick__btn ${dataAberta ? 'is-open' : ''}`} type="button" onClick={() => setDataAberta((v) => !v)}>
+            <Ic d={ICONS.calendar} />
+            <span>{dataRelativa(inicio)}</span>
+            <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} className="date-pick__chevron" />
+          </button>
+          <DatePicker
+            aberto={dataAberta}
+            onFechar={() => setDataAberta(false)}
+            onSelect={(d) => onChange({ startIso: dataIso(d) })}
+            selecionada={inicio}
+          />
+        </div>
+      </div>
+      <div className="cycle-custom__row">
+        <span className="cycle-custom__label">A cada</span>
+        <div className="dur-pick cycle-custom__interval">
+          <input
+            type="number" min={1} max={999} value={custom.count} aria-label="Valor do intervalo"
+            onChange={(e) => onChange({ count: Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1)) })}
+          />
+          <div className="cycle-unit-pick">
+            <button type="button" className={`cycle-unit ${unitAberta ? 'is-open' : ''}`} aria-haspopup="listbox" aria-expanded={unitAberta} onClick={() => setUnitAberta((v) => !v)}>
+              <span>{custom.unit}</span>
+              <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} className="cycle-unit__chevron" />
+            </button>
+            {unitAberta && (
+              <>
+                <div className="cycle-unit__overlay" onClick={() => setUnitAberta(false)} />
+                <div className="cycle-unit__menu" role="listbox">
+                  {['horas', 'dias'].map((op) => (
+                    <button key={op} type="button" role="option" className={`cycle-unit__opt ${custom.unit === op ? 'is-on' : ''}`}
+                      onClick={() => { onChange({ unit: op }); setUnitAberta(false); }}>
+                      {op}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        <span className="cycle-custom__label">Repetir</span>
+        <div className="dur-pick cycle-custom__reps">
+          <input
+            type="number" min={2} max={365} value={custom.occurrences} aria-label="Número de repetições"
+            onChange={(e) => onChange({ occurrences: Math.max(2, Math.min(365, parseInt(e.target.value, 10) || 2)) })}
+          />
+          <span className="cycle-custom__times">×</span>
+        </div>
+      </div>
+      <p className="cycle-custom__summary">
+        {custom.occurrences} ocorrências · a cada {custom.count}{u} · termina {dataRelativa(fim)}
+      </p>
     </div>
   );
 }

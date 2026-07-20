@@ -59,6 +59,36 @@
 .chip--pick { cursor: pointer; size: 100%; }
 .chip--pick:hover { background: var(--color-surface-sunken); }
 
+/* Categoria como menu suspenso (mesmo padrão do filtro no To Do).
+   Escala para qualquer número de categorias: o menu rola em vez de crescer. */
+.cat-pick { position: relative; display: inline-flex; }
+.cat-pick__btn { gap: 6px; }
+.cat-pick__btn.is-open { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-pill); }
+.cat-pick__chevron { flex: none; color: var(--color-text-muted); transition: transform var(--duration-fast); }
+.cat-pick__btn.is-open .cat-pick__chevron { transform: rotate(180deg); }
+
+.cat-pick__overlay { position: fixed; inset: 0; z-index: 50; }
+.cat-pick__menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 51;
+  min-width: 200px; max-width: 280px; max-height: 280px; overflow-y: auto;
+  background: var(--color-card); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); padding: 6px; box-shadow: var(--shadow-raised);
+}
+.cat-pick__overlay[hidden], .cat-pick__menu[hidden] { display: none; }
+.cat-pick__item {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border: none; border-radius: var(--radius-sm); background: transparent;
+  font-family: var(--font-body); font-size: var(--font-size-sm); font-weight: var(--weight-medium);
+  color: var(--color-text-soft); cursor: pointer; text-align: left;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.cat-pick__item:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+.cat-pick__item.is-on { background: var(--color-accent-soft); color: var(--color-text); }
+.cat-pick__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.cat-pick__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-pick__check { flex: none; display: flex; color: var(--color-accent); }
+.cat-pick__check svg { width: 15px; height: 15px; }
+
 /* Placeholder no título */
 .edit-title[data-placeholder]:empty::before { content: attr(data-placeholder); color: var(--color-text-faint); font-weight: var(--weight-regular); }
 
@@ -84,7 +114,7 @@
 .edit-desc:empty::before { content: attr(data-placeholder); color: var(--color-text-faint); }
 
 /* Chips de meta (categoria, data, prioridade) */
-.detail__chips { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: 0 0 var(--space-xl) 0px; }
+.detail__chips { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin: 0 0 var(--space-xl) 0px; }
 
 /* ---------- Painel de módulos ativáveis (RF05) ---------- */
 .modules { margin-bottom: var(--space-xl); }
@@ -142,6 +172,66 @@
 .cycle-opts { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
 .cycle-opt { padding: 7px 14px; border-radius: var(--radius-pill); border: 1px solid var(--color-border-strong); background: var(--color-card); font-size: var(--font-size-sm); color: var(--color-text-soft); cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast), color var(--duration-fast); }
 .cycle-opt.is-on { border-color: var(--color-accent); background: var(--color-accent-soft); color: var(--color-text); }
+
+/* ── Ciclo personalizado (intervalo × repetições) ───────────────── */
+.cycle-custom { margin-top: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+.cycle-custom[hidden] { display: none; }
+.cycle-custom__row { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+.cycle-custom__label { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.cycle-custom__interval, .cycle-custom__reps { height: 28px; }
+/* Dropdown de unidade (horas ⇄ dias) embutido na pill do intervalo. */
+.cycle-unit-pick { position: relative; margin-left: 4px; }
+.cycle-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.cycle-unit:hover { filter: brightness(0.96); }
+.cycle-unit__chevron { width: 11px; height: 11px; transition: transform var(--duration-fast); }
+.cycle-unit.is-open .cycle-unit__chevron { transform: rotate(180deg); }
+
+.cycle-unit__overlay { position: fixed; inset: 0; z-index: 50; }
+.cycle-unit__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 51;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  box-shadow: var(--shadow-raised);
+  min-width: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cycle-unit__opt {
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-soft);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.cycle-unit__opt:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+.cycle-unit__opt.is-on { background: var(--color-accent-soft); color: var(--color-accent); font-weight: var(--weight-medium); }
+.cycle-custom__times { color: var(--color-text-muted); margin-left: 2px; font-size: var(--font-size-sm); }
+.cycle-custom__reps input { width: 26px; }
+.cycle-custom__summary { margin: 2px 0 0; font-size: var(--font-size-sm); color: var(--color-text-soft); }
 
 /* Notas */
 .notes-area { width: 100%; min-height: 90px; resize: vertical; border: none; padding: var(--space-md); font-family: var(--font-body); font-size: var(--font-size-md); color: var(--color-text); background: transparent; outline: none; }
@@ -227,3 +317,49 @@
 .is-embed .detail__back { display: none; }
 .is-embed .app { display: block; }
 .is-embed .app__main { padding: 0; }
+
+/* ---------- Duração estimada (Time-Boxing) ---------- */
+/* Mesmo "molde" dos badges vizinhos (.chip / .badge--info): pílula de
+   24px de altura, mesma borda e mesma tipografia — só que com <input>
+   editável no lugar de texto fixo. */
+.dur-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-soft);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  line-height: 1;
+}
+.dur-pick svg { width: 13px; height: 13px; flex: none; color: var(--color-text-muted); margin-right: 2px; }
+.dur-pick input {
+  width: 18px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+  font-family: inherit;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+.dur-pick input:first-of-type { margin-left: 2px; }
+.dur-pick input:focus { outline: none; color: var(--color-accent); }
+.dur-pick input::-webkit-outer-spin-button,
+.dur-pick input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.dur-alert {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+  margin-right: 8px;
+}
+.dur-alert.hidden { display: none; }
