@@ -3,7 +3,7 @@
    Resumo compacto de um evento do calendário.
    Lê URL params (evId, taskId, ini, fim, dow, dateNum, titulo,
    cat, prio) e — quando taskId existe — vincula ao objeto de
-   tarefa em Storage('todo-tarefas') para salvar mudanças.
+   tarefa em Store('todo-tarefas') para salvar mudanças.
    ============================================================ */
 (function () {
   'use strict';
@@ -93,9 +93,9 @@
   // Renderiza picker de categoria
   function renderCat() {
     catPicker.innerHTML = Categorias.TODAS.map(c => `
-      <button class="evsum__cat-opt ${estado.cat === c.nome ? 'is-on' : ''}" data-cat="${c.nome}" type="button">
-        <span class="evsum__cat-dot" style="background:${c.cor}"></span>
-        ${c.nome}
+      <button class="evsum__cat-opt ${estado.cat === c.nome ? 'is-on' : ''}" data-cat="${Utils.esc(c.nome)}" type="button">
+        <span class="evsum__cat-dot" style="background:${Utils.esc(c.cor)}"></span>
+        ${Utils.esc(c.nome)}
       </button>`).join('');
 
     catPicker.querySelectorAll('.evsum__cat-opt').forEach(btn => {

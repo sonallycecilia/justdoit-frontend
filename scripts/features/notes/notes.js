@@ -19,11 +19,8 @@
 
   function ico(p) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; }
 
-  function escapar(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
+  // Escape central de core/utils.js (mesma função usada nas outras telas).
+  const escapar = Utils.esc;
 
   function formatarData(iso) {
     if (!iso) return '';
@@ -53,7 +50,7 @@
     const fixada = n.fixada ? ' note-card--pinned' : '';
     const data = formatarData(n.atualizadaEm || n.criadaEm);
     return `
-      <article class="note-card${fixada}" data-id="${n.id}">
+      <article class="note-card${fixada}" data-id="${escapar(n.id)}">
         <div class="note-card__top">
           <h3 class="note-card__title">${escapar(tituloDe(n))}</h3>
           ${n.fixada ? `<span class="note-card__pin-badge">${ico(ICO.pin)}Fixada</span>` : ''}
@@ -72,7 +69,7 @@
 
   function editHtml(n) {
     return `
-      <article class="note-card note-card--editing" data-id="${n.id}">
+      <article class="note-card note-card--editing" data-id="${escapar(n.id)}">
         <input class="note-edit__title" type="text" maxlength="255" placeholder="Título (opcional)" value="${escapar(n.titulo)}">
         <textarea class="note-edit__body" maxlength="10000" placeholder="Conteúdo…">${escapar(n.conteudo)}</textarea>
         <div class="note-edit__actions">
@@ -84,7 +81,7 @@
 
   function confirmHtml(n) {
     return `
-      <article class="note-card note-card--confirming" data-id="${n.id}">
+      <article class="note-card note-card--confirming" data-id="${escapar(n.id)}">
         <p class="note-confirm__msg">Excluir esta anotação? Não dá para desfazer.</p>
         <div class="note-edit__actions">
           <button class="btn btn--secondary btn--sm" data-cancel type="button">Cancelar</button>

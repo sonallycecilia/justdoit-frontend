@@ -1,7 +1,7 @@
 /* ============================================================
    JustDoIt — features/auth/onboarding.js
    Setup guiado em 1 passo: primeira categoria/tarefa.
-   Persiste no Storage.
+   Persiste no Store.
    Depende de: core/storage.js, features/auth/auth.js
    ============================================================ */
 (function () {

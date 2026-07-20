@@ -9,6 +9,9 @@
 (function () {
   'use strict';
 
+  // Escape de conteúdo do usuário/backend interpolado em innerHTML.
+  const esc = Utils.esc;
+
   /* ── URL param / modo ─────────────────────────────────── */
   const params = new URLSearchParams(window.location.search);
   const taskId = params.get('id');
@@ -27,12 +30,12 @@
   const tarefas = Tarefas.listar();
   const tarefa  = taskId ? tarefas.find(t => t.id === taskId) : null;
 
-  // Storage keys — por tarefa quando editando, genérico para nova
-  const KEY_NOTAS = Storage.KEYS.detalheNotas(taskId);
-  const KEY_SUBS  = Storage.KEYS.detalheSubs(taskId);
-  const KEY_DESC  = Storage.KEYS.detalheDesc(taskId);
-  const KEY_MODS  = taskId ? Storage.KEYS.detalheMods(taskId)  : null;
-  const KEY_CICLO = taskId ? Storage.KEYS.detalheCiclo(taskId) : null;
+  // Store keys — por tarefa quando editando, genérico para nova
+  const KEY_NOTAS = Store.KEYS.detalheNotas(taskId);
+  const KEY_SUBS  = Store.KEYS.detalheSubs(taskId);
+  const KEY_DESC  = Store.KEYS.detalheDesc(taskId);
+  const KEY_MODS  = taskId ? Store.KEYS.detalheMods(taskId)  : null;
+  const KEY_CICLO = taskId ? Store.KEYS.detalheCiclo(taskId) : null;
 
   // atualizarSpec() usa variáveis declaradas mais abaixo (cicloAtual, subs,
   // LABEL_MOD). Como sincronizarPaineis() o chama cedo, este flag evita rodá-lo
@@ -64,8 +67,8 @@
     catMenu.innerHTML = CATS.map((c, i) => `
       <button class="cat-pick__item ${i === catIdx ? 'is-on' : ''}" type="button" role="option"
               aria-selected="${i === catIdx}" data-idx="${i}">
-        <span class="cat-pick__dot" style="background:${c.cor}"></span>
-        <span class="cat-pick__name">${c.nome}</span>
+        <span class="cat-pick__dot" style="background:${esc(c.cor)}"></span>
+        <span class="cat-pick__name">${esc(c.nome)}</span>
         ${i === catIdx ? `<span class="cat-pick__check">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         </span>` : ''}
@@ -238,7 +241,7 @@
     });
     if (KEY_MODS) {
       const ativos = [...grid.querySelectorAll('.module-toggle.is-on')].map(b => b.getAttribute('data-mod'));
-      Storage.gravar(KEY_MODS, ativos);
+      Store.gravar(KEY_MODS, ativos);
     }
     atualizarSpec();
   }
@@ -249,7 +252,7 @@
 
   // Restaurar módulos salvos
   if (KEY_MODS) {
-    const savedMods = Storage.ler(KEY_MODS, null);
+    const savedMods = Store.ler(KEY_MODS, null);
     if (savedMods) {
       grid.querySelectorAll('.module-toggle').forEach(btn => {
         btn.classList.toggle('is-on', savedMods.includes(btn.getAttribute('data-mod')));
@@ -288,13 +291,13 @@
                         : Cycle.rotulo(t);
   // Preferimos o rascunho local (KEY_CICLO); se vazio (ex.: outro dispositivo),
   // caímos na recorrência que veio da tarefa (meta/backend); senão "none".
-  let cicloAtual = (KEY_CICLO && Storage.ler(KEY_CICLO, null)) || (tarefa && tarefa.recorrencia) || 'none';
+  let cicloAtual = (KEY_CICLO && Store.ler(KEY_CICLO, null)) || (tarefa && tarefa.recorrencia) || 'none';
 
   // ── Ciclo personalizado (intervalo × repetições) ──────────────
   const KEY_CICLO_CUSTOM = KEY_CICLO ? KEY_CICLO + '-custom' : null;
   const CICLO_CUSTOM_PADRAO = { count: 12, unit: 'horas', occurrences: 7, startIso: null, startTime: null };
   let cicloCustom = (tarefa && tarefa.recorrenciaCustom)
-                 || (KEY_CICLO_CUSTOM && Storage.ler(KEY_CICLO_CUSTOM, null))
+                 || (KEY_CICLO_CUSTOM && Store.ler(KEY_CICLO_CUSTOM, null))
                  || Object.assign({}, CICLO_CUSTOM_PADRAO);
 
   const cycleCustom   = document.getElementById('cycleCustom');
@@ -347,7 +350,7 @@
       startIso:    Utils.dataIso(cycleStartDate),
       startTime:   (unit === 'horas' && tv.hora !== null) ? fmtHora(tv.hora, tv.min) : null,
     };
-    if (KEY_CICLO_CUSTOM) Storage.gravar(KEY_CICLO_CUSTOM, cicloCustom);
+    if (KEY_CICLO_CUSTOM) Store.gravar(KEY_CICLO_CUSTOM, cicloCustom);
 
     const u = cicloCustom.unit === 'horas' ? 'h' : (cicloCustom.count === 1 ? ' dia' : ' dias');
     const fim = fimPrevisto(cicloCustom, cycleStartDate);
@@ -399,7 +402,7 @@
       cycleOpts.querySelectorAll('.cycle-opt').forEach(o => o.classList.remove('is-on'));
       opt.classList.add('is-on');
       cicloAtual = opt.getAttribute('data-cycle');
-      if (KEY_CICLO) Storage.gravar(KEY_CICLO, cicloAtual);
+      if (KEY_CICLO) Store.gravar(KEY_CICLO, cicloAtual);
       toggleCustomVisivel();
       atualizarSpec();
     });
@@ -409,7 +412,7 @@
   /* ── Cronômetro de execução (RF13) ───────────────────── */
   const timerDisplay = document.getElementById('timerDisplay');
   const timerToggle  = document.getElementById('timerToggle');
-  const timerInitial = taskId ? Storage.ler(Storage.KEYS.detalheTimer(taskId), 0) : 0;
+  const timerInitial = taskId ? Store.ler(Store.KEYS.detalheTimer(taskId), 0) : 0;
 
   // Acumula o tempo de execução por dia (lido pelo card "Tempo executado" do
   // dashboard). O cronômetro guarda o total acumulado da tarefa sem data, então
@@ -417,17 +420,17 @@
   let ultimoTimer = timerInitial;
   function registrarTempoDiario(deltaSeg) {
     if (deltaSeg <= 0) return;
-    const log = Storage.ler(Storage.KEYS.TEMPO_DIARIO, {});
+    const log = Store.ler(Store.KEYS.TEMPO_DIARIO, {});
     const hoje = Utils.dataIso(new Date());
     log[hoje] = (log[hoje] || 0) + deltaSeg;
-    Storage.gravar(Storage.KEYS.TEMPO_DIARIO, log);
+    Store.gravar(Store.KEYS.TEMPO_DIARIO, log);
   }
 
   const cron = TaskTimer.criar({
     inicial: timerInitial,
     onTick: (s) => {
       timerDisplay.textContent = TaskTimer.formatar(s);
-      if (taskId) Storage.gravar(Storage.KEYS.detalheTimer(taskId), s);
+      if (taskId) Store.gravar(Store.KEYS.detalheTimer(taskId), s);
       document.getElementById('specTempo').textContent = TaskTimer.formatar(s);
       registrarTempoDiario(s - ultimoTimer); // ignora reset (delta ≤ 0)
       ultimoTimer = s;
@@ -442,7 +445,7 @@
   document.getElementById('timerReset').addEventListener('click', () => {
     cron.reset();
     timerToggle.textContent = 'Iniciar';
-    if (taskId) Storage.gravar(Storage.KEYS.detalheTimer(taskId), 0);
+    if (taskId) Store.gravar(Store.KEYS.detalheTimer(taskId), 0);
   });
 
   /* ── Foco / Pomodoro (RF06) ───────────────────────────── */
@@ -451,7 +454,7 @@
   const pomoPhase  = document.getElementById('pomoPhase');
   const pomoToggle = document.getElementById('pomoToggle');
   const pomoReset  = document.getElementById('pomoReset');
-  let ciclosPomodoro = taskId ? Storage.ler(Storage.KEYS.detalheCiclos(taskId), 0) : 0;
+  let ciclosPomodoro = taskId ? Store.ler(Store.KEYS.detalheCiclos(taskId), 0) : 0;
 
   function pintarPomo(restante, dur, fase) {
     pomoTime.textContent = Focus.formatar(restante);
@@ -465,13 +468,13 @@
   // Cada bloco de foco concluído entra no log diário (lido pelo card
   // "Foco hoje" do dashboard), agregado por dia.
   function registrarFocoDiario() {
-    const log = Storage.ler(Storage.KEYS.FOCO_DIARIO, {});
+    const log = Store.ler(Store.KEYS.FOCO_DIARIO, {});
     const hoje = Utils.dataIso(new Date());
     const dia = log[hoje] || { ciclos: 0, minutos: 0 };
     dia.ciclos += 1;
     dia.minutos += FOCO_MIN;
     log[hoje] = dia;
-    Storage.gravar(Storage.KEYS.FOCO_DIARIO, log);
+    Store.gravar(Store.KEYS.FOCO_DIARIO, log);
   }
 
   const pomo = Focus.criar({
@@ -484,7 +487,7 @@
       pomoPhase.textContent = `${fase === 'foco' ? 'Foco' : 'Pausa'} · ciclo ${ciclo}/4`;
       if (fase === 'pausa') {
         ciclosPomodoro++;
-        if (taskId) Storage.gravar(Storage.KEYS.detalheCiclos(taskId), ciclosPomodoro);
+        if (taskId) Store.gravar(Store.KEYS.detalheCiclos(taskId), ciclosPomodoro);
         document.getElementById('specPomos').textContent = String(ciclosPomodoro);
         registrarFocoDiario();
       }
@@ -505,8 +508,8 @@
 
   /* ── Notas ────────────────────────────────────────────── */
   const notes = document.getElementById('notes');
-  notes.value = Storage.ler(KEY_NOTAS, '');
-  notes.addEventListener('input', () => Storage.gravar(KEY_NOTAS, notes.value));
+  notes.value = Store.ler(KEY_NOTAS, '');
+  notes.addEventListener('input', () => Store.gravar(KEY_NOTAS, notes.value));
 
   /* ── Subtarefas com progresso em cascata (RF03) ───────── */
   const subList       = document.getElementById('subList');
@@ -516,17 +519,17 @@
   const chipsProgress = document.getElementById('chipsProgress');
   const chipsSubFill  = document.getElementById('chipsSubFill');
   const chipsSubCount = document.getElementById('chipsSubCount');
-  let subs = Storage.ler(KEY_SUBS, []);
+  let subs = Store.ler(KEY_SUBS, []);
 
   function pintarSubs() {
     const feitas = subs.filter(s => s.done).length;
     subList.innerHTML = subs.map(s => `
-      <div class="subtask ${s.done ? 'is-done' : ''}" data-id="${s.id}">
+      <div class="subtask ${s.done ? 'is-done' : ''}" data-id="${esc(s.id)}">
         <button class="subtask__check" aria-label="Concluir subtarefa">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
         </button>
-        <span class="subtask__label">${s.titulo}</span>
-        <button class="subtask__del" aria-label="Remover subtarefa" data-del="${s.id}">
+        <span class="subtask__label">${esc(s.titulo)}</span>
+        <button class="subtask__del" aria-label="Remover subtarefa" data-del="${esc(s.id)}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </div>`).join('');
@@ -545,7 +548,7 @@
       btn.addEventListener('click', () => {
         const s = subs.find(x => x.id === btn.closest('.subtask').getAttribute('data-id'));
         s.done = !s.done;
-        Storage.gravar(KEY_SUBS, subs);
+        Store.gravar(KEY_SUBS, subs);
         pintarSubs();
         atualizarSpec();
         sincronizarConclusaoPorSubs();
@@ -555,7 +558,7 @@
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-del');
         subs = subs.filter(x => x.id !== id);
-        Storage.gravar(KEY_SUBS, subs);
+        Store.gravar(KEY_SUBS, subs);
         pintarSubs();
         atualizarSpec();
       });
@@ -596,7 +599,7 @@
     if (e.key === 'Enter' && subInput.value.trim()) {
       subs.push({ id: 's' + Date.now(), titulo: subInput.value.trim(), done: false });
       subInput.value = '';
-      Storage.gravar(KEY_SUBS, subs);
+      Store.gravar(KEY_SUBS, subs);
       pintarSubs();
       atualizarSpec();
     }
@@ -657,7 +660,7 @@
     // Descrição: prioriza o rascunho local (KEY_DESC); se vazio, usa a que o
     // backend guardou (tarefa.descricao) — assim ela aparece mesmo em outro
     // dispositivo ou quando o save local foi pulado.
-    const descSalva = Storage.ler(KEY_DESC, '') || tarefa.descricao || '';
+    const descSalva = Store.ler(KEY_DESC, '') || tarefa.descricao || '';
     if (descSalva) document.getElementById('desc').textContent = descSalva;
     // Done
     if (tarefa.done) detail.classList.add('is-done');
@@ -674,7 +677,7 @@
 
   // Persiste descrição ao editar
   document.getElementById('desc').addEventListener('input', () => {
-    Storage.gravar(KEY_DESC, document.getElementById('desc').textContent);
+    Store.gravar(KEY_DESC, document.getElementById('desc').textContent);
   });
 
   /* ── Registrar / Salvar alterações ───────────────────── */
@@ -762,20 +765,20 @@
           // KEY_* são null quando não há id). Grava tudo sob o id definitivo,
           // senão a tarefa reabre sem essas configurações.
           if (novoId) {
-            Storage.gravar(Storage.KEYS.detalheSubs(novoId), subs);
-            Storage.gravar(Storage.KEYS.detalheNotas(novoId), notes.value);
-            Storage.gravar(Storage.KEYS.detalheDesc(novoId), descricao);
+            Store.gravar(Store.KEYS.detalheSubs(novoId), subs);
+            Store.gravar(Store.KEYS.detalheNotas(novoId), notes.value);
+            Store.gravar(Store.KEYS.detalheDesc(novoId), descricao);
             const modsAtivos = [...grid.querySelectorAll('.module-toggle.is-on')]
               .map(b => b.getAttribute('data-mod'));
-            Storage.gravar(Storage.KEYS.detalheMods(novoId), modsAtivos);
-            Storage.gravar(Storage.KEYS.detalheCiclo(novoId), cicloAtual);
+            Store.gravar(Store.KEYS.detalheMods(novoId), modsAtivos);
+            Store.gravar(Store.KEYS.detalheCiclo(novoId), cicloAtual);
             if (cicloAtual === 'custom') {
-              Storage.gravar(Storage.KEYS.detalheCiclo(novoId) + '-custom', cicloCustom);
+              Store.gravar(Store.KEYS.detalheCiclo(novoId) + '-custom', cicloCustom);
             }
           }
-          Storage.remover(KEY_SUBS);
-          Storage.remover(KEY_NOTAS);
-          Storage.remover(KEY_DESC);
+          Store.remover(KEY_SUBS);
+          Store.remover(KEY_NOTAS);
+          Store.remover(KEY_DESC);
           window.location.href = 'todo.html';
         })
         .catch((err) => {

@@ -15,7 +15,7 @@ const Auth = (function () {
 
   // Aplica o tema salvo (ou preferência do sistema) e vincula o botão #themeToggle
   function iniciarTema() {
-    const temaSalvo = window.Storage && Storage.lerTema();
+    const temaSalvo = window.Store && Store.lerTema();
     const prefereDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     _aplicarTema(temaSalvo || (prefereDark ? 'dark' : 'light'));
 
@@ -24,7 +24,7 @@ const Auth = (function () {
       btn.addEventListener('click', function () {
         const novo = raiz.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         _aplicarTema(novo);
-        if (window.Storage) Storage.gravarTema(novo);
+        if (window.Store) Store.gravarTema(novo);
       });
     }
   }
@@ -32,15 +32,15 @@ const Auth = (function () {
   function gravarSessao(dados) {
     // mescla com a sessao atual p/ preservar campos (name/em) ao renovar tokens
     var atual = lerSessao() || {};
-    if (window.Storage) Storage.gravar('sessao', Object.assign({}, atual, dados, { em: Date.now() }));
+    if (window.Store) Store.gravar('sessao', Object.assign({}, atual, dados, { em: Date.now() }));
   }
 
   function lerSessao() {
-    return window.Storage ? Storage.ler('sessao') : null;
+    return window.Store ? Store.ler('sessao') : null;
   }
 
   function limparSessao() {
-    if (window.Storage) Storage.remover('sessao');
+    if (window.Store) Store.remover('sessao');
   }
 
   // Faz logout no backend (revoga o refresh token) e limpa a sessao local

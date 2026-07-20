@@ -5,6 +5,8 @@
 (function () {
   'use strict';
   const raiz = document.documentElement;
+  // Escape de conteúdo do usuário/backend interpolado em innerHTML.
+  const esc = Utils.esc;
 
   /* ---------- Conta (perfil: nome, email, senha) ---------- */
   // Puxa os dados da conta de GET /auth/me. Cada campo (nome, email, senha) tem
@@ -81,7 +83,7 @@
 
     // Remove caches antigos da foto que versões anteriores gravavam localmente.
     if (window.Auth && Auth.gravarSessao) Auth.gravarSessao({ avatarUrl: undefined });
-    if (window.Storage && Storage.remover) Storage.remover('perfil-foto');
+    if (window.Store && Store.remover) Store.remover('perfil-foto');
 
     if (avatarInput) {
       const escolher = function () { avatarInput.click(); };
@@ -262,7 +264,7 @@
   /* ---------- Tema (segmented, persistente) ---------- */
   const seg = document.getElementById('themeSeg');
   function temaAtual() {
-    const salvo = Storage.lerTema();
+    const salvo = Store.lerTema();
     return salvo || 'system';
   }
   function marcarSeg() {
@@ -280,8 +282,8 @@
   seg.querySelectorAll('button').forEach(b => {
     b.addEventListener('click', () => {
       const t = b.dataset.theme;
-      if (t === 'system') Storage.remover('tema');
-      else Storage.gravarTema(t);
+      if (t === 'system') Store.remover('tema');
+      else Store.gravarTema(t);
       aplicar(t);
       marcarSeg();
     });
@@ -292,12 +294,12 @@
   const semSeg = document.getElementById('weekStartSeg');
   if (semSeg) {
     const marcarSemana = () => {
-      const atual = Storage.ler('inicio-semana', 'seg');
+      const atual = Store.ler('inicio-semana', 'seg');
       semSeg.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b.dataset.start === atual));
     };
     semSeg.querySelectorAll('button').forEach(b => {
       b.addEventListener('click', () => {
-        Storage.gravar('inicio-semana', b.dataset.start);
+        Store.gravar('inicio-semana', b.dataset.start);
         marcarSemana();
       });
     });
@@ -369,9 +371,9 @@
         `<button class="cat-row__del" aria-label="Excluir categoria">${DEL_ICON}</button>`
       : `<span class="cat-row__tag">padrão</span>`;
     return `
-      <div class="cat-row"${opts.id ? ` data-id="${opts.id}"` : ''} data-count="${count}">
-        <span class="cat-row__dot" style="background:${cor}"></span>
-        <span class="cat-row__name">${nome}</span>
+      <div class="cat-row"${opts.id ? ` data-id="${esc(opts.id)}"` : ''} data-count="${count}">
+        <span class="cat-row__dot" style="background:${esc(cor)}"></span>
+        <span class="cat-row__name">${esc(nome)}</span>
         <span class="cat-row__count">${count} ${count === 1 ? 'tarefa' : 'tarefas'}</span>
         ${acao}
       </div>`;
@@ -477,9 +479,9 @@
 
     const n = Number(count) || 0;
     modal.querySelector('#catDelText').innerHTML = n > 0
-      ? `A categoria <strong>${nome}</strong> possui <strong>${n} ${n === 1 ? 'tarefa' : 'tarefas'}</strong>. ` +
+      ? `A categoria <strong>${esc(nome)}</strong> possui <strong>${n} ${n === 1 ? 'tarefa' : 'tarefas'}</strong>. ` +
         `Ao excluir, ${n === 1 ? 'ela será movida' : 'elas serão movidas'} para <strong>Genérico</strong>. Deseja excluir mesmo assim?`
-      : `Deseja excluir a categoria <strong>${nome}</strong>?`;
+      : `Deseja excluir a categoria <strong>${esc(nome)}</strong>?`;
 
     onConfirmar = onSim;
     modal.hidden = false;

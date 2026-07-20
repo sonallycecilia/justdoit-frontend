@@ -6,7 +6,10 @@
 (function () {
   'use strict';
 
-  const MARK = '<svg width="22" height="22" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M33 7 L46.5 21 L39.6 21 L39.6 36.4 C39.6 44.2 34.6 48.9 27 48.3 C19.8 47.7 15.3 42.6 15.9 37.5 C16.3 33.9 18.9 31.9 21.9 32.5 C24.4 33 25.6 35.4 24.2 37.4 C23.2 38.8 21.4 38.7 20.6 37.6 M33 7 L19.5 21 L26.4 21 L26.4 36.4 C26.4 40 28.8 42.3 32.2 42.3"/></svg>';
+  // Escape de conteúdo do usuário/backend interpolado em innerHTML.
+  const esc = window.Utils ? Utils.esc : String;
+
+  const MARK ='<svg width="22" height="22" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M33 7 L46.5 21 L39.6 21 L39.6 36.4 C39.6 44.2 34.6 48.9 27 48.3 C19.8 47.7 15.3 42.6 15.9 37.5 C16.3 33.9 18.9 31.9 21.9 32.5 C24.4 33 25.6 35.4 24.2 37.4 C23.2 38.8 21.4 38.7 20.6 37.6 M33 7 L19.5 21 L26.4 21 L26.4 36.4 C26.4 40 28.8 42.3 32.2 42.3"/></svg>';
 
   function ic(paths) {
     return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
@@ -153,11 +156,11 @@
       taskRegistry.set(t.id, t);
       const prio = t.prioridade || 'normal';
       return `
-        <a class="sidebar-task" href="${BASE}pages/tasks/task-detail.html?id=${t.id}" draggable="true" data-task-id="${t.id}" title="${t.titulo}">
+        <a class="sidebar-task" href="${BASE}pages/tasks/task-detail.html?id=${esc(t.id)}" draggable="true" data-task-id="${esc(t.id)}" title="${esc(t.titulo)}">
           <span class="sidebar-task__grip">${ICONS.gripDots}</span>
-          <span class="sidebar-task__prio sidebar-task__prio--${prio}"></span>
-          <span class="sidebar-task__titulo">${t.titulo}</span>
-          <span class="sidebar-task__data">${t.data || ''}</span>
+          <span class="sidebar-task__prio sidebar-task__prio--${esc(prio)}"></span>
+          <span class="sidebar-task__titulo">${esc(t.titulo)}</span>
+          <span class="sidebar-task__data">${esc(t.data || '')}</span>
         </a>`;
     }).join('');
   }
@@ -166,14 +169,14 @@
   function catHtml(c, allTarefas) {
     const pendentes = allTarefas.filter(t => !t.done && t.cat === c.nome);
     return `
-      <div class="sidebar-cat" data-cat="${c.nome}" data-cat-id="${c.id}">
-        <button class="sidebar-cat__header" aria-expanded="false" aria-label="Expandir ${c.nome}">
-          <span class="cat-dot" style="background:${c.cor}"></span>
-          <span class="nav-item__label">${c.nome}</span>
+      <div class="sidebar-cat" data-cat="${esc(c.nome)}" data-cat-id="${esc(c.id)}">
+        <button class="sidebar-cat__header" aria-expanded="false" aria-label="Expandir ${esc(c.nome)}">
+          <span class="cat-dot" style="background:${esc(c.cor)}"></span>
+          <span class="nav-item__label">${esc(c.nome)}</span>
           <span class="nav-item__count">${pendentes.length}</span>
           <span class="sidebar-cat__chevron">${ICONS.chevron}</span>
         </button>
-        <div class="sidebar-cat__tasks hidden" data-cat-tasks="${c.nome}">
+        <div class="sidebar-cat__tasks hidden" data-cat-tasks="${esc(c.nome)}">
           ${renderCatTarefas(c.nome, '', allTarefas)}
         </div>
       </div>`;
@@ -500,7 +503,7 @@
       const novo  = dark ? 'light' : 'dark';
       if (novo === 'dark') raiz.setAttribute('data-theme', 'dark');
       else raiz.removeAttribute('data-theme');
-      if (window.Storage) Storage.gravarTema(novo);
+      if (window.Store) Store.gravarTema(novo);
     });
 
     // ── Logout ──────────────────────────────────────────────────
@@ -562,7 +565,7 @@
   }
 
   // Apply saved theme before first paint
-  const salvo      = window.Storage && Storage.lerTema();
+  const salvo      = window.Store && Store.lerTema();
   const prefereDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   if (salvo === 'dark' || (!salvo && prefereDark)) document.documentElement.setAttribute('data-theme', 'dark');
 

@@ -87,6 +87,15 @@ const Utils = (function () {
     return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
   }
 
+  // Escapa texto para interpolação segura em HTML (innerHTML/atributos).
+  // TODO conteúdo vindo do usuário ou do backend deve passar por aqui antes
+  // de entrar num template literal que vira innerHTML.
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   // Percentual seguro 0–100
   function pct(parte, total) {
     if (!total) return 0;
@@ -124,5 +133,9 @@ const Utils = (function () {
     _toastEl._timer = setTimeout(() => _toastEl.classList.remove('is-visible'), 4000);
   }
 
-  return { DIAS, DIAS_CURTOS, MESES, MESES_LONGOS, hoje, saudacao, dataCurta, dataRelativa, calcQuando, dataIso, parseData, intervaloSemana, horas, pct, capitalizarNome, toast };
+  return { DIAS, DIAS_CURTOS, MESES, MESES_LONGOS, hoje, saudacao, dataCurta, dataRelativa, calcQuando, dataIso, parseData, intervaloSemana, horas, esc, pct, capitalizarNome, toast };
 })();
+
+// `const` no topo de um script clássico NÃO cria window.Utils — sem esta linha,
+// todo guard `window.Utils ? … : …` (sidebar, dashboard) falha em silêncio.
+window.Utils = Utils;

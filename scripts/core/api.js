@@ -14,12 +14,12 @@
   // ─── Helper de requisição ─────────────────────────────────────────────────────
 
   // --- Sessao (helpers locais) -------------------------------------------------
-  function _lerSessao() { return window.Storage ? Storage.ler('sessao') : null; }
+  function _lerSessao() { return window.Store ? Store.ler('sessao') : null; }
   function _gravarSessao(dados) {
     var atual = _lerSessao() || {};
-    if (window.Storage) Storage.gravar('sessao', Object.assign({}, atual, dados));
+    if (window.Store) Store.gravar('sessao', Object.assign({}, atual, dados));
   }
-  function _limparSessao() { if (window.Storage) Storage.remover('sessao'); }
+  function _limparSessao() { if (window.Store) Store.remover('sessao'); }
 
   // Se o token expirar, tenta renovar (1 vez)
   var _renovando = false;
@@ -109,6 +109,10 @@
       // por sidebar.js e settings.js. (Era isto antes de uma refatoração trocá-lo
       // por 'profile: /users/profile', que nem existe no backend e quebrou tudo.)
       me: SVC.auth + '/auth/me',
+      // Revoga os refresh tokens do usuário no backend (POST autenticado, sem
+      // corpo, responde 204). Consumido por Auth.logout — sem esta entrada o
+      // POST ia para uma URL 'undefined' e o refresh token nunca era revogado.
+      logout: SVC.auth + '/auth/logout',
     },
 
     // ── todo.html / task-detail.html / dashboard.html ────────────────────────

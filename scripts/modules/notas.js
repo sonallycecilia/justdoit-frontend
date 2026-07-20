@@ -8,7 +8,7 @@
    rápido e sobreviver a um refresh offline; nunca é a origem do dado.
 
    O rascunho do compositor (texto ainda não virou nota) usa a chave
-   compartilhada Storage.KEYS.NOTAS, a mesma do bloco no To Do — assim
+   compartilhada Store.KEYS.NOTAS, a mesma do bloco no To Do — assim
    o que se está escrevendo é o mesmo nos dois lugares.
 
    Depende de core/storage.js e core/api.js.
@@ -17,17 +17,17 @@ const Notas = (function () {
   'use strict';
 
   const KEY = 'notas-cache';               // cache de leitura da lista
-  const KEY_RASCUNHO = Storage.KEYS.NOTAS; // rascunho do compositor (compartilhado c/ To Do)
+  const KEY_RASCUNHO = Store.KEYS.NOTAS; // rascunho do compositor (compartilhado c/ To Do)
 
   // ── Cache local (modelo da UI) ──────────────────────────────
-  function listar() { return Storage.ler(KEY, []); }
+  function listar() { return Store.ler(KEY, []); }
   // Mantém a invariante da UI: a fixada primeiro. O sort é estável, então
   // preserva a ordem que o backend já devolveu dentro de cada grupo.
   function salvar(lista) {
     const ordenada = lista.slice().sort(function (a, b) {
       return (b.fixada ? 1 : 0) - (a.fixada ? 1 : 0);
     });
-    Storage.gravar(KEY, ordenada);
+    Store.gravar(KEY, ordenada);
   }
 
   // resposta do backend (NoteResponse) → modelo da UI
@@ -114,9 +114,9 @@ const Notas = (function () {
   }
 
   // ── Rascunho do compositor (compartilhado com o To Do) ──────
-  function lerRascunho()       { return Storage.ler(KEY_RASCUNHO, ''); }
-  function gravarRascunho(txt) { Storage.gravar(KEY_RASCUNHO, txt); }
-  function limparRascunho()    { Storage.remover(KEY_RASCUNHO); }
+  function lerRascunho()       { return Store.ler(KEY_RASCUNHO, ''); }
+  function gravarRascunho(txt) { Store.gravar(KEY_RASCUNHO, txt); }
+  function limparRascunho()    { Store.remover(KEY_RASCUNHO); }
 
   return {
     listar, carregarDaApi, criar, atualizar, remover, fixar, daApi,

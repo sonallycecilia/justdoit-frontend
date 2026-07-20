@@ -12,11 +12,11 @@
     // Pinta a saudação a partir de um nome (primeiro nome, capitalizado).
     function pintarSaudacao(nome) {
       const primeiroNome = nome ? Utils.capitalizarNome(nome).split(' ')[0] : '';
-      greeting.innerHTML = `${Utils.saudacao()}${primeiroNome ? `, <em>${primeiroNome}.</em>` : '.'}`;
+      greeting.innerHTML = `${Utils.saudacao()}${primeiroNome ? `, <em>${Utils.esc(primeiroNome)}.</em>` : '.'}`;
     }
 
     // Render imediato com o que já temos em sessão (pode estar vazio no login).
-    const sessao = window.Auth ? Auth.lerSessao() : Storage.ler('sessao');
+    const sessao = window.Auth ? Auth.lerSessao() : Store.ler('sessao');
     pintarSaudacao(sessao && sessao.name);
 
     // Busca o nome real no backend (auth/me) e atualiza — igual ao sidebar.js.
@@ -43,15 +43,15 @@
 
     lista.innerHTML = tarefas.length
       ? tarefas.map(t => `
-          <div class="task ${t.done ? 'is-done' : ''}" data-id="${t.id}">
+          <div class="task ${t.done ? 'is-done' : ''}" data-id="${Utils.esc(t.id)}">
             <button class="task__check" aria-label="Concluir tarefa">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
             </button>
             <div class="task__main">
-              <div class="task__title">${t.titulo}</div>
+              <div class="task__title">${Utils.esc(t.titulo)}</div>
               <div class="task__meta">
-                <span class="task__cat"><span class="task__cat-dot" style="background:${Categorias.cor(t.cat)}"></span>${t.cat}</span>
-                ${t.hora ? `<span class="task__time">${t.hora}</span>` : ''}
+                <span class="task__cat"><span class="task__cat-dot" style="background:${Utils.esc(Categorias.cor(t.cat))}"></span>${Utils.esc(t.cat)}</span>
+                ${t.hora ? `<span class="task__time">${Utils.esc(t.hora)}</span>` : ''}
               </div>
             </div>
             <div class="task__right">
@@ -123,7 +123,7 @@
     }
 
     // ── Foco hoje (log diário de ciclos Pomodoro) ──
-    const focoLog = Storage.ler(Storage.KEYS.FOCO_DIARIO, {});
+    const focoLog = Store.ler(Store.KEYS.FOCO_DIARIO, {});
     const elFoco = document.getElementById('statFoco');
     const elFocoHint = document.getElementById('statFocoHint');
     if (elFoco) {
@@ -139,7 +139,7 @@
     const elExecFill = document.getElementById('statProgressFill');
     const elExecHint = document.getElementById('statProgressHint');
     if (elExecVal) {
-      const tempoLog = Storage.ler(Storage.KEYS.TEMPO_DIARIO, {});
+      const tempoLog = Store.ler(Store.KEYS.TEMPO_DIARIO, {});
       let focoHoras = 0, cronHoras = 0, hojeHoras = 0;
       diasSemana.forEach(iso => {
         const f = (focoLog[iso] && focoLog[iso].minutos || 0) / 60;

@@ -3,7 +3,7 @@
    Abstração simples do LocalStorage. Todo estado temporário
    (tarefas, configurações, sessão) deve passar por aqui.
    ============================================================ */
-const Storage = (function () {
+const Store = (function () {
   const PREFIX = 'jdi.';
 
   const KEYS = {
@@ -28,7 +28,7 @@ const Storage = (function () {
       const bruto = localStorage.getItem(PREFIX + chave);
       return bruto === null ? padrao : JSON.parse(bruto);
     } catch (e) {
-      console.warn('[Storage] falha ao ler', chave, e);
+      console.warn('[Store] falha ao ler', chave, e);
       return padrao;
     }
   }
@@ -37,7 +37,7 @@ const Storage = (function () {
     try {
       localStorage.setItem(PREFIX + chave, JSON.stringify(valor));
     } catch (e) {
-      console.warn('[Storage] falha ao gravar', chave, e);
+      console.warn('[Store] falha ao gravar', chave, e);
     }
   }
 
@@ -53,4 +53,4 @@ const Storage = (function () {
 })();
 
 // Disponível globalmente para os outros scripts
-window.Storage = Storage;
+window.Store = Store;

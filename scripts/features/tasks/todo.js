@@ -6,6 +6,9 @@
 (function () {
   'use strict';
 
+  // Escape de conteúdo do usuário/backend interpolado em innerHTML.
+  const esc = Utils.esc;
+
   const filtros = { cat: 'all', status: 'open', date: 'all' };
 
   function passaFiltro(t) {
@@ -42,14 +45,14 @@
         </div>
         <div class="todo-list">
           ${g.itens.map(t => `
-            <div class="todo-item ${t.done ? 'is-done' : ''}" data-id="${t.id}">
+            <div class="todo-item ${t.done ? 'is-done' : ''}" data-id="${esc(t.id)}">
               <button class="todo-check" aria-label="Concluir">${ico('<path d="M5 13l4 4L19 7"/>')}</button>
               <div class="todo-main" data-open>
-                <div class="todo-title">${t.titulo}</div>
+                <div class="todo-title">${esc(t.titulo)}</div>
                 <div class="todo-meta">
-                  <span class="todo-cat"><span class="todo-cat__dot" style="background:${Categorias.cor(t.cat)}"></span>${t.cat}</span>
-                  <span class="todo-date ${t.overdue ? 'is-overdue' : ''}">${ico('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')}${t.data}</span>
-                  ${t.hora ? `<span class="todo-time">${ico('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>')}${t.hora}</span>` : ''}
+                  <span class="todo-cat"><span class="todo-cat__dot" style="background:${esc(Categorias.cor(t.cat))}"></span>${esc(t.cat)}</span>
+                  <span class="todo-date ${t.overdue ? 'is-overdue' : ''}">${ico('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')}${esc(t.data)}</span>
+                  ${t.hora ? `<span class="todo-time">${ico('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>')}${esc(t.hora)}</span>` : ''}
                 </div>
               </div>
               <div class="todo-right">
@@ -121,13 +124,13 @@
       filtros.cat = 'all';
     }
     const sel     = Categorias.TODAS.find(c => c.nome === filtros.cat);
-    const rotulo  = filtros.cat === 'all' ? 'Todas as categorias' : filtros.cat;
+    const rotulo  = filtros.cat === 'all' ? 'Todas as categorias' : esc(filtros.cat);
     const check   = `<span class="cat-filter__check">${ico('<path d="M20 6 9 17l-5-5"/>')}</span>`;
     const chevron = `<svg class="cat-filter__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="m6 9 6 6 6-6"/></svg>`;
 
     catFilter.innerHTML =
       `<button class="cat-filter__btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-        ${sel ? `<span class="cat-filter__dot" style="background:${sel.cor}"></span>` : ''}
+        ${sel ? `<span class="cat-filter__dot" style="background:${esc(sel.cor)}"></span>` : ''}
         <span class="cat-filter__name">${rotulo}</span>
         ${chevron}
       </button>
@@ -138,9 +141,9 @@
           ${filtros.cat === 'all' ? check : ''}
         </button>
         ${Categorias.TODAS.map(c => `
-          <button class="cat-filter__item ${filtros.cat === c.nome ? 'is-on' : ''}" data-value="${c.nome}" role="option">
-            <span class="cat-filter__dot" style="background:${c.cor}"></span>
-            <span class="cat-filter__item-name">${c.nome}</span>
+          <button class="cat-filter__item ${filtros.cat === c.nome ? 'is-on' : ''}" data-value="${esc(c.nome)}" role="option">
+            <span class="cat-filter__dot" style="background:${esc(c.cor)}"></span>
+            <span class="cat-filter__item-name">${esc(c.nome)}</span>
             ${filtros.cat === c.nome ? check : ''}
           </button>`).join('')}
       </div>`;

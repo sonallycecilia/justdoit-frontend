@@ -22,7 +22,7 @@ const DOW_JUN26  = ['SEG','TER','QUA','QUI','SEX','SÁB','DOM']; // jun-1-2026 =
 const DOW_SEG = ['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
 const DOW_DOM = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
 function inicioDomingo() {
-  return !!(window.Storage && Storage.ler('inicio-semana', 'seg') === 'dom');
+  return !!(window.Store && Store.ler('inicio-semana', 'seg') === 'dom');
 }
 function rotulosDow() { return inicioDomingo() ? DOW_DOM : DOW_SEG; }
 

@@ -204,7 +204,7 @@
       birthDate: nascimentoInput.value,
     }).then(function (res) {
       Auth.gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken, name: nome });
-      Storage.gravar(Storage.KEYS.TAREFAS, []);
+      Store.gravar(Store.KEYS.TAREFAS, []);
       window.location.href = 'onboarding.html';
     }).catch(function (err) {
       submitBtn.disabled    = false;

@@ -13,12 +13,12 @@
 const Tarefas = (function () {
   'use strict';
 
-  const KEY = Storage.KEYS.TAREFAS;
+  const KEY = Store.KEYS.TAREFAS;
   const META_KEY = 'todo-tarefas-meta';
 
   // ── Cache local (modelo da UI) ──────────────────────────────
   function listar() {
-    return Storage.ler(KEY, []);
+    return Store.ler(KEY, []);
   }
 
   function buscar(id) {
@@ -26,16 +26,16 @@ const Tarefas = (function () {
   }
 
   function salvar(lista) {
-    Storage.gravar(KEY, lista);
+    Store.gravar(KEY, lista);
   }
 
   // ── Meta lateral (campos que o backend não persiste) ────────
-  function lerMeta() { return Storage.ler(META_KEY, {}); }
+  function lerMeta() { return Store.ler(META_KEY, {}); }
 
   function gravarMeta(id, dados) {
     const mapa = lerMeta();
     mapa[id] = Object.assign({}, mapa[id], dados);
-    Storage.gravar(META_KEY, mapa);
+    Store.gravar(META_KEY, mapa);
   }
 
   // "Genérico" é a categoria padrão da UI e NÃO existe no backend; ela é
@@ -353,7 +353,7 @@ const Tarefas = (function () {
       mapa[t.id] = Object.assign({}, mapa[t.id], { cat: 'Genérico', categoriaId: CAT_GENERICO_ID });
       return Object.assign({}, t, { cat: 'Genérico', categoriaId: CAT_GENERICO_ID });
     });
-    Storage.gravar(META_KEY, mapa);
+    Store.gravar(META_KEY, mapa);
     salvar(lista);
     notificarMudanca();
   }
@@ -369,7 +369,7 @@ const Tarefas = (function () {
       mapa[t.id] = Object.assign({}, mapa[t.id], { cat: nomeNovo });
       return Object.assign({}, t, { cat: nomeNovo });
     });
-    Storage.gravar(META_KEY, mapa);
+    Store.gravar(META_KEY, mapa);
     salvar(lista);
     notificarMudanca();
   }
