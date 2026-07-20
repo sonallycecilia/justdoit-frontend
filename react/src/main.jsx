@@ -20,6 +20,7 @@ import './styles/pages/todo.css';
 import './styles/pages/task-detail.css';
 import './styles/pages/notes.css';
 import './styles/pages/calendar.css';
+import './styles/pages/event-summary.css';
 
 iniciarTema();
 

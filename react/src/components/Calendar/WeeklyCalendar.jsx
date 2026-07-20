@@ -678,7 +678,8 @@ function MonthView({ mesData, eventos, categorias, onOpen, mover }) {
 }
 
 /* ── TimePickerInline ────────────────────────────────────── */
-function TimePickerInline({ ini, fim, onChange }) {
+// Exportado para reuso no EventSummary (drawer lateral).
+export function TimePickerInline({ ini, fim, onChange }) {
   const [open, setOpen] = useState(false);
   const h = Math.floor(ini);
   const m = Math.round((ini % 1) * 60);
