@@ -14,7 +14,6 @@ import { useTarefas } from '../hooks/useTasks';
 // Páginas ainda não migradas para o app React (vivem no front antigo).
 const NAV_PENDENTE = [
   { id: 'dashboard', label: 'Visão geral', icon: ICONS.dashboard },
-  { id: 'calendar', label: 'Calendário', icon: ICONS.calendar },
 ];
 
 export default function Sidebar({ ativa = 'todo' }) {
@@ -80,6 +79,10 @@ export default function Sidebar({ ativa = 'todo' }) {
               <span className="nav-item__label">{n.label}</span>
             </span>
           ))}
+          <Link className={`nav-item ${ativa === 'calendar' ? 'is-active' : ''}`} to="/calendario">
+            <span className="nav-item__ic"><Ic d={ICONS.calendar} /></span>
+            <span className="nav-item__label">Calendário</span>
+          </Link>
           <Link className={`nav-item ${ativa === 'todo' ? 'is-active' : ''}`} to="/todo">
             <span className="nav-item__ic"><Ic d={ICONS.todo} /></span>
             <span className="nav-item__label">To Do</span>
@@ -145,7 +148,16 @@ export default function Sidebar({ ativa = 'todo' }) {
                           <div className="sidebar-cat__empty">{busca ? 'Nenhum resultado' : 'Nenhuma tarefa pendente'}</div>
                         )}
                         {doGrupo.map((t) => (
-                          <Link className="sidebar-task" key={t.id} to={`/tasks/${t.id}`} title={t.titulo}>
+                          <Link
+                            className="sidebar-task"
+                            key={t.id}
+                            to={`/tasks/${t.id}`}
+                            title={t.titulo}
+                            // Arrastável para o calendário: o payload leva só o id;
+                            // o calendário resolve a tarefa pelo cache ['tarefas'].
+                            draggable
+                            onDragStart={(e) => e.dataTransfer.setData('application/jdi-task', JSON.stringify({ id: t.id }))}
+                          >
                             <span className={`sidebar-task__prio sidebar-task__prio--${t.prioridade}`} />
                             <span className="sidebar-task__titulo">{t.titulo}</span>
                             <span className="sidebar-task__data">{t.data || ''}</span>
