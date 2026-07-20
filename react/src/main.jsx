@@ -18,6 +18,7 @@ import './styles/components/badge.css';
 import './styles/components/date-picker.css';
 import './styles/pages/todo.css';
 import './styles/pages/task-detail.css';
+import './styles/pages/notes.css';
 
 iniciarTema();
 

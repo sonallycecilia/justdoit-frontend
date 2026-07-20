@@ -85,6 +85,10 @@ export default function Sidebar({ ativa = 'todo' }) {
             <span className="nav-item__label">To Do</span>
             <span className="nav-item__count">{pendentes.length}</span>
           </Link>
+          <Link className={`nav-item ${ativa === 'notes' ? 'is-active' : ''}`} to="/anotacoes">
+            <span className="nav-item__ic"><Ic d={ICONS.notes} /></span>
+            <span className="nav-item__label">Anotações</span>
+          </Link>
         </nav>
 
         <Link className="sidebar__new-task" to="/tasks/nova" aria-label="Nova tarefa" title="Nova tarefa">

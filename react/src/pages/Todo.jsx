@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Ic, { ICONS } from '../components/Ic';
 import Sidebar from '../components/Sidebar';
+import NoteComposer from '../components/NoteComposer';
 import { useCategorias } from '../hooks/useCategories';
 import { useRemoverTarefa, useTarefas, useToggleDone } from '../hooks/useTasks';
 import * as Priority from '../lib/priority';
@@ -60,6 +61,8 @@ export default function Todo() {
           <div className="page__head-actions">
             <Link className="btn btn--primary btn--md" to="/tasks/nova">+ Nova tarefa</Link>
           </div>
+
+          <NoteComposer />
 
           <div className="filters">
             {/* Categoria: dropdown preenchido com as categorias do backend */}
