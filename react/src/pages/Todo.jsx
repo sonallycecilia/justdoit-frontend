@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Ic, { ICONS } from '../components/Ic';
 import Sidebar from '../components/Sidebar';
+import CategorySelect from '../components/CategorySelect';
 import NoteComposer from '../components/NoteComposer';
 import { useCategorias } from '../hooks/useCategories';
 import { useRemoverTarefa, useTarefas, useToggleDone } from '../hooks/useTasks';
@@ -22,7 +23,6 @@ const DATAS = [
 export default function Todo() {
   const navigate = useNavigate();
   const [filtros, setFiltros] = useState({ cat: 'all', status: 'open', date: 'all' });
-  const [catMenuAberto, setCatMenuAberto] = useState(false);
 
   const { data: categorias } = useCategorias();
   const { data: tarefas, isLoading, isError, refetch } = useTarefas(categorias);
@@ -43,7 +43,6 @@ export default function Todo() {
   }, [tarefas, filtros]);
 
   const grupos = useMemo(() => Priority.agrupar(visiveis), [visiveis]);
-  const catSelecionada = categorias?.find((c) => c.nome === filtros.cat);
 
   return (
     <div className="app">
@@ -66,46 +65,12 @@ export default function Todo() {
 
           <div className="filters">
             {/* Categoria: dropdown preenchido com as categorias do backend */}
-            <div className="cat-filter">
-              <button
-                className={`cat-filter__btn ${catMenuAberto ? 'is-open' : ''}`}
-                type="button"
-                aria-haspopup="listbox"
-                aria-expanded={catMenuAberto}
-                onClick={() => setCatMenuAberto((v) => !v)}
-              >
-                {catSelecionada && <span className="cat-filter__dot" style={{ background: catSelecionada.cor }} />}
-                <span className="cat-filter__name">{filtros.cat === 'all' ? 'Todas as categorias' : filtros.cat}</span>
-                <Ic d={ICONS.chevron} className="cat-filter__chevron" size={13} strokeWidth={2} />
-              </button>
-              {catMenuAberto && (
-                <>
-                  <div className="cat-filter__overlay" onClick={() => setCatMenuAberto(false)} />
-                  <div className="cat-filter__menu" role="listbox">
-                    <button
-                      className={`cat-filter__item ${filtros.cat === 'all' ? 'is-on' : ''}`}
-                      role="option"
-                      onClick={() => { setFiltros((f) => ({ ...f, cat: 'all' })); setCatMenuAberto(false); }}
-                    >
-                      <span className="cat-filter__item-name">Todas as categorias</span>
-                      {filtros.cat === 'all' && <span className="cat-filter__check"><Ic d={ICONS.check} /></span>}
-                    </button>
-                    {categorias?.map((c) => (
-                      <button
-                        key={c.id}
-                        className={`cat-filter__item ${filtros.cat === c.nome ? 'is-on' : ''}`}
-                        role="option"
-                        onClick={() => { setFiltros((f) => ({ ...f, cat: c.nome })); setCatMenuAberto(false); }}
-                      >
-                        <span className="cat-filter__dot" style={{ background: c.cor }} />
-                        <span className="cat-filter__item-name">{c.nome}</span>
-                        {filtros.cat === c.nome && <span className="cat-filter__check"><Ic d={ICONS.check} /></span>}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+            <CategorySelect
+              categorias={categorias}
+              valor={filtros.cat}
+              onChange={(c) => setFiltros((f) => ({ ...f, cat: c ? c.nome : 'all' }))}
+              incluirTodas
+            />
 
             <div className="filter-group">
               {STATUS.map((s) => (

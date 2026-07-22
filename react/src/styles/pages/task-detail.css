@@ -52,8 +52,8 @@
 }
 .detail__check:hover { border-color: var(--color-accent); }
 .detail__check svg { width: 16px; height: 16px; color: #fff; opacity: 0; }
-.detail.is-done .detail__check { background: var(--color-success); border-color: var(--color-success); }
-.detail.is-done .detail__check svg { opacity: 1; }
+.task-editor.is-done .detail__check { background: var(--color-success); border-color: var(--color-success); }
+.task-editor.is-done .detail__check svg { opacity: 1; }
 
 /* Chip clicável de categoria */
 .chip--pick { cursor: pointer; size: 100%; }
@@ -102,7 +102,7 @@
 }
 .edit-title:hover { background: var(--color-surface-sunken); }
 .edit-title:focus { background: var(--color-card); }
-.detail.is-done .edit-title { color: var(--color-text-muted); text-decoration: line-through; text-decoration-color: var(--color-border-strong); }
+.task-editor.is-done .edit-title { color: var(--color-text-muted); text-decoration: line-through; text-decoration-color: var(--color-border-strong); }
 
 .edit-desc {
   font-size: var(--font-size-md); color: var(--color-text-soft); line-height: var(--leading-relaxed);

@@ -1,15 +1,21 @@
 # justdoit-react
 
 Front React do JustDoIt (gerenciador de tarefas). Vive em `react/` DENTRO do repo
-`justdoit-frontend` (branch feature-react) e substitui gradualmente o app vanilla da raiz,
-consumindo o backend em `../../JustDoIt` (4 serviços Spring).
+`justdoit-frontend` e é o front ÚNICO — o app vanilla da raiz foi aposentado em
+2026-07-21. Consome o backend em `../../JustDoIt` (4 serviços Spring).
 Histórico da migração inicial: ver `RELATORIO.md`.
 
-ATENÇÃO porta 3000: o CORS do backend só aceita http://localhost:3000, e tanto o
-`python dev.py front` (vanilla) quanto o `npm run dev` (Vite) usam essa porta —
-**um por vez**. Por isso a sidebar do vanilla ainda NÃO aponta para as rotas React
-(e vice-versa o item "Visão geral" da sidebar React segue desabilitado): os links
-cruzados só fazem sentido após o deploy unificado (build do Vite servido junto).
+ATENÇÃO porta 3000: o CORS do backend só aceita http://localhost:3000, então o
+Vite fixa essa porta (`strictPort`). Suba com `npm run dev` ou `python dev.py front`.
+
+## Deploy
+
+GitHub Pages via `.github/workflows/deploy.yml` (push na `main`), publicando
+`react/dist`. Duas peças que não podem sumir do build:
+- `react/public/CNAME` — o domínio próprio (justdoit-app.duckdns.org). Por isso
+  `base` fica em '/', e não numa subpasta do github.io.
+- `404.html` — gerado pelo plugin `fallbackSpa` do `vite.config.js`, que copia o
+  `index.html` ao fim do build. Sem ele, recarregar `/visao-geral` dá 404 no Pages.
 
 ## Regra de ouro
 
@@ -101,14 +107,103 @@ ALTER TABLE justdoit_db.cycle_config
 
 ## Status da migração
 
-Migrado: Login, Signup, To Do, Task Detail (com tempo estimado + ciclo personalizado),
-**Calendário** (`/calendario` — vistas dia/semana/mês, drag-and-drop, faixa Sem horário,
-pacotes, modal, drawer lateral com EventSummary) e **Anotações** (`/anotacoes` + compositor
-no To Do). Sidebar com botão "Nova tarefa" e tarefas arrastáveis para o calendário
-(payload `application/jdi-task` = `{id}`).
-Falta: Dashboard, Análise, Configurações, Onboarding — fontes em `../pages/` +
-`../scripts/features/`. Ao migrar uma página: portar o HTML pra JSX reusando as classes
-CSS (SEMPRE re-copiar o CSS da raiz antes — a raiz é a fonte mais nova), mover o estado
-para hooks (query/mutation), adicionar a rota no `App.jsx` e habilitar o item na
-`Sidebar.jsx`. Deploy unificado (GH Pages com build em subpasta + fallback SPA) ainda
-pendente.
+**Todas as páginas do app antigo estão migradas** (jul/2026). Rotas em `App.jsx`:
+`/login`, `/signup`, `/onboarding`, `/visao-geral`, `/todo`, `/anotacoes`,
+`/calendario`, `/analise`, `/configuracoes`, `/tasks/nova`, `/tasks/:id`.
+
+A home do app logado é `/visao-geral` (login e o catch-all caem lá, como no front
+antigo); o Signup vai para `/onboarding`. A `Sidebar.jsx` não tem mais itens
+desabilitados — o bloco `NAV_PENDENTE` foi removido.
+
+Falta: **deploy unificado** (GH Pages com build em subpasta + fallback SPA) e
+aposentar o app vanilla da raiz.
+
+Ao migrar/portar mais alguma coisa: reusar as classes CSS existentes (SEMPRE
+re-copiar o CSS da raiz antes — a raiz é a fonte mais nova), mover o estado para
+hooks (query/mutation) e adicionar a rota no `App.jsx`.
+
+## Home dividida (jul/2026)
+
+A rota `/` é `pages/Home.jsx`: **landing à esquerda, login à direita**. Substitui
+o `index.html` vanilla da raiz, que ocupava a tela toda e mandava o visitante
+para uma tela de login separada.
+
+- `components/Landing/LandingPane.jsx` — port do `index.html` + `landing/landing.js`.
+- `components/Landing/Overlays.jsx` — Recursos, Sobre e o modal Legal
+  (port de `scripts/features/auth/legal.js`), como componentes controlados.
+- `components/Landing/FeatureShowcase.jsx` — vitrine animada que substituiu o
+  mock estático "Hoje". Roda em looping 3 cenas (Pomodoro, Subtarefas, Ciclo),
+  7s cada, pausando no hover e desligada em `prefers-reduced-motion`.
+  ⚠ Os timers são **só de demonstração** (rodam acelerados); a lógica real é a
+  do `TaskEditor`/`useTaskDetail`. Se uma feature mudar, a cena é decorativa e
+  não quebra nada — mas vale manter coerente com o produto.
+  ⚠ Nada de animação de saída terminando em `opacity: 0` com `forwards`: foi o
+  que deixou o card do Ciclo invisível ~800ms por volta. A troca é feita pela
+  `key` do elemento, com animação de ENTRADA.
+- `components/LoginForm.jsx` — o formulário, extraído da antiga `pages/Login.jsx`
+  (que foi REMOVIDA). `/login` agora só redireciona para `/`, porque o
+  `api/client.js` manda para lá quando o refresh do token falha.
+- ⚠ A landing usava **Lucide via CDN** (`<i data-lucide>`), que não entra no
+  bundle. Os ícones viraram entradas do `ICONS` em `Ic.jsx` — `sun`, `layers`,
+  `folderTree` e `arrowUp` foram criados para isso. Não reintroduzir o CDN.
+- `styles/pages/home.css` tem os ajustes de meia tela. ⚠ Use **`padding-block`**
+  ali, nunca o atalho `padding`: o atalho zera o `padding-inline` herdado de
+  `.mkt__wrap` e o conteúdo cola na borda (foi exatamente esse o bug do hero).
+  O recuo lateral é um `clamp()` único no `.mkt__wrap`, para que marca, tema e
+  links do rodapé fiquem alinhados nas duas extremidades.
+
+## Editor de tarefa compartilhado (jul/2026)
+
+`src/components/TaskEditor.jsx` é o corpo ÚNICO de edição de tarefa. Quem usa:
+- `pages/TaskDetail.jsx` — casca (Sidebar + topbar) em volta de `<TaskEditor />`.
+- `components/Calendar/EventSummary.jsx` — drawer lateral, `<TaskEditor compacto />`.
+
+Antes o drawer tinha uma versão própria e reduzida (só prioridade e categoria),
+que divergia da página. Não recriar isso: mexeu no editor, mexeu nos dois.
+
+- **Nada de botão Salvar em edição.** Com `taskId` definido tudo persiste sozinho:
+  título/descrição com debounce de 700 ms (e no blur), o resto na hora. O botão
+  "Registrar tarefa" só existe em `/tasks/nova`, porque sem id não há o que
+  atualizar — o POST acontece lá e só então os módulos configurados são gravados.
+- `persistir(mudancas)` recebe a mudança explicitamente porque o state do React
+  só vale no próximo render — passar `{prioridade: n}` em vez de confiar no
+  `setPrioridade(n)` que acabou de rodar.
+- `onSalvo(dados)` avisa o caller do que foi persistido. O drawer usa para mover
+  o bloco de tempo (`/time-blocks`) junto quando a data/hora da tarefa muda —
+  sem isso o card ficaria parado na grade.
+- `compacto` esconde a grade `detail__spec` e faz as colunas dos módulos fluírem
+  (o CSS fixa 6 colunas, que espremem no drawer).
+- Teto biológico continua com o backend: o 400 vira toast + `dur-alert`, nunca
+  validação no cliente. No drawer, `aoFalharPorTeto` (exportado do
+  `WeeklyCalendar`) reverte o bloco.
+- `CategorySelect` (`components/CategorySelect.jsx`) é o dropdown de categoria do
+  To Do, do editor e do drawer. `incluirTodas` liga a opção "Todas as categorias"
+  (só o filtro do To Do usa).
+
+## Pegadinhas das páginas migradas por último (jul/2026)
+
+- **Análise e os números da Visão geral**: o backend NÃO tem analytics
+  (`/analytics/weekly` e `/analytics/categories` respondem 403). Tudo é calculado
+  no cliente em `src/hooks/useAnalytics.js` — **o único ponto a trocar** quando os
+  endpoints existirem. Ele deriva de `GET /tasks` (conclusão, estimativa, categoria),
+  `GET /tasks/{id}/timer` (executado) e `GET /tasks/{id}/focus-sessions` (Pomodoro).
+  ⚠ Custo: 2 requisições por tarefa da semana, em paralelo, com teto `MAX_TAREFAS`.
+- O dashboard antigo somava foco/tempo de `localStorage` (`Store.KEYS.FOCO_DIARIO`
+  e `TEMPO_DIARIO`). Isso é dado de negócio local — proibido pela regra de ouro.
+  Não reintroduzir ao mexer na Visão geral.
+- Cada tarefa é atribuída ao dia do seu `dueDate`: o timer guarda só o total
+  acumulado, sem quebra por dia. É a granularidade honesta possível hoje.
+- O donut "Tempo por categoria" mostra tempo **estimado**, não executado (o timer
+  não separa por categoria) — por isso o rótulo "tempo estimado" no card.
+- **CategoryModal** faz criar E editar: passar `categoria` liga o modo edição
+  (PUT /categories/{id}); sem ela, cria. Editar invalida `['categorias']` **e**
+  `['tarefas']`, porque a tarefa guarda `categoryId` e o rótulo exibido muda.
+- Excluir categoria não mexe nas tarefas no cliente: o `DELETE /categories/{id}`
+  zera o `category_id` no backend e elas voltam para "Genérico" no refetch.
+- **Tema**: a preferência "Sistema" é a AUSÊNCIA da chave `jdi.tema` (mesma
+  convenção do app antigo). Ver `preferenciaTema()` / `definirTema()` em `lib/theme.js`.
+- **Foto de perfil**: redimensionada para 256px (JPEG data URL) e persistida via
+  `PUT /auth/me {avatarUrl}`. Remover = enviar string vazia — `null` é ignorado
+  pelo backend. Nada de base64 em localStorage.
+- `useConta()` (`hooks/useConta.js`) usa a queryKey `['usuario']`, a mesma da
+  Sidebar — as duas compartilham o cache do `GET /auth/me`.

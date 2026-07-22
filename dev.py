@@ -3,19 +3,24 @@
 Automação de desenvolvimento local — sobe backend + frontend de uma vez.
 
 Uso:
-  python dev.py start    — sobe infra (MySQL+Redis) + 4 serviços (backend) e serve o frontend em :3000
-  python dev.py front    — serve só o frontend em http://localhost:3000
-  python dev.py back      — sobe só o backend (infra + serviços)
-  python dev.py restart   — sobe a infra e relança os 4 serviços (feche as janelas antigas antes)
-  python dev.py stop      — para a infra (MySQL+Redis). Feche as janelas dos serviços manualmente.
+  python dev.py start    — sobe infra + 4 serviços (backend) e serve o front em :3000
+  python dev.py front    — serve só o front (React/Vite) em http://localhost:3000
+  python dev.py back     — sobe só o backend (infra + serviços)
+  python dev.py restart  — sobe a infra e relança os 4 serviços (feche as janelas antigas antes)
+  python dev.py stop     — para a infra (MySQL+Redis). Feche as janelas dos serviços manualmente.
 
 Observação: o backend só aceita CORS de http://localhost:3000, por isso o frontend
-é sempre servido nessa porta. Não abra os HTML direto (file://) — as requisições
-seriam bloqueadas e o api.js apontaria para produção.
+é sempre servido nessa porta. Não use a extensão Live Server do VS Code (porta
+5500) — as requisições seriam bloqueadas pelo CORS e o app nem chega a carregar
+(o Live Server não compila JSX, dá 404 em main.jsx).
 
 Nota (2026-07): o refactor da arquitetura do backend removeu o antigo
 docs/automações/local.py. Agora a infra sobe via docker-compose e cada serviço
 via ./gradlew :services:<svc>:bootRun — este script orquestra os dois.
+
+Nota (2026-07-21): o app vanilla da raiz foi aposentado — o front agora é só o
+app React (Vite) em react/. Os comandos `start-react`/`react` viraram
+`start`/`front`. Ver react/CLAUDE.md.
 """
 import os
 import sys
@@ -24,6 +29,9 @@ import webbrowser
 
 # Raiz do frontend (onde este script está)
 FRONT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Front novo (React/Vite), subpasta deste mesmo repo.
+REACT_DIR = os.path.join(FRONT_DIR, "react")
 
 # Backend: projeto irmão. Ajuste aqui se estiver em outro lugar.
 BACKEND_DIR = os.path.abspath(os.path.join(FRONT_DIR, "..", "JustDoIt"))
@@ -83,15 +91,20 @@ def start_services():
 
 
 def serve_front():
-    print(f"\n[FRONT] Servindo {FRONT_DIR} em http://localhost:{PORT}")
+    """Sobe o app React (Vite) via `npm run dev`, em janela própria. A porta 3000
+    é obrigatória — o CORS do backend só aceita essa origem."""
+    if not os.path.isdir(REACT_DIR):
+        print(f"[ERRO] Não encontrei o app React em:\n  {REACT_DIR}")
+        sys.exit(1)
+    print(f"\n[FRONT] Servindo o app React (Vite) em http://localhost:{PORT}")
+    npm = "npm.cmd" if sys.platform == "win32" else "npm"
     if sys.platform == "win32":
-        # abre em janela própria pra não travar o terminal
         subprocess.Popen(
-            f'start "justdoit-frontend" cmd /k ""{sys.executable}" -m http.server {PORT}"',
-            cwd=FRONT_DIR, shell=True
+            f'start "justdoit-react" cmd /k "{npm} run dev"',
+            cwd=REACT_DIR, shell=True
         )
     else:
-        subprocess.Popen([sys.executable, "-m", "http.server", str(PORT)], cwd=FRONT_DIR)
+        subprocess.Popen([npm, "run", "dev"], cwd=REACT_DIR)
     webbrowser.open(f"http://localhost:{PORT}")
 
 

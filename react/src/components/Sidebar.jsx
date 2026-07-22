@@ -1,22 +1,17 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import Ic, { ICONS, Mark } from './Ic';
 import CategoryModal from './CategoryModal';
 import { api } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import { alternarTema } from '../lib/theme';
-import { lerSessao, gravarSessao, limparSessao } from '../auth/session';
+import { lerSessao, limparSessao } from '../auth/session';
 import { capitalizarNome, iniciais } from '../lib/utils';
 import { useCategorias } from '../hooks/useCategories';
+import { useConta } from '../hooks/useConta';
 import { useTarefas } from '../hooks/useTasks';
 
-// Páginas ainda não migradas para o app React (vivem no front antigo).
-const NAV_PENDENTE = [
-  { id: 'dashboard', label: 'Visão geral', icon: ICONS.dashboard },
-];
-
-export default function Sidebar({ ativa = 'todo' }) {
+export default function Sidebar({ ativa = 'dashboard' }) {
   const navigate = useNavigate();
   const [colapsada, setColapsada] = useState(() => localStorage.getItem('jdi-sidebar-collapsed') === 'true');
   const [catsVisiveis, setCatsVisiveis] = useState(true);
@@ -29,15 +24,7 @@ export default function Sidebar({ ativa = 'todo' }) {
 
   // Nome/avatar: começa com o que há na sessão e atualiza com GET /auth/me.
   const sessao = lerSessao();
-  const { data: usuario } = useQuery({
-    queryKey: ['usuario'],
-    queryFn: async () => {
-      const user = await api.get(endpoints.auth.me);
-      if (user?.name) gravarSessao({ name: user.name, email: user.email });
-      return user;
-    },
-    staleTime: 5 * 60_000,
-  });
+  const { data: usuario } = useConta();
   const nome = capitalizarNome(usuario?.name || sessao?.name || '') || 'Usuário';
 
   const pendentes = useMemo(() => (tarefas || []).filter((t) => !t.done), [tarefas]);
@@ -45,7 +32,7 @@ export default function Sidebar({ ativa = 'todo' }) {
   function sair() {
     api.post(endpoints.auth.logout).catch(() => {}).finally(() => {
       limparSessao();
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
     });
   }
 
@@ -64,7 +51,7 @@ export default function Sidebar({ ativa = 'todo' }) {
   return (
     <aside className={`sidebar ${colapsada ? 'sidebar--collapsed' : ''}`}>
       <div className="sidebar__brand">
-        <Link className="sidebar__mark" to="/todo" aria-label="Ir para o To Do"><Mark /></Link>
+        <Link className="sidebar__mark" to="/visao-geral" aria-label="Ir para a Visão geral"><Mark /></Link>
         <span className="sidebar__word">JustDoIt</span>
         <button className="sidebar__collapse" onClick={toggleColapso} aria-label={colapsada ? 'Expandir menu' : 'Recolher menu'}>
           <Ic d={ICONS.chevronLeft} />
@@ -73,12 +60,10 @@ export default function Sidebar({ ativa = 'todo' }) {
 
       <div className="sidebar__scroll">
         <nav className="sidebar__nav">
-          {NAV_PENDENTE.map((n) => (
-            <span key={n.id} className="nav-item" style={{ opacity: 0.45, cursor: 'default' }} title="Página ainda no app antigo — em migração">
-              <span className="nav-item__ic"><Ic d={n.icon} /></span>
-              <span className="nav-item__label">{n.label}</span>
-            </span>
-          ))}
+          <Link className={`nav-item ${ativa === 'dashboard' ? 'is-active' : ''}`} to="/visao-geral">
+            <span className="nav-item__ic"><Ic d={ICONS.dashboard} /></span>
+            <span className="nav-item__label">Visão geral</span>
+          </Link>
           <Link className={`nav-item ${ativa === 'calendar' ? 'is-active' : ''}`} to="/calendario">
             <span className="nav-item__ic"><Ic d={ICONS.calendar} /></span>
             <span className="nav-item__label">Calendário</span>
@@ -91,6 +76,10 @@ export default function Sidebar({ ativa = 'todo' }) {
           <Link className={`nav-item ${ativa === 'notes' ? 'is-active' : ''}`} to="/anotacoes">
             <span className="nav-item__ic"><Ic d={ICONS.notes} /></span>
             <span className="nav-item__label">Anotações</span>
+          </Link>
+          <Link className={`nav-item ${ativa === 'analytics' ? 'is-active' : ''}`} to="/analise">
+            <span className="nav-item__ic"><Ic d={ICONS.analytics} /></span>
+            <span className="nav-item__label">Análise</span>
           </Link>
         </nav>
 
@@ -185,6 +174,7 @@ export default function Sidebar({ ativa = 'todo' }) {
           </button>
         </div>
         <div className="sidebar__actions">
+          <Link className="btn-icon" to="/configuracoes" aria-label="Configurações"><Ic d={ICONS.settings} /></Link>
           <button className="btn-icon" onClick={alternarTema} aria-label="Alternar tema"><Ic d={ICONS.moon} /></button>
         </div>
       </div>

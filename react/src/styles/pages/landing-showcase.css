@@ -1,0 +1,180 @@
+/* JustDoIt — vitrine animada da landing (React-only).
+   Carrossel estilo menu: a cena em foco fica centralizada e as vizinhas
+   aparecem menores e esmaecidas nas laterais. Demonstra funcionalidades
+   reais: Pomodoro, subtarefas e ciclo de repetição. */
+
+.showcase { position: relative; }
+
+/* Palco: os cards são posicionados a partir do centro, então o viewport pode
+   ser mais largo que o card e sobra espaço para os vizinhos espiarem. */
+.showcase__viewport {
+  position: relative;
+  height: 292px;
+  overflow: hidden;
+}
+
+.showcase__card {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: clamp(268px, 23vw, 330px);
+  height: 272px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: transform .5s var(--ease-out), opacity .5s var(--ease-out), box-shadow .5s;
+  will-change: transform;
+}
+.showcase__card.is-active {
+  box-shadow: var(--shadow-raised);
+  z-index: 2;
+}
+/* As laterais não recebem clique de leitura, só servem de contexto visual. */
+.showcase__card:not(.is-active) { z-index: 1; pointer-events: none; }
+
+.showcase__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+  flex: none;
+}
+.showcase__ic {
+  width: 28px; height: 28px; flex: none;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft); color: var(--color-accent);
+  display: grid; place-items: center;
+}
+.showcase__ic svg { width: 15px; height: 15px; }
+.showcase__title { font-family: var(--font-display); font-size: var(--font-size-md); font-weight: 500; }
+.showcase__hint { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
+
+.showcase__stage {
+  flex: 1;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.showcase__cena { width: 100%; animation: showcase-entra .45s var(--ease-out) both; }
+@keyframes showcase-entra {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Setas de navegação */
+.showcase__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text-soft);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+}
+.showcase__nav:hover { background: var(--color-surface-sunken); color: var(--color-accent); border-color: var(--color-accent); }
+.showcase__nav svg { width: 17px; height: 17px; }
+.showcase__nav--prev { left: 0; }
+.showcase__nav--next { right: 0; }
+
+/* Indicador embaixo */
+.showcase__dots {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 14px;
+}
+.showcase__dot {
+  width: 24px; height: 4px; border-radius: var(--radius-pill);
+  background: var(--color-border-strong); border: 0; padding: 0;
+  cursor: pointer; transition: background var(--duration-fast);
+}
+.showcase__dot:hover { background: var(--color-text-faint); }
+.showcase__dot.is-on { background: var(--color-accent); }
+.showcase__legenda { text-align: center; margin-top: 8px; font-size: var(--font-size-sm); color: var(--color-text-muted); }
+
+/* ── Cena: Pomodoro ─────────────────────────────────────────────────────── */
+.sc-foco { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.sc-foco .pomo__ring { width: 96px; height: 96px; }
+.sc-foco .pomo__ring::before { inset: 9px; }
+.sc-foco__tarefa { font-size: var(--font-size-sm); color: var(--color-text); font-weight: var(--weight-medium); }
+.sc-foco__desc { font-size: var(--font-size-xs); color: var(--color-text-soft); line-height: 1.5; margin: 0; }
+.sc-foco__ciclos { display: flex; gap: 5px; }
+.sc-foco__pip { width: 18px; height: 4px; border-radius: var(--radius-pill); background: var(--color-surface-sunken); }
+.sc-foco__pip.is-on { background: var(--color-accent); }
+
+/* ── Cena: Subtarefas ───────────────────────────────────────────────────── */
+.sc-sub__titulo { font-size: var(--font-size-sm); font-weight: var(--weight-medium); margin-bottom: 10px; }
+.sc-sub__lista { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+.sc-sub__item { display: flex; align-items: center; gap: 9px; }
+.sc-sub__check {
+  width: 16px; height: 16px; flex: none;
+  border-radius: 50%; border: 1.5px solid var(--color-border-strong);
+  display: grid; place-items: center;
+  transition: background var(--duration-base), border-color var(--duration-base);
+}
+.sc-sub__check svg { width: 10px; height: 10px; color: #fff; opacity: 0; transition: opacity var(--duration-base); }
+.sc-sub__item.is-done .sc-sub__check { background: var(--color-success); border-color: var(--color-success); }
+.sc-sub__item.is-done .sc-sub__check svg { opacity: 1; }
+.sc-sub__label { font-size: var(--font-size-xs); color: var(--color-text-soft); transition: color var(--duration-base); }
+.sc-sub__item.is-done .sc-sub__label { color: var(--color-text-muted); text-decoration: line-through; text-decoration-color: var(--color-border-strong); }
+
+/* ── Cena: Ciclo ────────────────────────────────────────────────────────── */
+.sc-ciclo__tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--color-accent); background: var(--color-accent-soft);
+  padding: 4px 9px; border-radius: var(--radius-pill); margin-bottom: 12px;
+}
+.sc-ciclo__tag svg { width: 11px; height: 11px; }
+.sc-ciclo__card {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-surface);
+  /* Cada ocorrência ENTRA animada (a key do elemento remonta a cada volta).
+     Nada de animação de saída parando em opacity:0 — isso deixava o card
+     invisível por quase um segundo a cada ciclo, parecendo quebrado. */
+  animation: sc-ciclo-entra .45s var(--ease-out) both;
+}
+@keyframes sc-ciclo-entra {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: none; }
+}
+.sc-ciclo__card.is-done { border-color: var(--color-success); }
+/* O tick reusa .sc-sub__check, mas a regra que o acende é escopada em
+   .sc-sub__item — que não existe aqui. Daí o par abaixo. */
+.sc-ciclo__card.is-done .sc-sub__check { background: var(--color-success); border-color: var(--color-success); }
+.sc-ciclo__card.is-done .sc-sub__check svg { opacity: 1; }
+.sc-ciclo__t { flex: 1; font-size: var(--font-size-xs); color: var(--color-text); }
+.sc-ciclo__card.is-done .sc-ciclo__t { text-decoration: line-through; color: var(--color-text-muted); }
+.sc-ciclo__data { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
+.sc-ciclo__prox { margin-top: 10px; font-size: var(--font-size-xs); color: var(--color-text-soft); }
+.sc-ciclo__prox strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+
+/* Barra de progresso da cena de subtarefas */
+.sc-progress { display: flex; align-items: center; gap: 9px; }
+.sc-progress__track { flex: 1; height: 5px; border-radius: var(--radius-pill); background: var(--color-surface-sunken); overflow: hidden; }
+.sc-progress__fill { height: 100%; border-radius: var(--radius-pill); background: var(--color-accent); transition: width var(--duration-base) var(--ease-out); }
+.sc-progress__fill--done { background: var(--color-success); }
+.sc-progress__n { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
+
+/* Quem pediu menos movimento não recebe animação nenhuma. */
+@media (prefers-reduced-motion: reduce) {
+  .showcase__cena,
+  .sc-ciclo__card { animation: none; }
+  .showcase__card { transition: none; }
+  .sc-progress__fill,
+  .sc-sub__check,
+  .sc-sub__check svg,
+  .sc-sub__label { transition: none; }
+}

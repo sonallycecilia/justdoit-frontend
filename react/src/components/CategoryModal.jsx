@@ -1,37 +1,35 @@
 import { useEffect, useRef, useState } from 'react';
 import Ic, { ICONS } from './Ic';
-import { useCriarCategoria } from '../hooks/useCategories';
+import { CORES_CATEGORIA as CORES } from '../lib/cores';
+import { CAT_GENERICO, useAtualizarCategoria, useCriarCategoria } from '../hooks/useCategories';
 
-const CORES = [
-  'var(--color-cat-teal)',
-  'var(--color-cat-rust)',
-  'var(--color-cat-green)',
-  'var(--color-cat-sage)',
-  'var(--color-cat-purple)',
-  'var(--color-cat-pink)',
-  'var(--color-cat-blue)',
-  'var(--color-cat-terracotta)',
-  'var(--color-cat-plum)',
-];
-
-// Modal "Nova categoria" — cria a categoria de verdade no backend
-// (POST /categories) e invalida a query de categorias ao concluir.
-export default function CategoryModal({ aberto, onFechar }) {
+// Janela de categoria — cria (POST /categories) ou edita (PUT /categories/{id})
+// no backend e invalida as queries ao concluir. Passar `categoria` liga o modo
+// de edição; sem ela, o modal cria uma nova.
+export default function CategoryModal({ aberto, categoria, onFechar }) {
+  const editando = Boolean(categoria);
   const [nome, setNome] = useState('');
   const [cor, setCor] = useState(CORES[0]);
   const [erro, setErro] = useState('');
   const inputRef = useRef(null);
+
   const criar = useCriarCategoria();
+  const atualizar = useAtualizarCategoria();
+  const mutation = editando ? atualizar : criar;
 
   useEffect(() => {
-    if (aberto) {
-      setNome('');
-      setCor(CORES[0]);
-      setErro('');
-      criar.reset();
-      setTimeout(() => inputRef.current?.focus(), 0);
-    }
-  }, [aberto]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!aberto) return;
+    setNome(categoria?.nome || '');
+    // Cor atual da categoria; se ela não estiver na paleta, cai na primeira.
+    setCor(CORES.includes(categoria?.cor) ? categoria.cor : CORES[0]);
+    setErro('');
+    criar.reset();
+    atualizar.reset();
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+  }, [aberto, categoria]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!aberto) return;
@@ -45,19 +43,26 @@ export default function CategoryModal({ aberto, onFechar }) {
   function salvar() {
     const n = nome.trim();
     if (!n) { setErro('Dê um nome à categoria.'); inputRef.current?.focus(); return; }
+    if (editando && n === CAT_GENERICO.nome) {
+      setErro('Este nome é reservado à categoria padrão.');
+      return;
+    }
+    if (editando && n === categoria.nome && cor === categoria.cor) { onFechar(); return; }
+
     setErro('');
-    criar.mutate({ nome: n, cor }, {
+    const dados = editando ? { id: categoria.id, nome: n, cor } : { nome: n, cor };
+    mutation.mutate(dados, {
       onSuccess: onFechar,
-      onError: (e) => setErro(e.message || 'Não foi possível criar a categoria.'),
+      onError: (e) => setErro(e.message || 'Não foi possível salvar a categoria.'),
     });
   }
 
   return (
     <div className="cat-modal">
       <div className="cat-modal__backdrop" onClick={onFechar} />
-      <div className="cat-modal__card" role="dialog" aria-modal="true" aria-label="Nova categoria">
+      <div className="cat-modal__card" role="dialog" aria-modal="true" aria-label={editando ? 'Editar categoria' : 'Nova categoria'}>
         <div className="cat-modal__head">
-          <h3 className="cat-modal__title">Nova categoria</h3>
+          <h3 className="cat-modal__title">{editando ? 'Editar categoria' : 'Nova categoria'}</h3>
           <button className="cat-modal__close" type="button" onClick={onFechar} aria-label="Fechar">
             <Ic d={ICONS.close} />
           </button>
@@ -90,8 +95,8 @@ export default function CategoryModal({ aberto, onFechar }) {
         {erro && <div className="cat-modal__error">{erro}</div>}
         <div className="cat-modal__actions">
           <button className="btn btn--secondary btn--sm" type="button" onClick={onFechar}>Cancelar</button>
-          <button className="btn btn--primary btn--sm" type="button" onClick={salvar} disabled={criar.isPending}>
-            {criar.isPending ? 'Adicionando…' : 'Adicionar'}
+          <button className="btn btn--primary btn--sm" type="button" onClick={salvar} disabled={mutation.isPending}>
+            {mutation.isPending ? 'Salvando…' : (editando ? 'Salvar' : 'Adicionar')}
           </button>
         </div>
       </div>

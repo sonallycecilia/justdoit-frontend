@@ -1,7 +1,7 @@
 // Cliente HTTP único do app. Porta a lógica de renovação de token do front
 // antigo (scripts/core/api.js): 401/403 → tenta /auth/refresh UMA vez (promessa
 // compartilhada entre requisições concorrentes) e refaz a requisição original.
-// Se o próprio refresh falhar, a sessão acabou → limpa e manda para /login.
+// Se o próprio refresh falhar, a sessão acabou → limpa e manda para a home.
 import { endpoints } from './endpoints';
 import { lerSessao, gravarSessao, limparSessao } from '../auth/session';
 
@@ -73,7 +73,7 @@ async function request(method, url, body) {
   } catch (e) {
     // O refresh em si falhou: a sessão acabou de verdade → volta ao login.
     limparSessao();
-    window.location.assign('/login');
+    window.location.assign('/');
     throw e;
   }
   // Refresh OK: refaz a requisição original; se ainda falhar, propaga o erro.

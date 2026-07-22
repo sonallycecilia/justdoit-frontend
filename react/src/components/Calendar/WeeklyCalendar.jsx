@@ -18,6 +18,7 @@ import { useCriarTarefa, useRemoverTarefa, useTarefas, useToggleDone } from '../
 import { fmtHora, useAtualizarBloco, useBlocos, useCriarBloco, usePatchTarefa, useRemoverBloco } from '../../hooks/useTimeBlocks';
 import { prioridadeParaApi } from '../../lib/priority';
 import { toast } from '../../lib/toast';
+import { MESES, MESES_LONGOS } from '../../lib/utils';
 
 // Faixa padrão da grade (6h–22h). É expandida dinamicamente por faixaHoras()
 // quando existe algum evento fora disso (ex.: uma tarefa às 4h), para que ele
@@ -52,9 +53,6 @@ function corCategoria(categorias, ev) {
   const c = (categorias || []).find(x => x.nome === nome);
   return c ? c.cor : `var(--color-cat-${ev.cat || 'generico'})`;
 }
-
-const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-const MESES_LONGOS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
 function gerarDiasSemana(offsetSemanas = 0) {
   const domingo = inicioDomingo();
@@ -124,7 +122,8 @@ function ehPersistido(id) {
    O calendário NÃO recalcula o teto localmente — os moves são otimistas e,
    quando o 400 chega, `aoFalharPorTeto` desfaz a mudança visual e mostra o
    motivo vindo do backend. Outros erros (rede etc.) seguem otimistas. */
-function aoFalharPorTeto(err, reverter) {
+// Exportado para o EventSummary (drawer lateral), que também escreve horário.
+export function aoFalharPorTeto(err, reverter) {
   if (!err || err.status !== 400) return;
   if (typeof reverter === 'function') reverter();
   toast(err.error || err.message || 'Teto biológico atingido: esse dia já está cheio.', 'error');

@@ -47,6 +47,39 @@ export function deIso(iso) {
   return new Date(y, m - 1, d);
 }
 
+// "Bom dia" | "Boa tarde" | "Boa noite"
+export function saudacao(data = new Date()) {
+  const h = data.getHours();
+  if (h >= 5 && h < 12) return 'Bom dia';
+  if (h >= 12 && h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+// Semana (segunda a domingo) que contém dataBase.
+export function intervaloSemana(dataBase) {
+  const d = dataBase ? new Date(dataBase) : new Date();
+  const recuo = d.getDay() === 0 ? 6 : d.getDay() - 1;
+  const seg = new Date(d);
+  seg.setDate(d.getDate() - recuo);
+  seg.setHours(0, 0, 0, 0);
+  const dom = new Date(seg);
+  dom.setDate(seg.getDate() + 6);
+  return {
+    inicio: seg,
+    fim: dom,
+    inicioIso: dataIso(seg),
+    fimIso: dataIso(dom),
+    rotulo: `${seg.getDate()} ${MESES[seg.getMonth()]} – ${dom.getDate()} ${MESES[dom.getMonth()]}`,
+  };
+}
+
+// horas decimais → "2h30" / "3h"
+export function horas(decimal) {
+  const h = Math.floor(decimal);
+  const m = Math.round((decimal - h) * 60);
+  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+}
+
 // Percentual seguro 0–100
 export function pct(parte, total) {
   if (!total) return 0;
@@ -76,6 +109,12 @@ export function formatarTempo(seg) {
   const mm = String(m).padStart(2, '0');
   const ss = String(s).padStart(2, '0');
   return h ? `${String(h).padStart(2, '0')}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+// (14, 30) → "14:30". Não confundir com o fmtHora de hooks/useTimeBlocks,
+// que converte HORAS DECIMAIS (14.5) — o calendário usa fração de hora.
+export function fmtHoraMin(h, m) {
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 // segundos → "25:00" (mm:ss, para o Pomodoro)

@@ -61,7 +61,8 @@ export default function Signup() {
     }),
     onSuccess: (res) => {
       gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken, name: capitalizarNome(nome) });
-      navigate('/todo', { replace: true });
+      // Conta nova cai no setup guiado, como no front antigo.
+      navigate('/onboarding', { replace: true });
     },
     onError: (e) => setErroForm(e.message || 'Erro ao criar conta. Tente novamente.'),
   });
@@ -118,7 +119,7 @@ export default function Signup() {
             <div className="auth__head">
               <div className="auth__eyebrow">Vamos começar</div>
               <h1 className="auth__title">Criar conta</h1>
-              <p className="auth__sub">Já tem uma conta? <Link to="/login">Entrar</Link></p>
+              <p className="auth__sub">Já tem uma conta? <Link to="/">Entrar</Link></p>
             </div>
 
             <form className="auth__form" onSubmit={enviar} noValidate>

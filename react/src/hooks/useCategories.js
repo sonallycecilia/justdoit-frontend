@@ -32,6 +32,32 @@ export function useCriarCategoria() {
   });
 }
 
+export function useAtualizarCategoria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, nome, cor }) => api.put(endpoints.categories.update(id), { name: nome, color: cor }),
+    // As tarefas carregam o categoryId, não o nome: renomear muda o rótulo
+    // exibido, então a lista de tarefas também precisa ser reprocessada.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categorias'] });
+      qc.invalidateQueries({ queryKey: ['tarefas'] });
+    },
+  });
+}
+
+// DELETE /categories/{id} zera o category_id das tarefas da categoria no
+// backend — elas voltam para "Genérico" sozinhas quando a lista é recarregada.
+export function useRemoverCategoria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.remove(endpoints.categories.remove(id)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categorias'] });
+      qc.invalidateQueries({ queryKey: ['tarefas'] });
+    },
+  });
+}
+
 // Resolve nome/cor de uma categoria a partir do categoryId do backend.
 export function categoriaPorId(categorias, id) {
   if (!id) return CAT_GENERICO;
