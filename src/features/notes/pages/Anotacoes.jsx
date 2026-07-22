@@ -162,7 +162,7 @@ export default function Anotacoes() {
             </div>
           )}
 
-          <div>
+          <div className="notes-list">
             {notas?.map((n) => <NoteCard key={n.id} nota={n} />)}
           </div>
         </div>

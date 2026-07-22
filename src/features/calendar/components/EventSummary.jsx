@@ -5,9 +5,11 @@
 // A única responsabilidade extra daqui é manter o BLOCO de tempo do calendário
 // em sincronia quando a hora/data da tarefa muda pelo editor.
 import { Link } from 'react-router-dom';
+import Ic, { ICONS } from '@/components/Ic';
 import TaskEditor from '@/features/tasks/components/TaskEditor';
-import { useAtualizarBloco } from '@/features/calendar/hooks/useTimeBlocks';
+import { fmtHora, useAtualizarBloco } from '@/features/calendar/hooks/useTimeBlocks';
 import { aoFalharPorTeto } from '@/features/calendar/components/WeeklyCalendar';
+import { dataRelativa, deIso } from '@/lib/utils';
 
 function ehBlocoPersistido(id) {
   return typeof id === 'string' && id.indexOf('ext-') !== 0 && id.indexOf('task-') !== 0;
@@ -40,9 +42,15 @@ export default function EventSummary({ ev, dias }) {
   }
 
   return (
-    <div className="evsum" style={{ padding: '16px 20px' }}>
+    <div className="evsum">
+      {/* O chip mostra a posição do BLOCO na grade — é a única informação que
+          o editor não tem, já que ele fala da tarefa, não do agendamento. */}
       <div className="evsum__topbar">
-        <span />
+        <span className="evsum__chip">
+          <Ic d={ICONS.calendar} />
+          {iso ? dataRelativa(deIso(iso)) : 'Sem data'}
+          {!ev.semHora && ev.ini != null && ` · ${fmtHora(ev.ini)}–${fmtHora(ev.fim)}`}
+        </span>
         <div className="evsum__topbar-actions">
           {ev.taskId && (
             <Link className="btn btn--secondary btn--sm" to={`/tasks/${ev.taskId}`}>Ver tarefa completa</Link>
@@ -56,7 +64,7 @@ export default function EventSummary({ ev, dias }) {
         <div className="evsum__card card">
           <section className="evsum__section">
             <div className="evsum__section-head">Bloco sem tarefa vinculada</div>
-            <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+            <p className="evsum__section-text">
               Este bloco de tempo não está ligado a nenhuma tarefa — os campos da
               tarefa ficam disponíveis quando há uma vinculada.
             </p>

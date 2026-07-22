@@ -1,111 +1,36 @@
 /* ============================================================
    JustDoIt — event-summary.css
-   Resumo compacto de evento do calendário.
+   Conteúdo do drawer lateral do calendário.
+
+   O corpo do drawer é o <TaskEditor compacto />, então quase todo
+   o visual vem do task-detail.css. O que sobra aqui é só a casca:
+   topbar, chip do horário do bloco e o card de "sem tarefa".
    ============================================================ */
 
-.evsum { max-width: 560px; padding: var(--space-xl); display: flex; flex-direction: column; gap: var(--space-lg); }
+/* O drawer é redimensionável (380–900px) — nada de max-width aqui,
+   senão o conteúdo para de acompanhar o arrasto da borda. */
+.evsum {
+  padding: var(--space-lg) var(--space-md);
+  display: flex; flex-direction: column; gap: var(--space-lg);
+}
 
-/* Topbar */
-.evsum__topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
-.evsum__back {
+/* Topbar: chip do horário do bloco à esquerda, ações à direita */
+.evsum__topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; }
+.evsum__topbar-actions { display: flex; align-items: center; gap: var(--space-sm); flex: none; }
+
+.evsum__chip {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: var(--font-size-sm); font-weight: var(--weight-medium);
-  color: var(--color-text-muted); text-decoration: none;
-  transition: color var(--duration-fast);
-}
-.evsum__back:hover { color: var(--color-text); }
-.evsum__back svg { width: 16px; height: 16px; }
-.evsum__topbar-actions { display: flex; align-items: center; gap: var(--space-sm); }
-
-/* Cabeçalho: check + título */
-.evsum__head { display: flex; align-items: flex-start; gap: var(--space-md); }
-
-.evsum__check {
-  appearance: none; border: 0; background: transparent; cursor: pointer; padding: 0; flex: none; margin-top: 2px;
-  color: var(--color-text-muted);
-  transition: color var(--duration-fast);
-}
-.evsum__check svg { width: 26px; height: 26px; display: block; }
-.evsum__check:hover { color: var(--color-success); }
-.evsum__check-tick { opacity: 0; transition: opacity var(--duration-fast); }
-.is-done .evsum__check { color: var(--color-success); }
-.is-done .evsum__check-tick { opacity: 1; }
-
-.evsum__title {
-  min-width: 0; overflow-wrap: anywhere; word-break: break-word;
-  font-family: var(--font-display); font-size: var(--font-size-2xl); font-weight: var(--weight-medium);
-  line-height: 1.2; transition: color var(--duration-fast), text-decoration var(--duration-fast);
-}
-.is-done .evsum__title { color: var(--color-text-muted); text-decoration: line-through; text-decoration-color: var(--color-border-strong); }
-
-/* Chips de tempo + data */
-.evsum__chips { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-sm); }
-
-.evsum__time-tag,
-.evsum__date-tag {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px 5px 8px; border-radius: var(--radius-pill);
+  padding: 4px 10px 4px 8px; border-radius: var(--radius-pill);
   background: var(--color-surface-sunken); border: 1px solid var(--color-border);
-  font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-soft);
+  font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-soft);
 }
-.evsum__time-tag svg,
-.evsum__date-tag svg { width: 13px; height: 13px; opacity: .7; }
+.evsum__chip svg { width: 13px; height: 13px; opacity: .7; }
 
-/* Card com controles */
+/* Card do estado "bloco sem tarefa vinculada" */
 .evsum__card { display: flex; flex-direction: column; gap: var(--space-lg); padding: var(--space-lg); }
-
 .evsum__section { display: flex; flex-direction: column; gap: var(--space-sm); }
 .evsum__section-head {
   font-size: var(--font-size-xs); font-family: var(--font-mono);
   text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted);
 }
-
-/* Prioridade */
-.evsum__prio-row { display: flex; gap: 5px; flex-wrap: wrap; }
-.evsum__prio-opt {
-  flex: 1; min-width: 80px; display: flex; align-items: center; justify-content: center; gap: 5px;
-  padding: 6px 8px; border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border-strong); background: var(--color-card);
-  font-size: var(--font-size-xs); font-weight: var(--weight-medium);
-  color: var(--color-text-soft); cursor: pointer; white-space: nowrap;
-  transition: border-color var(--duration-fast), background var(--duration-fast), color var(--duration-fast);
-}
-.evsum__prio-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-
-.evsum__prio-opt[data-prio="urgent"]:hover,
-.evsum__prio-opt[data-prio="urgent"].is-on    { border-color: var(--color-priority-urgent);    color: var(--color-priority-urgent); }
-.evsum__prio-opt[data-prio="important"]:hover,
-.evsum__prio-opt[data-prio="important"].is-on { border-color: var(--color-priority-important); color: var(--color-priority-important); }
-.evsum__prio-opt[data-prio="normal"]:hover,
-.evsum__prio-opt[data-prio="normal"].is-on    { border-color: var(--color-priority-normal);    color: var(--color-priority-normal); }
-.evsum__prio-opt[data-prio="low"]:hover,
-.evsum__prio-opt[data-prio="low"].is-on       { border-color: var(--color-priority-low);       color: var(--color-priority-low); }
-
-.evsum__prio-opt[data-prio="urgent"].is-on    { background: var(--color-priority-urgent-soft); }
-.evsum__prio-opt[data-prio="important"].is-on { background: var(--color-priority-important-soft); }
-.evsum__prio-opt[data-prio="normal"].is-on    { background: var(--color-priority-normal-soft); }
-.evsum__prio-opt[data-prio="low"].is-on       { background: var(--color-priority-low-soft); }
-
-/* Categoria */
-.evsum__cat-picker { display: flex; gap: 6px; flex-wrap: wrap; }
-.evsum__cat-opt {
-  flex: 1; min-width: 90px; display: flex; align-items: center; justify-content: center; gap: 6px;
-  overflow-wrap: anywhere; text-align: center;
-  padding: 7px 12px; border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border-strong); background: var(--color-card);
-  font-size: var(--font-size-sm); font-weight: var(--weight-medium);
-  color: var(--color-text-soft); cursor: pointer;
-  transition: border-color var(--duration-fast), background var(--duration-fast), color var(--duration-fast);
-}
-.evsum__cat-opt:hover { border-color: var(--color-accent); }
-.evsum__cat-opt.is-on { border-color: var(--color-accent); background: var(--color-accent-soft); color: var(--color-text); }
-.evsum__cat-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-
-/* Rodapé: salvar */
-.evsum__save-row { display: flex; align-items: center; gap: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-border); }
-.evsum__saved {
-  font-size: var(--font-size-sm); color: var(--color-success);
-  opacity: 0; transition: opacity var(--duration-fast);
-  pointer-events: none;
-}
-.evsum__saved.is-visible { opacity: 1; }
+.evsum__section-text { font-size: var(--font-size-sm); color: var(--color-text-muted); margin: 0; }

@@ -86,6 +86,16 @@ export function useSalvarNota(taskId) {
   });
 }
 
+// Limpar a nota. O PUT recusa content em branco (@NotBlank no backend), então
+// esvaziar a textarea é DELETE — antes o texto simplesmente voltava no reload.
+export function useApagarNota(taskId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.remove(endpoints.tasks.note(taskId)),
+    onSuccess: () => qc.setQueryData(['nota', taskId], ''),
+  });
+}
+
 // ─── Configuração de módulos ativos ──────────────────────────────────────────
 // O backend guarda 5 flags; "subtarefas" não tem flag própria e é derivado da
 // existência de subtarefas (ligado automaticamente quando há alguma).

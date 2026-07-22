@@ -6,7 +6,7 @@
 // — título/descrição com debounce, o resto na hora. Em modo criação não há id
 // para gravar, então os campos ficam locais e o caller salva via `salvar()`
 // exposto por `onPronto`.
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
 import DatePicker from '@/components/DatePicker';
 import TimePicker from '@/components/TimePicker';
@@ -19,11 +19,11 @@ import {
   MODULOS_PADRAO, cicloParaApi,
   useCiclo, useCriarSubtarefa, useLogarTempo, useModulos, useNota,
   useRegistrarCicloFoco, useRemoverSubtarefa, useSalvarCiclo, useSalvarModulos,
-  useSalvarNota, useSalvarTempoEstimado, useSessoesFoco, useSubtarefas, useTimer,
+  useApagarNota, useSalvarNota, useSalvarTempoEstimado, useSubtarefas, useTimer,
   useToggleSubtarefa, useZerarTempo,
 } from '@/features/tasks/hooks/useTaskDetail';
 import * as Priority from '@/features/tasks/lib/priority';
-import { TIPOS, customValido, fimPrevisto, rotuloCiclo, rotuloCustom } from '@/features/tasks/lib/cycle';
+import { TIPOS, customValido, fimPrevisto, rotuloCiclo } from '@/features/tasks/lib/cycle';
 import { dataIso, dataRelativa, deIso, fmtHoraMin, formatarMinSeg, formatarTempo, hoje, pct } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 
@@ -47,7 +47,6 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const { data: cicloServidor } = useCiclo(taskId);
   const { data: timerServidor } = useTimer(taskId);
   const segundosServidor = timerServidor?.segundos;
-  const { data: sessoesFoco } = useSessoesFoco(taskId);
 
   const criarTarefa = useCriarTarefa();
   const atualizarTarefa = useAtualizarTarefa();
@@ -56,6 +55,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const toggleSub = useToggleSubtarefa(taskId);
   const removerSub = useRemoverSubtarefa(taskId);
   const salvarNota = useSalvarNota(taskId);
+  const apagarNota = useApagarNota(taskId);
   const salvarMods = useSalvarModulos(taskId);
   const salvarCiclo = useSalvarCiclo(taskId);
   const logarTempo = useLogarTempo(taskId);
@@ -84,11 +84,15 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const [subsLocal, setSubsLocal] = useState([]);
   const [subInput, setSubInput] = useState('');
 
-  const preenchido = useRef(false);
+  // Guarda DE QUAL tarefa os campos não controlados foram preenchidos. Antes
+  // era um booleano zerado por um segundo effect, e como effects rodam na ordem
+  // de declaração, trocar de taskId com a tarefa nova já em cache preenchia
+  // nada: o primeiro saía cedo (flag ainda true) e o segundo só limpava depois.
+  const preenchidoDe = useRef(null);
 
   useEffect(() => {
-    if (!taskId || !tarefa || preenchido.current) return;
-    preenchido.current = true;
+    if (!taskId || !tarefa || preenchidoDe.current === taskId) return;
+    preenchidoDe.current = taskId;
     if (tituloRef.current) tituloRef.current.textContent = tarefa.titulo;
     if (descRef.current) descRef.current.textContent = tarefa.descricao || '';
     setDone(tarefa.done);
@@ -99,9 +103,6 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     }
     setPrioridade(tarefa.prioridade || 'normal');
   }, [taskId, tarefa]);
-
-  // Trocar de tarefa no drawer precisa repopular os campos não controlados.
-  useEffect(() => { preenchido.current = false; }, [taskId]);
 
   useEffect(() => {
     if (tarefa && categorias) setCatId(tarefa.categoriaId || 'generico');
@@ -229,8 +230,13 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     setNota(valor);
     if (!taskId) return;
     clearTimeout(notaTimer.current);
-    if (!valor.trim()) return; // backend exige content não-vazio
-    notaTimer.current = setTimeout(() => salvarNota.mutate(valor, { onSuccess: flashSalvo }), 800);
+    // Esvaziar a nota é DELETE: o PUT recusa content em branco (@NotBlank), e
+    // com o `return` que havia aqui apagar o texto não chegava ao backend —
+    // a nota voltava no próximo carregamento.
+    notaTimer.current = setTimeout(() => (valor.trim()
+      ? salvarNota.mutate(valor, { onSuccess: flashSalvo })
+      : apagarNota.mutate(undefined, { onSuccess: flashSalvo, onError: aoErro })
+    ), 800);
   }
   useEffect(() => () => clearTimeout(notaTimer.current), []);
 
@@ -272,11 +278,17 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const [cronRodando, setCronRodando] = useState(false);
   const deltaNaoLogado = useRef(0);
 
+  // `taskId` entra nas deps para ressincronizar ao trocar de tarefa: sem ele,
+  // duas tarefas com o mesmo total de segundos não disparavam o efeito e o
+  // mostrador ficava com o valor da anterior.
   useEffect(() => {
     if (segundosServidor !== undefined && !cronRodando) {
       setCronSegundos(segundosServidor + deltaNaoLogado.current);
     }
-  }, [segundosServidor]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [segundosServidor, taskId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Trocar de tarefa nunca deixa o cronômetro da anterior correndo.
+  useEffect(() => { setCronRodando(false); }, [taskId]);
 
   useEffect(() => {
     if (!cronRodando) return;
@@ -302,58 +314,76 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     if (taskId) zerarTempo.mutate();
   }
 
-  // Ao desmontar com tempo não logado, envia o delta (fire-and-forget).
+  // Ao desmontar — ou ao trocar de tarefa — envia o delta (fire-and-forget).
+  // Zerar o ref é obrigatório: sem isso os mesmos segundos seriam logados de
+  // novo na tarefa seguinte.
   useEffect(() => () => {
     const delta = deltaNaoLogado.current;
-    if (taskId && delta > 0) api.patch(endpoints.tasks.timerLog(taskId), { seconds: delta }).catch(() => {});
+    if (taskId && delta > 0) {
+      deltaNaoLogado.current = 0;
+      api.patch(endpoints.tasks.timerLog(taskId), { seconds: delta }).catch(() => {});
+    }
   }, [taskId]);
 
   // ── Pomodoro ──────────────────────────────────────────────────────────────
-  const [pomo, setPomo] = useState({ fase: 'foco', ciclo: 1, restante: FOCO_MIN * 60, rodando: false });
+  // `focos` conta fases de foco concluídas — é o gatilho da gravação, não um
+  // número exibido. Só cresce; o reset do timer não mexe nele.
+  const [pomo, setPomo] = useState({ fase: 'foco', ciclo: 1, restante: FOCO_MIN * 60, rodando: false, focos: 0 });
   const inicioFocoRef = useRef(null);
-  const ciclosServidor = useMemo(
-    () => (sessoesFoco || []).filter((s) => s.completed && s.sessionType === 'FOCUS').length,
-    [sessoesFoco],
-  );
-  const [ciclosLocais, setCiclosLocais] = useState(0);
-  const ciclosPomodoro = ciclosServidor + (taskId ? 0 : ciclosLocais);
+  const focosGravados = useRef(0);
+  // Ciclos concluídos em /tasks/nova. NÃO é contador de exibição (isso seria
+  // dado de negócio no cliente) — é fila de escrita pendente: o endpoint é
+  // /tasks/{id}/focus-sessions e o id só existe depois do POST, então o
+  // `criar()` esvazia isto logo em seguida, igual faz com subtarefas e nota.
+  const focoPendente = useRef([]);
 
+  // O updater abaixo é PURO de propósito: só calcula o próximo estado. O
+  // StrictMode invoca updaters duas vezes para expor impureza, e enquanto o
+  // POST da sessão de foco morava aqui dentro cada ciclo gravava DUAS sessões
+  // (inflando o foco da Análise). Quem tem efeito colateral é o effect abaixo,
+  // que reage ao contador `focos` e é idempotente via `focosGravados`.
   useEffect(() => {
     if (!pomo.rodando) return;
     const h = setInterval(() => {
       setPomo((p) => {
         if (p.restante > 0) return { ...p, restante: p.restante - 1 };
-        if (p.fase === 'foco') {
-          const startedAt = inicioFocoRef.current || new Date(Date.now() - FOCO_MIN * 60_000);
-          if (taskId) {
-            registrarFoco.mutate({
-              focusMinutes: FOCO_MIN,
-              startedAt: startedAt.toISOString().slice(0, 19),
-              endedAt: new Date().toISOString().slice(0, 19),
-            });
-          } else setCiclosLocais((c) => c + 1);
-          return { ...p, fase: 'pausa', restante: PAUSA_MIN * 60 };
-        }
-        inicioFocoRef.current = new Date();
-        return { fase: 'foco', ciclo: Math.min(p.ciclo + 1, 4), restante: FOCO_MIN * 60, rodando: p.rodando };
+        if (p.fase === 'foco') return { ...p, fase: 'pausa', restante: PAUSA_MIN * 60, focos: p.focos + 1 };
+        return { ...p, fase: 'foco', ciclo: Math.min(p.ciclo + 1, 4), restante: FOCO_MIN * 60 };
       });
     }, 1000);
     return () => clearInterval(h);
-  }, [pomo.rodando, taskId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pomo.rodando]);
+
+  useEffect(() => {
+    if (pomo.focos <= focosGravados.current) return;
+    focosGravados.current = pomo.focos;
+    const sessao = {
+      focusMinutes: FOCO_MIN,
+      startedAt: (inicioFocoRef.current || new Date(Date.now() - FOCO_MIN * 60_000)).toISOString().slice(0, 19),
+      endedAt: new Date().toISOString().slice(0, 19),
+    };
+    inicioFocoRef.current = null; // a próxima fase de foco define o seu início
+    // Com id vai direto; sem id entra na fila e o criar() grava depois.
+    if (taskId) registrarFoco.mutate(sessao);
+    else focoPendente.current.push(sessao);
+  }, [pomo.focos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function togglePomo() {
-    setPomo((p) => {
-      if (!p.rodando && p.fase === 'foco' && p.restante === FOCO_MIN * 60) inicioFocoRef.current = new Date();
-      return { ...p, rodando: !p.rodando };
-    });
+    // Fora do updater: marcar o início é efeito colateral (ver comentário acima).
+    if (!pomo.rodando && pomo.fase === 'foco' && inicioFocoRef.current === null) {
+      inicioFocoRef.current = new Date();
+    }
+    setPomo((p) => ({ ...p, rodando: !p.rodando }));
   }
   function pularFase() {
+    // Pular NÃO registra sessão: o ciclo não foi cumprido.
     setPomo((p) => (p.fase === 'foco'
       ? { ...p, fase: 'pausa', restante: PAUSA_MIN * 60 }
       : { ...p, fase: 'foco', ciclo: Math.min(p.ciclo + 1, 4), restante: FOCO_MIN * 60 }));
   }
   function resetPomo() {
-    setPomo({ fase: 'foco', ciclo: 1, restante: FOCO_MIN * 60, rodando: false });
+    inicioFocoRef.current = null;
+    setPomo((p) => ({ fase: 'foco', ciclo: 1, restante: FOCO_MIN * 60, rodando: false, focos: p.focos }));
   }
 
   const pomoDur = (pomo.fase === 'foco' ? FOCO_MIN : PAUSA_MIN) * 60;
@@ -396,6 +426,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
       hora: hora ? fmtHoraMin(hora.h, hora.m) : null,
     };
     const durMin = dur.h * 60 + dur.m;
+    setCronRodando(false); // congela o cronômetro: o que for salvo é o que está na tela
     setTetoAtingido(false);
     try {
       const resp = await criarTarefa.mutateAsync(dados);
@@ -416,7 +447,20 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
         if (cicloLocal !== 'none' && (cicloLocal !== 'custom' || customValido(cicloCustom))) {
           pendencias.push(api.put(endpoints.tasks.cycleConfig(novoId), cicloParaApi(valorCiclo())));
         }
-        if (durMin > 0) pendencias.push(api.put(endpoints.tasks.timer(novoId), { estimatedMinutes: durMin }));
+        // UM PUT só carregando os dois campos do timer. Nada de somar um
+        // PATCH /timer/log aqui: upsertTimer e logSeconds fazem find-or-create,
+        // e dois writes concorrentes no Promise.all abaixo criariam duas linhas
+        // de timer para a mesma tarefa. O PUT faz merge parcial campo a campo.
+        const segCron = deltaNaoLogado.current;
+        if (durMin > 0 || segCron > 0) {
+          const timer = {};
+          if (durMin > 0) timer.estimatedMinutes = durMin;
+          if (segCron > 0) timer.actualSeconds = segCron; // tarefa nova: define, não incrementa
+          pendencias.push(api.put(endpoints.tasks.timer(novoId), timer));
+        }
+        for (const s of focoPendente.current) {
+          pendencias.push(api.post(endpoints.tasks.focusSessions(novoId), { ...s, sessionType: 'FOCUS', completed: true }));
+        }
         if (Object.values(modsLocal).some(Boolean)) {
           pendencias.push(api.put(endpoints.tasks.moduleConfig(novoId), {
             focusEnabled: modsLocal.foco,
@@ -427,6 +471,9 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
           }));
         }
         await Promise.all(pendencias);
+        // Esvaziam só após gravar, para não duplicar numa segunda tentativa.
+        focoPendente.current = [];
+        deltaNaoLogado.current = 0;
       }
       onCriada?.(novoId);
       return novoId;
@@ -444,7 +491,6 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   }));
 
   const modAtivo = (m) => (m === 'subtarefas' ? subTogglelocal : Boolean(modsLocal[m]));
-  const modsAtivosRotulos = Object.keys(LABEL_MOD).filter(modAtivo).map((m) => LABEL_MOD[m]);
 
   if (taskId && carregandoTarefa) {
     return <div className="empty"><p>Carregando tarefa…</p></div>;
@@ -547,20 +593,10 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
         )}
       </div>
 
-      {taskId && !compacto && (
-        <div className="detail__spec">
-          <SpecItem icone={ICONS.checkCircle} label="Status">
-            <span style={done ? { color: 'var(--color-success)' } : undefined}>{done ? 'Concluída' : 'Aberta'}</span>
-          </SpecItem>
-          <SpecItem icone={ICONS.cycle} label="Recorrência">
-            {cicloLocal === 'none' ? '—' : cicloLocal === 'custom' ? rotuloCustom(cicloCustom) : rotuloCiclo(cicloLocal)}
-          </SpecItem>
-          <SpecItem icone={ICONS.clock} label="Tempo gasto" mono>{formatarTempo(cronSegundos)}</SpecItem>
-          <SpecItem icone={ICONS.target} label="Ciclos Pomodoro" mono>{String(ciclosPomodoro)}</SpecItem>
-          <SpecItem icone={ICONS.list} label="Subtarefas" mono>{feitas} / {subs.length}</SpecItem>
-          <SpecItem icone={ICONS.pencil} label="Módulos ativos">{modsAtivosRotulos.length ? modsAtivosRotulos.join(', ') : '—'}</SpecItem>
-        </div>
-      )}
+      {/* Não existe painel de "especificações" aqui de propósito: cada linha
+          dele repetia algo já visível na tela (status = o check do título,
+          recorrência/tempo/pomodoro = os próprios módulos, subtarefas = a
+          barra nos chips, módulos ativos = a grade logo abaixo). */}
 
       <div className="modules">
         <div className="modules__title">Módulos</div>
@@ -803,14 +839,3 @@ function CicloCustom({ custom, onChange }) {
   );
 }
 
-function SpecItem({ icone, label, mono, children }) {
-  return (
-    <div className="spec-item">
-      <span className="spec-item__ic"><Ic d={icone} /></span>
-      <div className="spec-item__body">
-        <span className="spec-item__label">{label}</span>
-        <span className={`spec-item__value ${mono ? 'spec-item__value--mono' : ''}`}>{children}</span>
-      </div>
-    </div>
-  );
-}

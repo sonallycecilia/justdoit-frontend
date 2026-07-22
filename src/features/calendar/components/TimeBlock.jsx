@@ -18,7 +18,7 @@ export const ICONES_MOD = {
   notas: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6',
 };
 
-export default function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, onDragEnd, dragging, onOpen, onDrawer, onDelete, layout }) {
+export default function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, onDragEnd, dragging, onOpen, onDrawer, onDelete, onToggle, layout }) {
   const wasDragged = useRef(false);
   const top = (ev.ini - startHour) * rowH;
   const height = (ev.fim - ev.ini) * rowH - 4;
@@ -52,39 +52,57 @@ export default function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, on
       title={ev.titulo}
     >
       <span className="timeblock__prio" style={{ background: COR_PRIORIDADE[ev.prio] }}></span>
-      <span className="timeblock__title">{ev.titulo}</span>
-      <span className="timeblock__meta">
-        <span>{ev.semHora ? 'Sem hora' : fmtHora(ev.ini)}</span>
-        {ev.mod && ICONES_MOD[ev.mod] && (
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {ICONES_MOD[ev.mod].split(' M').map((d, i) => <path key={i} d={(i ? 'M' : '') + d} />)}
-          </svg>
+
+      <div className="timeblock__row">
+        {onToggle && ev.taskId && (
+          <button
+            className={`timeblock__check${ev.done ? ' is-on' : ''}`}
+            onClick={(e) => { e.stopPropagation(); onToggle(ev); }}
+            title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          </button>
         )}
-      </span>
-      {onDrawer && (
-        <button
-          className="timeblock__arrow"
-          onClick={(e) => { e.stopPropagation(); onDrawer(ev); }}
-          title="Abrir painel lateral"
-        >
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m9 18 6-6-6-6" />
-          </svg>
-        </button>
-      )}
-      {onDelete && (
-        <button
-          className="timeblock__trash"
-          onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
-          title="Excluir tarefa"
-        >
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 6h18" />
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-          </svg>
-        </button>
-      )}
+
+        <div className="timeblock__content">
+          <span className="timeblock__title">{ev.titulo}</span>
+          <span className="timeblock__meta">
+            <span>{ev.semHora ? 'Sem hora' : fmtHora(ev.ini)}</span>
+            {ev.mod && ICONES_MOD[ev.mod] && (
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {ICONES_MOD[ev.mod].split(' M').map((d, i) => <path key={i} d={(i ? 'M' : '') + d} />)}
+              </svg>
+            )}
+          </span>
+        </div>
+
+        {onDrawer && (
+          <button
+            className="timeblock__arrow"
+            onClick={(e) => { e.stopPropagation(); onDrawer(ev); }}
+            title="Abrir painel lateral"
+          >
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+        )}
+        {onDelete && (
+          <button
+            className="timeblock__trash"
+            onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
+            title="Excluir tarefa"
+          >
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            </svg>
+          </button>
+        )}
+      </div>
     </div>
   );
 }

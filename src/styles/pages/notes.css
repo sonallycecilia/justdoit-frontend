@@ -110,7 +110,8 @@
 }
 
 /* ── Lista / cards ── */
-#notesList {
+/* Era o id #notesList no app vanilla; virou classe na migração pro React. */
+.notes-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: var(--space-lg);

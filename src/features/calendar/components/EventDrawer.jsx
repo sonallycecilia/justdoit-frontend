@@ -32,7 +32,7 @@ export default function EventDrawer({ onClose, children }) {
         </button>
         <span className="cal-drawer__hint">arraste a borda para redimensionar</span>
       </div>
-      <div className="cal-drawer__body" style={{ overflow: 'auto', flex: 1 }}>
+      <div className="cal-drawer__body">
         {children}
       </div>
     </div>

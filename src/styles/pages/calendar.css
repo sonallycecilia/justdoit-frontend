@@ -112,6 +112,45 @@
 .timeblock:hover .timeblock__trash { opacity: .6; }
 .timeblock__trash:hover { opacity: 1 !important; background: rgba(255,255,255,.3); color: var(--color-danger, #d33); }
 
+.timeblock__row { display: flex; align-items: flex-start; gap: 8px; }
+.timeblock__check {
+  flex: none; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-strong); border-radius: 50%; background: transparent; color: currentColor; opacity: 0.9; cursor: pointer; padding: 0; transition: background var(--duration-fast), opacity var(--duration-fast), border-color var(--duration-fast);
+}
+.timeblock__check.is-on { background: var(--color-success); color: #fff; border-color: var(--color-success); }
+.timeblock__check:hover { background: rgba(0,0,0,0.04); border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-border-strong)); }
+.timeblock__check svg { opacity: 0; transition: opacity var(--duration-fast) ease, transform var(--duration-fast) ease; transform: scale(0.8); width: 10px; height: 10px; }
+.timeblock__check.is-on svg { opacity: 1; transform: scale(1); stroke: #fff; }
+.timeblock__content { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+
+.cal-allday__check { flex: none; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-strong); border-radius: 50%; background: transparent; color: currentColor; opacity: 0.65; cursor: pointer; margin: 0 6px; transition: border-color var(--duration-fast), background var(--duration-fast); }
+.cal-allday__check svg { opacity: 0; transform: scale(0.8); transition: opacity var(--duration-fast), transform var(--duration-fast); width: 10px; height: 10px; }
+.cal-allday__check.is-on { background: var(--color-success); border-color: var(--color-success); color: #fff; }
+.cal-allday__check.is-on svg { opacity: 1; transform: scale(1); stroke: #fff; }
+.cal-allday__chip:hover .cal-allday__check { opacity: 1; background: rgba(255,255,255,0.02); }
+
+.cal-pack-row__act--done { flex: none; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--color-border-strong); background: transparent; color: currentColor; transition: background var(--duration-fast), border-color var(--duration-fast); }
+.cal-pack-row__act--done.is-on { background: var(--color-success); border-color: var(--color-success); color: #fff; }
+.cal-pack-row__act--done svg { opacity: 0; transform: scale(0.8); transition: opacity var(--duration-fast), transform var(--duration-fast); width: 10px; height: 10px; }
+.cal-pack-row__act--done.is-on svg { opacity: 1; transform: scale(1); stroke: #fff; }
+
+.cal-monthpop__toggle { flex: none; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-strong); border-radius: 50%; background: transparent; color: currentColor; opacity: .7; cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast); }
+.cal-monthpop__toggle svg { opacity: 0; transform: scale(0.8); transition: opacity var(--duration-fast), transform var(--duration-fast); width: 10px; height: 10px; }
+.cal-monthpop__toggle.is-on { background: var(--color-success); border-color: var(--color-success); color: #fff; }
+.cal-monthpop__toggle.is-on svg { opacity: 1; transform: scale(1); stroke: #fff; }
+.cal-monthpop__item:hover .cal-monthpop__toggle { opacity: 1; background: rgba(255,255,255,0.02); }
+
+/* Hover: destacar borda da bolinha de toggle em todas as vistas */
+.timeblock:hover .timeblock__check { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border-strong)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 12%, transparent); }
+.cal-allday__chip:hover .cal-allday__check { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border-strong)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.cal-pack-row:hover .cal-pack-row__act--done { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border-strong)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.cal-monthpop__item:hover .cal-monthpop__toggle { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border-strong)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent); }
+
+/* Soften effect for filled state hover to keep contrast */
+.timeblock:hover .timeblock__check.is-on { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-success) 12%, transparent); }
+.cal-allday__chip:hover .cal-allday__check.is-on { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-success) 12%, transparent); }
+.cal-pack-row:hover .cal-pack-row__act--done.is-on { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-success) 12%, transparent); }
+.cal-monthpop__item:hover .cal-monthpop__toggle.is-on { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-success) 12%, transparent); }
+
 /* Bloco estreito (tarefas lado a lado num horário compartilhado) */
 .timeblock--multi { padding: 4px 5px 4px 8px; gap: 1px; }
 .timeblock--multi .timeblock__title { -webkit-line-clamp: 3; line-clamp: 3; padding-right: 4px; font-size: 12px; }
@@ -425,7 +464,11 @@ button.cal-month__ev { appearance: none; font: inherit; width: 100%; text-align:
   display: flex; flex-direction: column;
   transform: translateX(100%);
   transition: transform 240ms var(--ease-out, ease);
-  min-width: 280px; max-width: 560px;
+  /* A largura é controlada pelo EventDrawer (inline, clamp 380–900px).
+     NÃO repetir os limites aqui: o max-width de 560px que existia antes
+     travava o arrasto da borda no meio do caminho, sem erro nenhum.
+     O único limite que o CSS impõe é não passar da viewport. */
+  max-width: 95vw;
 }
 .cal-drawer.is-open { transform: translateX(0); }
 
@@ -446,40 +489,13 @@ button.cal-month__ev { appearance: none; font: inherit; width: 100%; text-align:
   padding: var(--space-md) var(--space-md) var(--space-md) calc(var(--space-md) + 8px);
   border-bottom: 1px solid var(--color-border); flex: none;
 }
-.cal-drawer__cat { width: 10px; height: 10px; border-radius: 3px; flex: none; }
-.cal-drawer__title { flex: 1; min-width: 0; overflow-wrap: anywhere; word-break: break-word; font-family: var(--font-display); font-size: var(--font-size-md); font-weight: var(--weight-medium); line-height: 1.3; }
-.cal-drawer__actions { display: flex; align-items: center; gap: 4px; flex: none; }
-
-.cal-drawer__meta {
-  display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
-  padding: var(--space-sm) var(--space-md) var(--space-sm) calc(var(--space-md) + 8px);
-  border-bottom: 1px solid var(--color-border);
-}
-.cal-drawer__chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 9px; border-radius: var(--radius-pill);
-  background: var(--color-surface-sunken); border: 1px solid var(--color-border);
-  font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-soft);
-}
-
-.cal-drawer__body {
-  flex: 1; overflow-y: auto;
-  padding: var(--space-lg) var(--space-md) var(--space-lg) calc(var(--space-md) + 8px);
-  display: flex; flex-direction: column; gap: var(--space-md);
-}
-.cal-drawer__group { display: flex; flex-direction: column; gap: var(--space-sm); }
-.cal-drawer__group-label { font-size: var(--font-size-xs); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); }
-.cal-drawer__prio-row { display: flex; gap: 5px; flex-wrap: wrap; }
-.cal-drawer__cat-row  { display: flex; gap: 6px; flex-wrap: wrap; }
+/* Sem padding: quem entra aqui (o .evsum) é dono do próprio recuo —
+   com padding nos dois o conteúdo ficava com margem dupla. */
+.cal-drawer__body { flex: 1; overflow-y: auto; padding: 0; }
 
 .cal-drawer__hint {
   font-size: var(--font-size-xs); color: var(--color-text-faint);
   font-family: var(--font-mono);
-}
-
-.cal-drawer__frame {
-  flex: 1; border: none; display: block; width: 100%;
-  background: var(--color-surface);
 }
 
 /* Timeblock concluído */

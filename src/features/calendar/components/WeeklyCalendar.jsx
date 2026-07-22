@@ -237,7 +237,7 @@ function faixaHoras(evs) {
 }
 
 /* ── PacotePanel (pacote expandido: tarefas empilhadas) ────── */
-function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDragEnd, onOpen, onDrawer, onDelete, onClose }) {
+function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDragEnd, onOpen, onDrawer, onDelete, onToggle, onClose }) {
   const arrastou = useRef(false);
   const itens = cluster.itens.slice().sort((a, b) => a.ini - b.ini);
   // Ao arrastar, o painel fica translúcido para revelar a grade por baixo. NÃO
@@ -267,6 +267,11 @@ function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDr
               onClick={() => { if (!arrastou.current && onOpen) onOpen(ev); }}
               title={ev.titulo}>
               <span className="cal-pack-row__prio" style={{ background: COR_PRIORIDADE[ev.prio] || 'var(--color-border-strong)' }} />
+              {onToggle && ev.taskId && (
+                <button className={`cal-pack-row__act cal-pack-row__act--done${ev.done ? ' is-on' : ''}`} onClick={e => { e.stopPropagation(); onToggle(ev); }} title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}>
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                </button>
+              )}
               <span className="cal-pack-row__main">
                 <span className="cal-pack-row__title">{ev.titulo}</span>
                 <span className="cal-pack-row__time">{ev.semHora ? 'Sem hora' : fmtHora(ev.ini)}</span>
@@ -274,6 +279,11 @@ function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDr
               {onDrawer && (
                 <button className="cal-pack-row__act" onClick={e => { e.stopPropagation(); onDrawer(ev); }} title="Abrir painel lateral">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                </button>
+              )}
+              {onToggle && ev.taskId && (
+                <button className="cal-pack-row__act cal-pack-row__act--done" onClick={e => { e.stopPropagation(); onToggle(ev); }} title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}>
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                 </button>
               )}
               {onDelete && (
@@ -292,17 +302,17 @@ function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDr
 /* ── ColunaDoDia (eventos de um dia) ─────────────────────────
    modo="pacote" (padrão, vista semana): tarefas do mesmo horário viram um
    pacote expansível. modo="lado" (vista Dia): sobrepostas ficam lado a lado. */
-function ColunaDoDia({ evs, categorias, rowH, startHour, arrastandoId, onDragStart, onDragEnd, onOpen, onDrawer, onDelete, modo }) {
+function ColunaDoDia({ evs, categorias, rowH, startHour, arrastandoId, onDragStart, onDragEnd, onOpen, onDrawer, onDelete, onToggle, modo }) {
   const [aberto, setAberto] = useState({}); // { chaveDoPacote: true }
 
-  function bloco(ev, layout) {
+    function bloco(ev, layout) {
     return (
       <TimeBlock key={ev.id} ev={ev} rowH={rowH} startHour={startHour}
         catCor={corCategoria(categorias, ev)}
         layout={layout}
         dragging={arrastandoId === ev.id}
         onDragStart={onDragStart} onDragEnd={onDragEnd}
-        onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
+        onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onToggle={onToggle} />
     );
   }
 
@@ -326,7 +336,7 @@ function ColunaDoDia({ evs, categorias, rowH, startHour, arrastandoId, onDragSta
             <PacotePanel key={key} cluster={c} top={top} categorias={categorias}
               arrastandoId={arrastandoId}
               onDragStart={onDragStart} onDragEnd={onDragEnd}
-              onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete}
+              onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onToggle={onToggle}
               onClose={() => setAberto(a => ({ ...a, [key]: false }))} />
           );
         }
@@ -360,18 +370,18 @@ function ColunaDoDia({ evs, categorias, rowH, startHour, arrastandoId, onDragSta
    Tarefas com data mas sem horário definido ficam nesta faixa acima da grade,
    por dia. São clicáveis (abrem o modal) e arrastáveis para a grade — ao
    soltar num horário elas ganham hora e descem para o calendário. */
-function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onDrawer, onDelete, onDeletePack, onSoltar, arrastando }) {
+function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onDrawer, onDelete, onDeletePack, onSoltar, arrastando, onToggle }) {
   const arrastou = useRef(false);
   const [aberto, setAberto] = useState({}); // { indiceDaColuna: true }
   const [over, setOver] = useState(null);   // coluna sob o cursor no arraste
 
   // Chip arrastável de uma tarefa sem horário. É uma <div role="button"> (não
   // <button>) para poder aninhar os botões de seta/excluir.
-  function chip(ev) {
+    function chip(ev) {
     const cor = corCategoria(categorias, ev);
     return (
       <div key={ev.id}
-        className={`cal-allday__chip${ev.done ? ' is-done' : ''}`}
+      className={`cal-allday__chip${ev.done ? ' is-done' : ''}`}
         role="button"
         draggable="true"
         style={{ background: `color-mix(in srgb, ${cor} 12%, var(--color-card))`, borderColor: `color-mix(in srgb, ${cor} 40%, transparent)`, color: cor }}
@@ -385,10 +395,20 @@ function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onDr
         onClick={() => { if (!arrastou.current && onOpen) onOpen(ev); }}
         title={ev.titulo}>
         <span className="cal-allday__dot" style={{ background: cor }} />
+        {onToggle && ev.taskId && (
+          <button className={`cal-allday__check${ev.done ? ' is-on' : ''}`} onClick={e => { e.stopPropagation(); onToggle(ev); }} title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+          </button>
+        )}
         <span className="cal-allday__chip-title">{ev.titulo}</span>
         {onDrawer && (
           <button className="cal-allday__arrow" onClick={e => { e.stopPropagation(); onDrawer(ev); }} title="Abrir painel lateral">
             <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+        )}
+        {onToggle && ev.taskId && (
+          <button className="cal-allday__check" onClick={e => { e.stopPropagation(); onToggle(ev); }} title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
           </button>
         )}
         {onDelete && (
@@ -453,7 +473,7 @@ function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onDr
 }
 
 /* ── WeekView ─────────────────────────────────────────────── */
-function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHora, adicionar, onOpen, onDrawer, onDelete, onDeletePack }) {
+function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHora, adicionar, onOpen, onDrawer, onDelete, onDeletePack, onToggle }) {
   const [arrastando, setArrastando] = useState(null);
   const [over, setOver] = useState(null);
 
@@ -515,7 +535,8 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
             categorias={categorias} onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onDeletePack={onDeletePack} onSoltar={soltarSemHora}
             arrastando={!!arrastando}
             onDragStart={setArrastando}
-            onDragEnd={() => { setArrastando(null); setOver(null); }} />
+            onDragEnd={() => { setArrastando(null); setOver(null); }}
+            onToggle={onToggle} />
         )}
       </div>
       <div className="cal-body">
@@ -534,7 +555,7 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
               arrastandoId={arrastando && arrastando.id}
               onDragStart={setArrastando}
               onDragEnd={() => { setArrastando(null); setOver(null); }}
-              onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
+              onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onToggle={onToggle} />
             {d.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - gStart) * ROW_H}px` }}></div>}
           </div>
         ))}
@@ -544,7 +565,7 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
 }
 
 /* ── DayView ──────────────────────────────────────────────── */
-function DayView({ dia, eventos, categorias, onOpen, onDrawer, onDelete, onDeletePack }) {
+function DayView({ dia, eventos, categorias, onOpen, onDrawer, onDelete, onDeletePack, onToggle }) {
   const doDia = eventos.filter(ev => ev.d === dia.idx);
   const semHoraEvs = doDia.filter(ev => ev.semHora);
   const timedEvs = doDia.filter(ev => !ev.semHora);
@@ -564,7 +585,7 @@ function DayView({ dia, eventos, categorias, onOpen, onDrawer, onDelete, onDelet
         {semHoraEvs.length > 0 && (
           <LaneSemHora colunas={[semHoraEvs]} categorias={categorias} onOpen={onOpen}
             onDrawer={onDrawer} onDelete={onDelete} onDeletePack={onDeletePack}
-            onDragStart={() => {}} onDragEnd={() => {}} />
+            onDragStart={() => {}} onDragEnd={() => {}} onToggle={onToggle} />
         )}
       </div>
       <div className="cal-body">
@@ -574,7 +595,7 @@ function DayView({ dia, eventos, categorias, onOpen, onDrawer, onDelete, onDelet
         <div className={`cal-col ${dia.hoje ? 'is-today' : ''}`} style={{ height: `${(gEnd - gStart) * ROW_H}px` }}>
           <ColunaDoDia evs={timedEvs} categorias={categorias} rowH={ROW_H} startHour={gStart} modo="lado"
             arrastandoId={null} onDragStart={() => {}} onDragEnd={() => {}}
-            onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} />
+            onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onToggle={onToggle} />
           {dia.hoje && <div className="cal-now" style={{ top: `${((() => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; })() - gStart) * ROW_H}px` }}></div>}
         </div>
       </div>
@@ -583,7 +604,7 @@ function DayView({ dia, eventos, categorias, onOpen, onDrawer, onDelete, onDelet
 }
 
 /* ── MonthDayPopover (todas as tarefas de um dia, no mês) ──── */
-function MonthDayPopover({ iso, num, rect, eventos, categorias, arrastandoId, onDragStart, onDragEnd, onOpen, onClose }) {
+function MonthDayPopover({ iso, num, rect, eventos, categorias, arrastandoId, onDragStart, onDragEnd, onOpen, onClose, onToggle }) {
   const evs = eventos.filter(ev => ev.iso === iso);
   const arrastando = !!arrastandoId;
   const top = Math.max(8, Math.min(rect.top, window.innerHeight - 340));
@@ -599,15 +620,20 @@ function MonthDayPopover({ iso, num, rect, eventos, categorias, arrastandoId, on
         <div className="cal-monthpop__list">
           {evs.map(ev => (
             <div key={ev.id}
-              className={`cal-monthpop__item${ev.done ? ' is-done' : ''}${arrastandoId === ev.id ? ' is-dragging' : ''}`}
-              draggable
-              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.id); onDragStart(ev.id); }}
-              onDragEnd={onDragEnd}
-              onClick={() => { onClose(); onOpen(ev); }}
-              title={ev.titulo}>
-              <span className="cal-monthpop__dot" style={{ background: corCategoria(categorias, ev) }} />
-              <span className="cal-monthpop__item-title">{ev.titulo}</span>
-            </div>
+                  className={`cal-monthpop__item${ev.done ? ' is-done' : ''}${arrastandoId === ev.id ? ' is-dragging' : ''}`}
+                  draggable
+                  onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.id); onDragStart(ev.id); }}
+                  onDragEnd={onDragEnd}
+                  onClick={() => { onClose(); onOpen(ev); }}
+                  title={ev.titulo}>
+                  <span className="cal-monthpop__dot" style={{ background: corCategoria(categorias, ev) }} />
+                  {onToggle && ev.taskId && (
+                    <button className={`cal-monthpop__toggle${ev.done ? ' is-on' : ''}`} onClick={e => { e.stopPropagation(); onToggle(ev); }} title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}>
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                    </button>
+                  )}
+                  <span className="cal-monthpop__item-title">{ev.titulo}</span>
+                </div>
           ))}
         </div>
       </div>
@@ -616,7 +642,7 @@ function MonthDayPopover({ iso, num, rect, eventos, categorias, arrastandoId, on
 }
 
 /* ── MonthView ────────────────────────────────────────────── */
-function MonthView({ mesData, eventos, categorias, onOpen, mover }) {
+function MonthView({ mesData, eventos, categorias, onOpen, mover, onToggle }) {
   const [arrastando, setArrastando] = useState(null); // id do evento em arraste
   const [over, setOver] = useState(null);             // iso do dia sob o cursor
   const [expandido, setExpandido] = useState(null);   // { iso, num, rect } popover
@@ -670,7 +696,7 @@ function MonthView({ mesData, eventos, categorias, onOpen, mover }) {
         <MonthDayPopover iso={expandido.iso} num={expandido.num} rect={expandido.rect}
           eventos={eventos} categorias={categorias} arrastandoId={arrastando}
           onDragStart={setArrastando} onDragEnd={() => { setArrastando(null); setOver(null); }}
-          onOpen={onOpen} onClose={() => setExpandido(null)} />
+          onOpen={onOpen} onClose={() => setExpandido(null)} onToggle={onToggle} />
       )}
     </div>
   );
@@ -1143,6 +1169,16 @@ export default function WeeklyCalendar({ onDrawer }) {
     setConfirmarEv(null);
   }
 
+  // Alterna o estado concluído de uma tarefa a partir do calendário.
+  function toggleEvento(ev) {
+    const novo = !ev.done;
+    setEventos(prev => (prev || []).map(e => (e.id === ev.id ? { ...e, done: novo } : e)));
+    setEventosMes(prev => (prev || []).map(e => (e.id === ev.id ? { ...e, done: novo } : e)));
+    if (ev.taskId) {
+      toggleDone.mutateAsync({ id: ev.taskId, concluir: novo }).catch(() => {});
+    }
+  }
+
   function openModal(ev) { setModalEv(ev); }
   function openDrawer(ev) { if (onDrawer) { setModalEv(null); onDrawer(ev, dias); } }
 
@@ -1230,9 +1266,9 @@ export default function WeeklyCalendar({ onDrawer }) {
         </div>
 
         <div className="cal-scroll">
-          {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} moverSemHora={moverParaSemHora} agendarSemHora={agendarSemHora} adicionar={adicionar} onOpen={openModal} onDrawer={temDrawer ? openDrawer : undefined} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} />}
-          {vista === 'dia' && <DayView dia={diaAtual} eventos={eventos} categorias={categorias} onOpen={openModal} onDrawer={temDrawer ? openDrawer : undefined} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} />}
-          {vista === 'mes' && <MonthView mesData={mesData} eventos={eventosMes} categorias={categorias} onOpen={openModal} mover={moverMes} />}
+          {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} moverSemHora={moverParaSemHora} agendarSemHora={agendarSemHora} adicionar={adicionar} onOpen={openModal} onDrawer={temDrawer ? openDrawer : undefined} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} onToggle={toggleEvento} />}
+          {vista === 'dia' && <DayView dia={diaAtual} eventos={eventos} categorias={categorias} onOpen={openModal} onDrawer={temDrawer ? openDrawer : undefined} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} onToggle={toggleEvento} />}
+          {vista === 'mes' && <MonthView mesData={mesData} eventos={eventosMes} categorias={categorias} onOpen={openModal} mover={moverMes} onToggle={toggleEvento} />}
         </div>
 
         <div className="cal-legend">
