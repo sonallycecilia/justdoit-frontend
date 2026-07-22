@@ -1,5 +1,6 @@
 .vscode/
 .claude/
+.github/
 *.key
 *.pem
 *.ppk
@@ -7,5 +8,5 @@ dev.
 __pycache__/
 *.pyc
 dev.py
-react/node_modules/
-react/dist/
+node_modules/
+dist/

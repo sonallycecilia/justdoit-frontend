@@ -1,8 +1,8 @@
 name: Deploy (GitHub Pages)
 
-# Publica o app React de react/ no GitHub Pages.
+# Publica o app React no GitHub Pages.
 # O CNAME e o 404.html (fallback de SPA) saem do build: o CNAME vem de
-# react/public/ e o 404.html é gerado pelo plugin fallbackSpa do vite.config.js.
+# public/ e o 404.html é gerado pelo plugin fallbackSpa do vite.config.js.
 
 on:
   push:
@@ -22,9 +22,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: react
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +29,6 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: react/package-lock.json
 
       - run: npm ci
       - run: npm run build
@@ -40,7 +36,7 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: react/dist
+          path: dist
 
   deploy:
     needs: build

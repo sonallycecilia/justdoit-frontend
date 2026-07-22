@@ -19,19 +19,19 @@ docs/automações/local.py. Agora a infra sobe via docker-compose e cada serviç
 via ./gradlew :services:<svc>:bootRun — este script orquestra os dois.
 
 Nota (2026-07-21): o app vanilla da raiz foi aposentado — o front agora é só o
-app React (Vite) em react/. Os comandos `start-react`/`react` viraram
-`start`/`front`. Ver react/CLAUDE.md.
+app React (Vite). Os comandos `start-react`/`react` viraram `start`/`front`.
+
+Nota (2026-07-22): o app React saiu de react/ e virou a raiz do repo, então este
+script roda o `npm run dev` no próprio diretório dele. Ver CLAUDE.md.
 """
 import os
 import sys
 import subprocess
 import webbrowser
 
-# Raiz do frontend (onde este script está)
+# Raiz do frontend (onde este script está) — é também a raiz do app React/Vite,
+# desde que o app foi promovido de react/ para a raiz do repo.
 FRONT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Front novo (React/Vite), subpasta deste mesmo repo.
-REACT_DIR = os.path.join(FRONT_DIR, "react")
 
 # Backend: projeto irmão. Ajuste aqui se estiver em outro lugar.
 BACKEND_DIR = os.path.abspath(os.path.join(FRONT_DIR, "..", "JustDoIt"))
@@ -93,18 +93,18 @@ def start_services():
 def serve_front():
     """Sobe o app React (Vite) via `npm run dev`, em janela própria. A porta 3000
     é obrigatória — o CORS do backend só aceita essa origem."""
-    if not os.path.isdir(REACT_DIR):
-        print(f"[ERRO] Não encontrei o app React em:\n  {REACT_DIR}")
+    if not os.path.isfile(os.path.join(FRONT_DIR, "package.json")):
+        print(f"[ERRO] Não encontrei o package.json do app React em:\n  {FRONT_DIR}")
         sys.exit(1)
     print(f"\n[FRONT] Servindo o app React (Vite) em http://localhost:{PORT}")
     npm = "npm.cmd" if sys.platform == "win32" else "npm"
     if sys.platform == "win32":
         subprocess.Popen(
             f'start "justdoit-react" cmd /k "{npm} run dev"',
-            cwd=REACT_DIR, shell=True
+            cwd=FRONT_DIR, shell=True
         )
     else:
-        subprocess.Popen([npm, "run", "dev"], cwd=REACT_DIR)
+        subprocess.Popen([npm, "run", "dev"], cwd=FRONT_DIR)
     webbrowser.open(f"http://localhost:{PORT}")
 
 
