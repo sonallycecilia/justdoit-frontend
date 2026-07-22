@@ -1,6 +1,10 @@
 // Ícone SVG inline no padrão do design system (stroke currentColor).
 // `d` recebe o(s) path(s) internos como string — os mesmos usados no front
 // antigo — evitando reescrever cada SVG em JSX.
+//
+// ⚠ SEGURANÇA: `d` vai direto para dangerouslySetInnerHTML. Só pode receber
+// literal do código (ICONS abaixo ou constante local do próprio componente).
+// NUNCA passar aqui algo vindo do usuário ou da API — seria XSS direto.
 export default function Ic({ d, size, style, className, strokeWidth = 2 }) {
   return (
     <svg

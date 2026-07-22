@@ -1,7 +1,13 @@
 /* JustDoIt — vitrine animada da landing (React-only).
    Carrossel estilo menu: a cena em foco fica centralizada e as vizinhas
-   aparecem menores e esmaecidas nas laterais. Demonstra funcionalidades
-   reais: Pomodoro, subtarefas e ciclo de repetição. */
+   aparecem menores e esmaecidas nas laterais. Demonstra os módulos REAIS da
+   tarefa: Foco, Subtarefas, Ciclo, Prioridade, Tempo, Notas e Categorias.
+
+   REGRA DESTE ARQUIVO: as cenas reusam a marcação e as classes dos módulos de
+   verdade (task-detail.css e o .cat-filter do todo.css). Tudo abaixo de
+   "Encolhimento das cenas" só ENCOLHE aquilo para caber num card de ~270px —
+   nunca redesenha. Se um módulo mudar de cara no editor, a vitrine muda junto;
+   o que precisa de revisão aqui é só o tamanho. */
 
 .showcase { position: relative; }
 
@@ -60,6 +66,9 @@
   display: flex;
   align-items: center;
   overflow: hidden;
+  /* Vitrine, não formulário: os botões e campos das cenas são figurantes.
+     Sem isto o visitante clicaria em "Pausar" e nada aconteceria. */
+  pointer-events: none;
 }
 .showcase__cena { width: 100%; animation: showcase-entra .45s var(--ease-out) both; }
 @keyframes showcase-entra {
@@ -90,11 +99,11 @@
 
 /* Indicador embaixo */
 .showcase__dots {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
   margin-top: 14px;
 }
 .showcase__dot {
-  width: 24px; height: 4px; border-radius: var(--radius-pill);
+  width: 20px; height: 4px; border-radius: var(--radius-pill);
   background: var(--color-border-strong); border: 0; padding: 0;
   cursor: pointer; transition: background var(--duration-fast);
 }
@@ -102,79 +111,80 @@
 .showcase__dot.is-on { background: var(--color-accent); }
 .showcase__legenda { text-align: center; margin-top: 8px; font-size: var(--font-size-sm); color: var(--color-text-muted); }
 
-/* ── Cena: Pomodoro ─────────────────────────────────────────────────────── */
-.sc-foco { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
-.sc-foco .pomo__ring { width: 96px; height: 96px; }
-.sc-foco .pomo__ring::before { inset: 9px; }
-.sc-foco__tarefa { font-size: var(--font-size-sm); color: var(--color-text); font-weight: var(--weight-medium); }
-.sc-foco__desc { font-size: var(--font-size-xs); color: var(--color-text-soft); line-height: 1.5; margin: 0; }
-.sc-foco__ciclos { display: flex; gap: 5px; }
-.sc-foco__pip { width: 18px; height: 4px; border-radius: var(--radius-pill); background: var(--color-surface-sunken); }
-.sc-foco__pip.is-on { background: var(--color-accent); }
+/* ════════════════════════════════════════════════════════════════════════
+   Encolhimento das cenas
+   Só medidas. Cores, bordas, raios e estados (.is-on, .is-done) vêm dos
+   módulos reais — não redeclarar nada disso aqui.
+   ════════════════════════════════════════════════════════════════════════ */
 
-/* ── Cena: Subtarefas ───────────────────────────────────────────────────── */
-.sc-sub__titulo { font-size: var(--font-size-sm); font-weight: var(--weight-medium); margin-bottom: 10px; }
-.sc-sub__lista { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
-.sc-sub__item { display: flex; align-items: center; gap: 9px; }
-.sc-sub__check {
-  width: 16px; height: 16px; flex: none;
-  border-radius: 50%; border: 1.5px solid var(--color-border-strong);
-  display: grid; place-items: center;
-  transition: background var(--duration-base), border-color var(--duration-base);
-}
-.sc-sub__check svg { width: 10px; height: 10px; color: #fff; opacity: 0; transition: opacity var(--duration-base); }
-.sc-sub__item.is-done .sc-sub__check { background: var(--color-success); border-color: var(--color-success); }
-.sc-sub__item.is-done .sc-sub__check svg { opacity: 1; }
-.sc-sub__label { font-size: var(--font-size-xs); color: var(--color-text-soft); transition: color var(--duration-base); }
-.sc-sub__item.is-done .sc-sub__label { color: var(--color-text-muted); text-decoration: line-through; text-decoration-color: var(--color-border-strong); }
+/* Legenda curta que algumas cenas usam no rodapé do card. */
+.sc-legenda { margin: 10px 0 0; font-size: var(--font-size-xs); color: var(--color-text-soft); line-height: 1.5; }
 
-/* ── Cena: Ciclo ────────────────────────────────────────────────────────── */
-.sc-ciclo__tag {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--font-mono); font-size: 10px;
-  color: var(--color-accent); background: var(--color-accent-soft);
-  padding: 4px 9px; border-radius: var(--radius-pill); margin-bottom: 12px;
-}
-.sc-ciclo__tag svg { width: 11px; height: 11px; }
-.sc-ciclo__card {
-  display: flex; align-items: center; gap: 9px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border); border-radius: var(--radius-md);
-  background: var(--color-surface);
-  /* Cada ocorrência ENTRA animada (a key do elemento remonta a cada volta).
-     Nada de animação de saída parando em opacity:0 — isso deixava o card
-     invisível por quase um segundo a cada ciclo, parecendo quebrado. */
-  animation: sc-ciclo-entra .45s var(--ease-out) both;
-}
-@keyframes sc-ciclo-entra {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: none; }
-}
-.sc-ciclo__card.is-done { border-color: var(--color-success); }
-/* O tick reusa .sc-sub__check, mas a regra que o acende é escopada em
-   .sc-sub__item — que não existe aqui. Daí o par abaixo. */
-.sc-ciclo__card.is-done .sc-sub__check { background: var(--color-success); border-color: var(--color-success); }
-.sc-ciclo__card.is-done .sc-sub__check svg { opacity: 1; }
-.sc-ciclo__t { flex: 1; font-size: var(--font-size-xs); color: var(--color-text); }
-.sc-ciclo__card.is-done .sc-ciclo__t { text-decoration: line-through; color: var(--color-text-muted); }
-.sc-ciclo__data { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
-.sc-ciclo__prox { margin-top: 10px; font-size: var(--font-size-xs); color: var(--color-text-soft); }
-.sc-ciclo__prox strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+/* ── Foco (.pomo do TaskEditor) ─────────────────────────────────────────── */
+/* Empilhado, como o próprio módulo já faz abaixo de 880px. */
+.showcase__cena .pomo { flex-direction: column; align-items: center; gap: 10px; }
+.showcase__cena .pomo__ring { width: 92px; height: 92px; }
+.showcase__cena .pomo__ring::before { inset: 9px; }
+.showcase__cena .pomo__time { font-size: var(--font-size-lg); }
+.showcase__cena .pomo__side { flex: none; width: 100%; text-align: center; }
+.showcase__cena .pomo__side p { font-size: var(--font-size-xs); line-height: 1.5; }
+.showcase__cena .pomo__actions { justify-content: center; margin-top: 10px; gap: 6px; }
 
-/* Barra de progresso da cena de subtarefas */
-.sc-progress { display: flex; align-items: center; gap: 9px; }
-.sc-progress__track { flex: 1; height: 5px; border-radius: var(--radius-pill); background: var(--color-surface-sunken); overflow: hidden; }
-.sc-progress__fill { height: 100%; border-radius: var(--radius-pill); background: var(--color-accent); transition: width var(--duration-base) var(--ease-out); }
-.sc-progress__fill--done { background: var(--color-success); }
-.sc-progress__n { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
+/* ── Subtarefas (.subtask do TaskEditor) ────────────────────────────────── */
+.showcase__cena .subtasks__progress { margin-bottom: 10px; gap: 8px; }
+.showcase__cena .progress__track { height: 5px; }
+.showcase__cena .subtask { padding: 6px 0; gap: 9px; }
+.showcase__cena .subtask__check { width: 16px; height: 16px; }
+.showcase__cena .subtask__check svg { width: 10px; height: 10px; }
+.showcase__cena .subtask__label { font-size: var(--font-size-xs); }
+
+/* ── Ciclo (.cycle-opts do TaskEditor) ──────────────────────────────────── */
+.showcase__cena .cycle-opts { gap: 5px; }
+.showcase__cena .cycle-opt { padding: 4px 9px; font-size: var(--font-size-xs); }
+.showcase__cena .cycle-custom__summary { margin-top: 12px; font-size: var(--font-size-xs); }
+.showcase__cena .cycle-custom__summary strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+
+/* ── Prioridade (.prio-picker do TaskEditor) ────────────────────────────── */
+/* Linha de contexto: o nome da tarefa com a pílula que muda junto. */
+.sc-tarefa { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.sc-tarefa__nome { flex: 1; min-width: 0; font-size: var(--font-size-sm); color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A pílula remonta pela key a cada troca de nível: animação de ENTRADA, nunca
+   de saída terminando em opacity:0 (foi o que já deixou o card do Ciclo
+   invisível por quase um segundo). */
+.sc-tarefa .badge { animation: showcase-entra .3s var(--ease-out) both; }
+.showcase__cena .prio-picker { gap: 6px; }
+.showcase__cena .prio-opt { padding: 5px 10px; font-size: var(--font-size-xs); }
+.showcase__cena .prio-opt__dot { width: 8px; height: 8px; }
+
+/* ── Tempo (.timer do TaskEditor) ───────────────────────────────────────── */
+.showcase__cena .timer { flex-direction: column; align-items: center; gap: 14px; }
+.showcase__cena .timer__display { font-size: var(--font-size-2xl); }
+.showcase__cena .timer__actions { gap: 6px; }
+
+/* ── Notas (.notes-area do TaskEditor) ──────────────────────────────────── */
+.sc-notas { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.showcase__cena .notes-area {
+  min-height: 150px; padding: 10px 12px; resize: none;
+  font-size: var(--font-size-xs); line-height: 1.6;
+}
+
+/* ── Categorias (.cat-filter do CategorySelect) ─────────────────────────── */
+/* O menu real é absoluto e some ao fechar; na vitrine fica aberto e no fluxo. */
+.showcase__cena .cat-filter { display: block; }
+.showcase__cena .cat-filter__btn { padding: 5px 8px 5px 10px; font-size: var(--font-size-xs); }
+.showcase__cena .cat-filter__menu {
+  position: static; min-width: 0; max-width: none; max-height: none;
+  margin-top: 8px; box-shadow: none; padding: 4px;
+}
+.showcase__cena .cat-filter__item { padding: 6px 8px; font-size: var(--font-size-xs); }
+.showcase__cena .cat-filter__check svg { width: 13px; height: 13px; }
 
 /* Quem pediu menos movimento não recebe animação nenhuma. */
 @media (prefers-reduced-motion: reduce) {
   .showcase__cena,
-  .sc-ciclo__card { animation: none; }
+  .sc-tarefa .badge { animation: none; }
   .showcase__card { transition: none; }
-  .sc-progress__fill,
-  .sc-sub__check,
-  .sc-sub__check svg,
-  .sc-sub__label { transition: none; }
+  .showcase__cena .progress__fill,
+  .showcase__cena .subtask__check,
+  .showcase__cena .subtask__check svg { transition: none; }
 }

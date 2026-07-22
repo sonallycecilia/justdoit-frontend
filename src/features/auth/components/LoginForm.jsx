@@ -13,11 +13,18 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [verSenha, setVerSenha] = useState(false);
+  // Decide o prazo do refresh token no backend E onde os tokens são guardados
+  // aqui: localStorage (sobrevive ao navegador fechar) ou sessionStorage.
+  const [lembrar, setLembrar] = useState(true);
 
   const login = useMutation({
-    mutationFn: () => api.post(endpoints.auth.login, { email: email.trim(), password: senha }),
+    mutationFn: () => api.post(endpoints.auth.login, {
+      email: email.trim(),
+      password: senha,
+      rememberMe: lembrar,
+    }),
     onSuccess: (res) => {
-      gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken });
+      gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken }, { lembrar });
       navigate('/visao-geral', { replace: true });
     },
   });
@@ -78,7 +85,13 @@ export default function LoginForm() {
         </div>
 
         <div className="auth__rowend">
-          <label className="checkline"><input type="checkbox" defaultChecked /> Manter conectado</label>
+          <label className="checkline">
+            <input
+              type="checkbox"
+              checked={lembrar}
+              onChange={(e) => setLembrar(e.target.checked)}
+            /> Manter conectado
+          </label>
           <a className="auth__forgot">Esqueceu a senha?</a>
         </div>
 

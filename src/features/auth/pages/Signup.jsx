@@ -60,7 +60,12 @@ export default function Signup() {
       birthDate: dataIso(nascimento),
     }),
     onSuccess: (res) => {
-      gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken, name: capitalizarNome(nome) });
+      // Conta nova nasce como sessão curta (equivalente ao "Manter conectado"
+      // desmarcado), igual ao prazo que o /auth/register emite.
+      gravarSessao(
+        { accessToken: res.accessToken, refreshToken: res.refreshToken, name: capitalizarNome(nome) },
+        { lembrar: false },
+      );
       // Conta nova cai no setup guiado, como no front antigo.
       navigate('/onboarding', { replace: true });
     },

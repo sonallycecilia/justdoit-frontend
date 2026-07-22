@@ -1,22 +1,44 @@
 // Vitrine animada da landing — substitui o mock estático "Hoje".
 // Carrossel estilo menu: a cena em foco fica centralizada e as vizinhas
-// aparecem menores e esmaecidas nas laterais. Passa sozinha em looping por
-// três funcionalidades REAIS (Pomodoro, subtarefas e ciclo de repetição).
+// aparecem menores e esmaecidas nas laterais. Passa sozinha em looping pelos
+// SEIS módulos de tarefa (Foco, Subtarefas, Ciclo, Prioridade, Tempo, Notas)
+// mais as Categorias.
+//
+// FIDELIDADE: cada cena usa a MESMA marcação e as MESMAS classes do módulo real
+// do `TaskEditor` (.pomo, .subtask, .cycle-opts, .prio-picker, .timer,
+// .notes-area) e do `CategorySelect` (.cat-filter*). Nada de componente paralelo
+// com visual próprio: mexeu no CSS do módulo, a vitrine acompanha de graça.
+// O que `landing-showcase.css` faz é só encolher isso para caber no card —
+// nunca redesenhar.
 //
 // Os timers são só de demonstração: rodam acelerados para a cena caber em
 // poucos segundos. A lógica de verdade vive em TaskEditor/useTaskDetail.
 import { useEffect, useState } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
-import { formatarMinSeg } from '@/lib/utils';
+import * as Priority from '@/features/tasks/lib/priority';
+import { TIPOS, rotuloCiclo } from '@/features/tasks/lib/cycle';
+import { formatarMinSeg, formatarTempo, pct } from '@/lib/utils';
 
-const DURACAO_CENA = 7000; // ms que cada cena fica em foco
+const DURACAO_CENA = 5500; // ms que cada cena fica em foco
 
 // Respeita quem pediu menos movimento no sistema: sem auto-avanço e sem loop.
 function usaMenosMovimento() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
-/* ── Cena 1: Pomodoro ─────────────────────────────────────────────────────── */
+// Avança um índice em looping enquanto `animar` estiver ligado. Todas as cenas
+// que só trocam de item usam isto em vez de repetir o mesmo setInterval.
+function useCiclagem(total, intervalo, animar) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (!animar) return;
+    const h = setInterval(() => setI((n) => (n + 1) % total), intervalo);
+    return () => clearInterval(h);
+  }, [total, intervalo, animar]);
+  return i;
+}
+
+/* ── Cena 1: Foco (Pomodoro) ──────────────────────────────────────────────── */
 const FOCO_TOTAL = 25 * 60;
 
 function CenaFoco({ animar }) {
@@ -31,24 +53,23 @@ function CenaFoco({ animar }) {
     return () => clearInterval(h);
   }, [animar]);
 
-  const pct = ((FOCO_TOTAL - restante) / FOCO_TOTAL) * 100;
-  // Um "pip" aceso a cada quarto do ciclo, como os 4 blocos do Pomodoro.
-  const ciclos = Math.min(4, Math.floor(pct / 25) + 1);
+  const p = ((FOCO_TOTAL - restante) / FOCO_TOTAL) * 100;
+  const ciclo = Math.min(4, Math.floor(p / 25) + 1);
 
   return (
-    <div className="sc-foco">
-      <div className="pomo__ring" style={{ '--pct': pct.toFixed(1) }}>
+    <div className="pomo">
+      <div className="pomo__ring" style={{ '--pct': p.toFixed(1) }}>
         <div className="pomo__inner">
           <div className="pomo__time">{formatarMinSeg(restante)}</div>
-          <div className="pomo__phase">Foco</div>
+          <div className="pomo__phase">Foco · ciclo {ciclo}/4</div>
         </div>
       </div>
-      <div className="sc-foco__tarefa">Revisar a proposta</div>
-      <p className="sc-foco__desc">Blocos de 25 minutos com pausas curtas.</p>
-      <div className="sc-foco__ciclos" aria-hidden="true">
-        {[1, 2, 3, 4].map((n) => (
-          <span key={n} className={`sc-foco__pip ${n <= ciclos ? 'is-on' : ''}`} />
-        ))}
+      <div className="pomo__side">
+        <p className="text-soft" style={{ margin: 0 }}>Blocos de 25 minutos com pausas curtas.</p>
+        <div className="pomo__actions">
+          <button className="btn btn--primary btn--sm" type="button" tabIndex={-1}>Pausar</button>
+          <button className="btn btn--ghost btn--sm" type="button" tabIndex={-1}>Pular fase</button>
+        </div>
       </div>
     </div>
   );
@@ -65,32 +86,30 @@ function CenaSubtarefas({ animar }) {
     const h = setInterval(() => {
       // Completa uma a uma e recomeça depois de um respiro no 100%.
       setFeitas((n) => (n >= SUBS.length + 1 ? 0 : n + 1));
-    }, 1100);
+    }, 900);
     return () => clearInterval(h);
   }, [animar]);
 
   const marcadas = Math.min(feitas, SUBS.length);
-  const pct = Math.round((marcadas / SUBS.length) * 100);
+  const p = pct(marcadas, SUBS.length);
 
   return (
     <div>
-      <div className="sc-sub__titulo">Preparar a proposta</div>
-      <div className="sc-sub__lista">
+      <div className="subtasks__progress">
+        <div className="progress">
+          <div className="progress__track">
+            <div className={`progress__fill ${p === 100 ? 'progress__fill--success' : ''}`} style={{ width: `${p}%` }} />
+          </div>
+        </div>
+        <span className="subtasks__count">{marcadas}/{SUBS.length}</span>
+      </div>
+      <div>
         {SUBS.map((s, i) => (
-          <div className={`sc-sub__item ${i < marcadas ? 'is-done' : ''}`} key={s}>
-            <span className="sc-sub__check"><Ic d={ICONS.check} strokeWidth={3} /></span>
-            <span className="sc-sub__label">{s}</span>
+          <div className={`subtask ${i < marcadas ? 'is-done' : ''}`} key={s}>
+            <span className="subtask__check"><Ic d={ICONS.check} strokeWidth={3} /></span>
+            <span className="subtask__label">{s}</span>
           </div>
         ))}
-      </div>
-      <div className="sc-progress">
-        <div className="sc-progress__track">
-          <div
-            className={`sc-progress__fill ${pct === 100 ? 'sc-progress__fill--done' : ''}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <span className="sc-progress__n">{marcadas}/{SUBS.length}</span>
       </div>
     </div>
   );
@@ -98,58 +117,158 @@ function CenaSubtarefas({ animar }) {
 
 /* ── Cena 3: Ciclo de repetição ───────────────────────────────────────────── */
 const MESES_CURTOS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+// Cenas mostram só os ciclos de período fixo: "Não repete" não tem próxima data
+// e "Personalizado" abre um formulário que não cabe no card.
+const CICLOS_DEMO = ['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY'];
+const DIAS_DO_CICLO = { DAILY: 1, WEEKLY: 7, BIWEEKLY: 14, MONTHLY: 30 };
 
 function rotuloData(d) {
   return `${d.getDate()} ${MESES_CURTOS[d.getMonth()]}`;
 }
 
 function CenaCiclo({ animar }) {
-  const [passo, setPasso] = useState(0); // quantas vezes a tarefa já voltou
-  const [concluida, setConcluida] = useState(false);
+  const i = useCiclagem(CICLOS_DEMO.length, 1600, animar);
+  const ativo = CICLOS_DEMO[i];
 
-  useEffect(() => {
-    if (!animar) return;
-    // Marca como concluída, segura um instante para dar de ler, e então troca
-    // pela próxima ocorrência (que entra animada pela key do elemento).
-    const marcar = setTimeout(() => setConcluida(true), 1500);
-    const proxima = setTimeout(() => {
-      setConcluida(false);
-      setPasso((p) => p + 1);
-    }, 2600);
-    return () => { clearTimeout(marcar); clearTimeout(proxima); };
-  }, [passo, animar]);
-
-  const data = new Date();
-  data.setDate(data.getDate() + passo * 7);
-  const proxima = new Date(data);
-  proxima.setDate(data.getDate() + 7);
+  const proxima = new Date();
+  proxima.setDate(proxima.getDate() + DIAS_DO_CICLO[ativo]);
 
   return (
     <div>
-      <span className="sc-ciclo__tag">
-        <Ic d={ICONS.cycle} /> a cada 7 dias
-      </span>
-      <div className={`sc-ciclo__card ${concluida ? 'is-done' : ''}`} key={passo}>
-        <span className="sc-sub__check"><Ic d={ICONS.check} strokeWidth={3} /></span>
-        <span className="sc-ciclo__t">Reunião de acompanhamento</span>
-        <span className="sc-ciclo__data">{rotuloData(data)}</span>
+      <div className="cycle-opts">
+        {TIPOS.map((t) => (
+          <span key={t} className={`cycle-opt ${t === ativo ? 'is-on' : ''}`}>{rotuloCiclo(t)}</span>
+        ))}
       </div>
-      <p className="sc-ciclo__prox">
+      <p className="cycle-custom__summary">
         Ao concluir, volta sozinha em <strong>{rotuloData(proxima)}</strong>.
       </p>
     </div>
   );
 }
 
+/* ── Cena 4: Prioridade ───────────────────────────────────────────────────── */
+function CenaPrioridade({ animar }) {
+  const i = useCiclagem(Priority.NIVEIS.length, 1400, animar);
+  const ativo = Priority.NIVEIS[i];
+
+  return (
+    <div>
+      <div className="sc-tarefa">
+        <span className="sc-tarefa__nome">Revisar a proposta</span>
+        {/* Mesma pílula que aparece nos chips do editor — troca junto com a opção. */}
+        <span className={`badge badge--${ativo}`} key={ativo}>{Priority.ROTULO[ativo]}</span>
+      </div>
+      <div className="prio-picker">
+        {Priority.NIVEIS.map((n) => (
+          <span
+            key={n}
+            className={`prio-opt ${n === ativo ? 'is-on' : ''}`}
+            style={{ color: Priority.COR[n] }}
+          >
+            <span className="prio-opt__dot" style={{ background: Priority.COR[n] }} />
+            <span style={{ color: 'var(--color-text-soft)' }}>{Priority.ROTULO[n]}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Cena 5: Cronômetro de execução ───────────────────────────────────────── */
+function CenaTempo({ animar }) {
+  // ~1h50 comprimida em poucos segundos: 47 segundos "reais" por tick de 40ms.
+  const [seg, setSeg] = useState(0);
+
+  useEffect(() => {
+    if (!animar) return;
+    const h = setInterval(() => setSeg((s) => (s >= 6600 ? 0 : s + 47)), 40);
+    return () => clearInterval(h);
+  }, [animar]);
+
+  return (
+    <div>
+      <div className="timer">
+        <div className="timer__display">{formatarTempo(seg)}</div>
+        <div className="timer__actions">
+          <button className="btn btn--primary btn--sm" type="button" tabIndex={-1}>Pausar</button>
+          <button className="btn btn--secondary btn--sm" type="button" tabIndex={-1}>Zerar</button>
+        </div>
+      </div>
+      <p className="sc-legenda">O tempo executado fica guardado na tarefa.</p>
+    </div>
+  );
+}
+
+/* ── Cena 6: Notas ────────────────────────────────────────────────────────── */
+const NOTA = 'Confirmar o orçamento com o financeiro antes de enviar para o cliente.';
+
+function CenaNotas({ animar }) {
+  const [n, setN] = useState(0);
+
+  useEffect(() => {
+    if (!animar) return;
+    // Digita letra a letra, segura o texto completo por um tempo e recomeça.
+    const h = setInterval(() => setN((v) => (v > NOTA.length + 22 ? 0 : v + 1)), 55);
+    return () => clearInterval(h);
+  }, [animar]);
+
+  return (
+    <div className="sc-notas">
+      {/* readOnly: é demonstração, não campo de verdade. */}
+      <textarea className="notes-area" readOnly tabIndex={-1} value={NOTA.slice(0, n)} />
+    </div>
+  );
+}
+
+/* ── Cena 7: Categorias ───────────────────────────────────────────────────── */
+const CATS_DEMO = [
+  { id: 1, nome: 'Trabalho', cor: 'var(--color-cat-teal)' },
+  { id: 2, nome: 'Estudos', cor: 'var(--color-cat-purple)' },
+  { id: 3, nome: 'Casa', cor: 'var(--color-cat-sage)' },
+  { id: 4, nome: 'Saúde', cor: 'var(--color-cat-rust)' },
+];
+
+function CenaCategorias({ animar }) {
+  const i = useCiclagem(CATS_DEMO.length, 1500, animar);
+  const ativa = CATS_DEMO[i];
+
+  return (
+    // O dropdown real abre em position:absolute; aqui ele fica sempre aberto e
+    // no fluxo (ver .showcase__cena .cat-filter__menu no CSS).
+    <div className="cat-filter">
+      <span className="cat-filter__btn is-open">
+        <span className="cat-filter__dot" style={{ background: ativa.cor }} />
+        <span className="cat-filter__name">{ativa.nome}</span>
+        <Ic d={ICONS.chevron} className="cat-filter__chevron" size={13} strokeWidth={2} />
+      </span>
+      <div className="cat-filter__menu">
+        {CATS_DEMO.map((c) => (
+          <span key={c.id} className={`cat-filter__item ${c.id === ativa.id ? 'is-on' : ''}`}>
+            <span className="cat-filter__dot" style={{ background: c.cor }} />
+            <span className="cat-filter__item-name">{c.nome}</span>
+            {c.id === ativa.id && <span className="cat-filter__check"><Ic d={ICONS.check} /></span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── Vitrine ──────────────────────────────────────────────────────────────── */
+// Os seis primeiros são, na ordem, os mesmos módulos do editor de tarefa.
 const CENAS = [
   { id: 'foco', titulo: 'Foco', icone: ICONS.target, hint: 'POMODORO', legenda: 'Cronômetro de 25 minutos', Cena: CenaFoco },
   { id: 'subtarefas', titulo: 'Subtarefas', icone: ICONS.list, hint: 'PASSOS', legenda: 'Quebre a tarefa em partes', Cena: CenaSubtarefas },
   { id: 'ciclo', titulo: 'Ciclo', icone: ICONS.cycle, hint: 'RECORRÊNCIA', legenda: 'A tarefa volta sozinha', Cena: CenaCiclo },
+  { id: 'prioridade', titulo: 'Prioridade', icone: ICONS.flag, hint: 'NÍVEIS', legenda: 'Saiba o que fazer primeiro', Cena: CenaPrioridade },
+  { id: 'tempo', titulo: 'Tempo', icone: ICONS.clock, hint: 'CRONÔMETRO', legenda: 'Meça quanto tempo levou', Cena: CenaTempo },
+  { id: 'notas', titulo: 'Notas', icone: ICONS.notes, hint: 'LEMBRETES', legenda: 'Anotações junto da tarefa', Cena: CenaNotas },
+  { id: 'categorias', titulo: 'Categorias', icone: ICONS.folderTree, hint: 'ORGANIZAÇÃO', legenda: 'Cada tarefa no seu lugar', Cena: CenaCategorias },
 ];
 
-// Distância circular até a cena em foco: com 3 cenas, a última precisa aparecer
-// à ESQUERDA da primeira (-1) e não lá na ponta direita (+2).
+// Distância circular até a cena em foco: a última precisa aparecer à ESQUERDA
+// da primeira (-1) e não lá na ponta direita (+6).
 function distanciaCircular(n, i, total) {
   let d = n - i;
   if (d > total / 2) d -= total;
@@ -159,11 +278,14 @@ function distanciaCircular(n, i, total) {
 
 // Posição de cada card em relação ao que está em foco. O deslocamento é em %
 // da largura do próprio card, então acompanha o clamp() da largura sem contas.
+// Com sete cenas só as duas vizinhas espiam: as demais ficam invisíveis, senão
+// o viewport viraria uma fileira de cards cortados.
 function estiloDoCard(distancia) {
+  const longe = Math.abs(distancia) > 1;
   const escala = distancia === 0 ? 1 : 0.82;
   return {
     transform: `translateX(calc(-50% + ${distancia * 80}%)) scale(${escala})`,
-    opacity: distancia === 0 ? 1 : 0.3,
+    opacity: distancia === 0 ? 1 : (longe ? 0 : 0.3),
   };
 }
 
@@ -203,8 +325,10 @@ export default function FeatureShowcase() {
                 <span className="showcase__title">{c.titulo}</span>
                 <span className="showcase__hint">{c.hint}</span>
               </div>
-              <div className="showcase__stage">
-                {/* Só a cena em foco anima — evita 3 timers rodando à toa. */}
+              {/* O palco é decorativo: o CSS corta o pointer-events e os
+                  controles das cenas ficam fora da ordem de tabulação. */}
+              <div className="showcase__stage" aria-hidden="true">
+                {/* Só a cena em foco anima — evita sete timers rodando à toa. */}
                 <div className="showcase__cena">
                   <Cena animar={ativo && !estatico} />
                 </div>

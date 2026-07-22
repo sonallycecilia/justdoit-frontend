@@ -1,13 +1,16 @@
 .vscode/
 .claude/
-.github/
-docs/
+
+# nada de .env versionado
+.env
+.env.*
+!.env.example
 *.key
 *.pem
 *.ppk
 dev.
 __pycache__/
 *.pyc
-dev.py
 node_modules/
 dist/
+docs/

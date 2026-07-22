@@ -1,7 +1,8 @@
 // Cliente HTTP único do app. Porta a lógica de renovação de token do front
 // antigo (scripts/core/api.js): 401/403 → tenta /auth/refresh UMA vez (promessa
 // compartilhada entre requisições concorrentes) e refaz a requisição original.
-// Se o próprio refresh falhar, a sessão acabou → limpa e manda para a home.
+// Se o refresh responder 401, a sessão acabou → limpa e manda para a home;
+// qualquer outra falha (rede, 5xx, 429) é passageira e preserva a sessão.
 import { endpoints } from '@/api/endpoints';
 import { lerSessao, gravarSessao, limparSessao } from '@/api/session';
 
@@ -67,13 +68,26 @@ async function request(method, url, body) {
     && url !== endpoints.auth.refresh;
   if (!podeRenovar) return tratarResposta(res);
 
+  // Outra aba pode ter renovado enquanto esta requisição estava em voo. Nesse
+  // caso já existe um access token novo no storage, e refrescar de novo queimaria
+  // o refresh token à toa — é justamente o que dispara a detecção de reuso do
+  // backend, que revoga todas as sessões do usuário.
+  const atual = lerSessao();
+  if (atual?.accessToken && atual.accessToken !== sessao.accessToken) {
+    return enviar(method, url, body, atual.accessToken).then(tratarResposta);
+  }
+
   let novoAccess;
   try {
     novoAccess = await refreshTokens();
   } catch (e) {
-    // O refresh em si falhou: a sessão acabou de verdade → volta ao login.
-    limparSessao();
-    window.location.assign('/');
+    // Só encerra a sessão quando o servidor diz que o refresh token não vale mais
+    // (401). Erro de rede, 5xx e 429 são falhas passageiras — deslogar nesses
+    // casos derrubava o usuário a cada instabilidade do servidor.
+    if (e instanceof ApiError && e.status === 401) {
+      limparSessao();
+      window.location.assign('/');
+    }
     throw e;
   }
   // Refresh OK: refaz a requisição original; se ainda falhar, propaga o erro.

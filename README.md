@@ -18,7 +18,7 @@ justdoit-frontend/
 ├── public/                    # Copiado cru para o build
 │   ├── CNAME                  # Domínio próprio (justdoit-app.duckdns.org)
 │   └── favicon.svg
-├── dev.py                     # Sobe backend + frontend de uma vez (uso local)
+├── run.py                     # Sobe backend + frontend de uma vez (uso local)
 └── src/
     ├── main.jsx               # Bootstrap: QueryClient, BrowserRouter, CSS global
     ├── App.jsx                # Tabela de rotas + guarda de autenticação
@@ -137,9 +137,9 @@ npm run dev      # http://localhost:3000
 Para subir backend e frontend juntos:
 
 ```bash
-python dev.py start    # infra + 4 serviços + front
-python dev.py front    # só o front
-python dev.py back     # só o backend
+python run.py start    # infra + 4 serviços + front
+python run.py front    # só o front
+python run.py back     # só o backend
 ```
 
 | Script | O que faz |

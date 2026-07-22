@@ -3,11 +3,11 @@
 Automação de desenvolvimento local — sobe backend + frontend de uma vez.
 
 Uso:
-  python dev.py start    — sobe infra + 4 serviços (backend) e serve o front em :3000
-  python dev.py front    — serve só o front (React/Vite) em http://localhost:3000
-  python dev.py back     — sobe só o backend (infra + serviços)
-  python dev.py restart  — sobe a infra e relança os 4 serviços (feche as janelas antigas antes)
-  python dev.py stop     — para a infra (MySQL+Redis). Feche as janelas dos serviços manualmente.
+  python run.py start    — sobe infra + 4 serviços (backend) e serve o front em :3000
+  python run.py front    — serve só o front (React/Vite) em http://localhost:3000
+  python run.py back     — sobe só o backend (infra + serviços)
+  python run.py restart  — sobe a infra e relança os 4 serviços (feche as janelas antigas antes)
+  python run.py stop     — para a infra (MySQL+Redis). Feche as janelas dos serviços manualmente.
 
 Observação: o backend só aceita CORS de http://localhost:3000, por isso o frontend
 é sempre servido nessa porta. Não use a extensão Live Server do VS Code (porta
@@ -66,7 +66,7 @@ def compose(*args):
     """Roda `docker compose -f infra/docker-compose.yml <args>` na raiz do backend."""
     if not os.path.isfile(COMPOSE_FILE):
         print(f"[ERRO] Não encontrei o docker-compose em:\n  {COMPOSE_FILE}")
-        print("Ajuste BACKEND_DIR no topo do dev.py.")
+        print("Ajuste BACKEND_DIR no topo do run.py.")
         sys.exit(1)
     cmd = ["docker", "compose", "-f", COMPOSE_FILE, *args]
     print(f"[INFRA] {' '.join(args)}")
@@ -120,7 +120,7 @@ def backend_up():
 def main():
     commands = ["start", "front", "back", "restart", "stop"]
     if len(sys.argv) != 2 or sys.argv[1] not in commands:
-        print(f"Uso: python dev.py [{' | '.join(commands)}]")
+        print(f"Uso: python run.py [{' | '.join(commands)}]")
         sys.exit(1)
 
     cmd = sys.argv[1]

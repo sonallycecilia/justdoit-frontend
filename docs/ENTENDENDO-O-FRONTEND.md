@@ -77,7 +77,7 @@ Cada arquivo da raiz e por que está ali:
 | `.gitignore`, `README.md` | convenção | Padrão de qualquer repositório |
 | `src/`, `public/`, `docs/`, `.github/` | convenção | Código-fonte, arquivos servidos crus, documentação e CI |
 | `node_modules/`, `dist/`, `__pycache__/` | gerados | Não versionados (estão no `.gitignore`); podem ser apagados e recriados a qualquer momento |
-| `dev.py` | ferramenta local | Incomum num repo JavaScript, mas sobe backend + frontend de uma vez; na raiz é onde é cômodo rodar |
+| `run.py` | ferramenta local | Incomum num repo JavaScript, mas sobe backend + frontend de uma vez; na raiz é onde é cômodo rodar |
 
 ### `public/` vs `src/`
 

@@ -112,13 +112,22 @@
 .timeblock:hover .timeblock__trash { opacity: .6; }
 .timeblock__trash:hover { opacity: 1 !important; background: rgba(255,255,255,.3); color: var(--color-danger, #d33); }
 
-.timeblock__row { display: flex; align-items: flex-start; gap: 8px; }
+.timeblock__row { display: flex; align-items: flex-start; gap: 6px; }
+/* Toggle de concluída: segue a MESMA linguagem visual da seta e da lixeira do
+   bloco — discreto e na cor da categoria (currentColor). Antes usava
+   --color-border-strong, que no tema escuro some contra o fundo tingido, e
+   pesava 18px contra ícones de 11px. */
 .timeblock__check {
-  flex: none; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-strong); border-radius: 50%; background: transparent; color: currentColor; opacity: 0.9; cursor: pointer; padding: 0; transition: background var(--duration-fast), opacity var(--duration-fast), border-color var(--duration-fast);
+  flex: none; width: 15px; height: 15px; margin-top: 1px;
+  display: grid; place-items: center;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: 50%; background: transparent; color: currentColor;
+  cursor: pointer; padding: 0;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
 }
+.timeblock__check:hover { border-color: currentColor; background: color-mix(in srgb, currentColor 15%, transparent); }
+.timeblock__check svg { opacity: 0; transition: opacity var(--duration-fast) ease, transform var(--duration-fast) ease; transform: scale(0.7); width: 9px; height: 9px; }
 .timeblock__check.is-on { background: var(--color-success); color: #fff; border-color: var(--color-success); }
-.timeblock__check:hover { background: rgba(0,0,0,0.04); border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-border-strong)); }
-.timeblock__check svg { opacity: 0; transition: opacity var(--duration-fast) ease, transform var(--duration-fast) ease; transform: scale(0.8); width: 10px; height: 10px; }
 .timeblock__check.is-on svg { opacity: 1; transform: scale(1); stroke: #fff; }
 .timeblock__content { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
 
@@ -139,14 +148,14 @@
 .cal-monthpop__toggle.is-on svg { opacity: 1; transform: scale(1); stroke: #fff; }
 .cal-monthpop__item:hover .cal-monthpop__toggle { opacity: 1; background: rgba(255,255,255,0.02); }
 
-/* Hover: destacar borda da bolinha de toggle em todas as vistas */
-.timeblock:hover .timeblock__check { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border-strong)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 12%, transparent); }
+/* Hover: destacar borda da bolinha de toggle em todas as vistas.
+   O bloco de tempo fica de fora: o halo de 4px era grande demais para o card
+   e o hover do próprio .timeblock__check já dá o retorno visual. */
 .cal-allday__chip:hover .cal-allday__check { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border-strong)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .cal-pack-row:hover .cal-pack-row__act--done { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border-strong)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .cal-monthpop__item:hover .cal-monthpop__toggle { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border-strong)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent); }
 
 /* Soften effect for filled state hover to keep contrast */
-.timeblock:hover .timeblock__check.is-on { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-success) 12%, transparent); }
 .cal-allday__chip:hover .cal-allday__check.is-on { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-success) 12%, transparent); }
 .cal-pack-row:hover .cal-pack-row__act--done.is-on { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-success) 12%, transparent); }
 .cal-monthpop__item:hover .cal-monthpop__toggle.is-on { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-success) 12%, transparent); }
@@ -155,6 +164,9 @@
 .timeblock--multi { padding: 4px 5px 4px 8px; gap: 1px; }
 .timeblock--multi .timeblock__title { -webkit-line-clamp: 3; line-clamp: 3; padding-right: 4px; font-size: 12px; }
 .timeblock--multi .timeblock__meta { font-size: 9px; }
+.timeblock--multi .timeblock__row { gap: 5px; }
+.timeblock--multi .timeblock__check { width: 13px; height: 13px; }
+.timeblock--multi .timeblock__check svg { width: 8px; height: 8px; }
 
 /* Pacote fechado (tarefas agrupadas num mesmo horário) */
 .cal-pack {
@@ -348,10 +360,6 @@ button.cal-month__ev { appearance: none; font: inherit; width: 100%; text-align:
 .task-modal__time { font-family: var(--font-mono); }
 
 .task-modal__controls { padding: var(--space-md) var(--space-lg) var(--space-lg); display: flex; flex-direction: column; gap: var(--space-md); }
-
-.task-modal__done-btn { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 9px var(--space-md); border-radius: var(--radius-md); border: 1.5px solid var(--color-border-strong); background: var(--color-card); font-size: var(--font-size-sm); font-weight: var(--weight-semibold); color: var(--color-text-soft); cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast), color var(--duration-fast); }
-.task-modal__done-btn:hover { border-color: var(--color-success); color: var(--color-success); }
-.task-modal__done-btn.is-done { border-color: var(--color-success); background: var(--color-priority-normal-soft); color: var(--color-success); }
 
 .task-modal__ctrl-group { display: flex; flex-direction: column; gap: 8px; }
 .task-modal__ctrl-label { font-size: var(--font-size-xs); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); }

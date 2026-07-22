@@ -7,7 +7,7 @@ Consome o backend em `../JustDoIt` (4 serviços Spring).
 Histórico da migração inicial: ver `docs/RELATORIO.md`.
 
 ATENÇÃO porta 3000: o CORS do backend só aceita http://localhost:3000, então o
-Vite fixa essa porta (`strictPort`). Suba com `npm run dev` ou `python dev.py front`.
+Vite fixa essa porta (`strictPort`). Suba com `npm run dev` ou `python run.py front`.
 
 ## Deploy
 
@@ -184,14 +184,23 @@ para uma tela de login separada.
 - `features/landing/components/Overlays.jsx` — Recursos, Sobre e o modal Legal
   (port de `scripts/features/auth/legal.js`), como componentes controlados.
 - `features/landing/components/FeatureShowcase.jsx` — vitrine animada que substituiu o
-  mock estático "Hoje". Roda em looping 3 cenas (Pomodoro, Subtarefas, Ciclo),
-  7s cada, pausando no hover e desligada em `prefers-reduced-motion`.
+  mock estático "Hoje". Roda em looping 7 cenas — os 6 módulos do `TaskEditor`
+  (Foco, Subtarefas, Ciclo, Prioridade, Tempo, Notas) mais Categorias —, 5,5s
+  cada, pausando no hover e desligada em `prefers-reduced-motion`.
+  **Cada cena usa a marcação e as classes do módulo REAL** (`.pomo`, `.subtask`,
+  `.cycle-opts`, `.prio-picker`, `.timer`, `.notes-area`, `.cat-filter`): nada de
+  componente paralelo com visual próprio. O `landing-showcase.css` só ENCOLHE
+  isso para caber no card de ~270px, num bloco escopado em `.showcase__cena` —
+  se precisar mudar cor, borda ou estado ali, o lugar certo é o CSS do módulo.
   ⚠ Os timers são **só de demonstração** (rodam acelerados); a lógica real é a
-  do `TaskEditor`/`useTaskDetail`. Se uma feature mudar, a cena é decorativa e
-  não quebra nada — mas vale manter coerente com o produto.
+  do `TaskEditor`/`useTaskDetail`. Botões e campos das cenas são figurantes:
+  `.showcase__stage` corta o `pointer-events` e eles levam `tabIndex={-1}`.
   ⚠ Nada de animação de saída terminando em `opacity: 0` com `forwards`: foi o
   que deixou o card do Ciclo invisível ~800ms por volta. A troca é feita pela
   `key` do elemento, com animação de ENTRADA.
+  ⚠ Com 7 cenas, só as duas vizinhas espiam nas laterais (`estiloDoCard` zera a
+  opacidade de quem está a mais de 1 de distância) — senão o viewport vira uma
+  fileira de cards cortados.
 - `features/auth/components/LoginForm.jsx` — o formulário, extraído da antiga `pages/Login.jsx`
   (que foi REMOVIDA). `/login` agora só redireciona para `/`, porque o
   `api/client.js` manda para lá quando o refresh do token falha.
@@ -228,6 +237,9 @@ que divergia da página. Não recriar isso: mexeu no editor, mexeu nos dois.
 - Teto biológico continua com o backend: o 400 vira toast + `dur-alert`, nunca
   validação no cliente. No drawer, `aoFalharPorTeto` (exportado do
   `WeeklyCalendar`) reverte o bloco.
+- O check da subtarefa (`.subtask__check`) é **redondo**, igual ao `.detail__check`
+  do título: os dois são "marcar como feito". Era quadrado arredondado até
+  jul/2026. A vitrine da landing reusa essa mesma classe — mudou aqui, mudou lá.
 - `CategorySelect` (`features/categories/components/CategorySelect.jsx`) é o dropdown de categoria do
   To Do, do editor e do drawer. `incluirTodas` liga a opção "Todas as categorias"
   (só o filtro do To Do usa).

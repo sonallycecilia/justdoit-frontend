@@ -884,13 +884,9 @@ function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
           )}
         </div>
 
-        {/* Controles interativos */}
+        {/* Controles interativos. Concluir/reabrir fica de fora de propósito:
+            o toggle mora na bolinha do próprio bloco no calendário. */}
         <div className="task-modal__controls">
-          <button className={`task-modal__done-btn${ev.done ? ' is-done' : ''}`} onClick={() => onUpdate({ done: !ev.done })}>
-            <Icon d={ev.done ? 'M9 12l2 2 4-4|M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0' : 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0'} size={15} />
-            {ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}
-          </button>
-
           <div className="task-modal__ctrl-group">
             <div className="task-modal__ctrl-label">Prioridade</div>
             <div className="task-modal__prio-row">
@@ -1220,11 +1216,8 @@ export default function WeeklyCalendar({ onDrawer }) {
     const taskId = modalEv.taskId;
     if (!taskId || !tarefasMap.has(taskId)) return;
 
-    // Concluir/reabrir tem endpoint próprio (PATCH complete/reopen).
-    if (changes.done !== undefined) {
-      toggleDone.mutate({ id: taskId, concluir: changes.done });
-      return;
-    }
+    // Concluir/reabrir NÃO passa por aqui: o modal não tem mais esse botão, o
+    // toggle é a bolinha do bloco (alternarDone), que chama o endpoint próprio.
 
     // Categoria, prioridade, data e hora → PUT /tasks (patch sobre o cache cru,
     // sem zerar os demais campos — ver usePatchTarefa).

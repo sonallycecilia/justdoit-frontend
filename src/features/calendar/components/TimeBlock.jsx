@@ -60,7 +60,9 @@ export default function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, on
             onClick={(e) => { e.stopPropagation(); onToggle(ev); }}
             title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}
           >
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {/* Dimensão real vem do CSS (.timeblock__check svg), que encolhe
+                em blocos estreitos — aqui só o strokeWidth precisa acompanhar. */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 6L9 17l-5-5" />
             </svg>
           </button>
