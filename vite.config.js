@@ -32,6 +32,13 @@ export default defineConfig({
     alias: { '@': resolve(__dirname, 'src') },
   },
   server: {
+    // Sem `host`, o Vite resolve 'localhost' pela ordem verbatim do Node e acaba
+    // escutando só em [::1]. O Chrome aqui resolve localhost para 127.0.0.1, então
+    // a porta parecia no ar (o terminal mostrava a URL) mas o navegador levava
+    // ECONNREFUSED. Fixar 127.0.0.1 garante que é exatamente onde o browser bate.
+    // O Origin enviado continua sendo http://localhost:3000, que é o que o CORS
+    // do backend exige — o bind não muda o cabeçalho.
+    host: '127.0.0.1',
     port: 3000,
     strictPort: true,
   },

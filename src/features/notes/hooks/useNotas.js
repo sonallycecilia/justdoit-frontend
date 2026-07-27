@@ -86,14 +86,27 @@ export function useFixarNota() {
 // ── Rascunho do compositor (compartilhado com o app antigo) ──────────────────
 // Mesma chave e mesmo encoding (JSON) do Store do vanilla: 'jdi.' + 'todo-notas'.
 const KEY_RASCUNHO = 'jdi.todo-notas';
+// O título do compositor é novo (não existia no vanilla), então vai em chave própria
+// para não quebrar o formato da chave compartilhada acima.
+const KEY_RASCUNHO_TITULO = 'jdi.todo-nota-titulo';
 
-export function lerRascunho() {
+function ler(chave) {
   try {
-    const bruto = localStorage.getItem(KEY_RASCUNHO);
+    const bruto = localStorage.getItem(chave);
     return bruto === null ? '' : JSON.parse(bruto);
   } catch { return ''; }
 }
-export function gravarRascunho(txt) {
-  try { localStorage.setItem(KEY_RASCUNHO, JSON.stringify(txt)); } catch { /* cheio/indisponível */ }
+function gravar(chave, txt) {
+  try { localStorage.setItem(chave, JSON.stringify(txt)); } catch { /* cheio/indisponível */ }
 }
-export function limparRascunho() { localStorage.removeItem(KEY_RASCUNHO); }
+
+export function lerRascunho() { return ler(KEY_RASCUNHO); }
+export function gravarRascunho(txt) { gravar(KEY_RASCUNHO, txt); }
+
+export function lerRascunhoTitulo() { return ler(KEY_RASCUNHO_TITULO); }
+export function gravarRascunhoTitulo(txt) { gravar(KEY_RASCUNHO_TITULO, txt); }
+
+export function limparRascunho() {
+  localStorage.removeItem(KEY_RASCUNHO);
+  localStorage.removeItem(KEY_RASCUNHO_TITULO);
+}

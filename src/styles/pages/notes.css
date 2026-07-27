@@ -46,6 +46,24 @@
   transition: opacity var(--duration-base);
 }
 .notepad__hint.is-visible { opacity: 1; }
+.notepad__title {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1.5px solid var(--color-border);
+  margin: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  padding: var(--space-sm) var(--space-lg);
+  outline: none;
+  caret-color: var(--color-accent);
+  box-sizing: border-box;
+}
+.notepad__title::placeholder { color: var(--color-text-faint); font-weight: var(--weight-regular); }
+.notepad__title:focus-visible { box-shadow: none; }
 .notepad__area {
   display: block;
   width: 100%;
