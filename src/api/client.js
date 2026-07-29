@@ -31,6 +31,7 @@ function refreshTokens() {
   return refreshing;
 }
 
+// quando algo da errado emite o aviso e retorna o status code e o corpo da resposta (JSON ou null)
 export class ApiError extends Error {
   constructor(message, status, body) {
     super(message);
