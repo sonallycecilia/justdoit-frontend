@@ -9,7 +9,7 @@ import { lerSessao, gravarSessao, limparSessao } from '@/api/session';
 let refreshing = null; // promessa compartilhada p/ evitar refresh duplicado
 
 function refreshTokens() {
-  if (refreshing) return refreshing;
+  if (refreshing) return refreshing; // correção -  atua como uma trava: se já tem refresh em andamento, espera ele terminar e devolve o access token novo.
   const sessao = lerSessao();
   if (!sessao?.refreshToken) return Promise.reject(new ApiError('Sessão expirada', 401));
 
@@ -39,7 +39,8 @@ export class ApiError extends Error {
     this.body = body;
   }
 }
-
+// pega a resposta e transforma em JSON ( ou null se não houver corpo)
+// injeta o acess token no header Authorization 
 function enviar(method, url, body, accessToken) {
   const headers = { 'Content-Type': 'application/json' };
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
@@ -71,10 +72,13 @@ async function requisitar(method, url, body) {
     && url !== endpoints.auth.refresh;
   if (!podeRenovar) return res;
 
-  // Outra aba pode ter renovado enquanto esta requisição estava em voo. Nesse
-  // caso já existe um access token novo no storage, e refrescar de novo queimaria
-  // o refresh token à toa — é justamente o que dispara a detecção de reuso do
-  // backend, que revoga todas as sessões do usuário.
+  // antes da correção: ter duas abas abertas com a mesma sessão podia levar a um refresh token ser descartado,
+  // se ambas abas tentassem renovar ao mesmo tempo.
+  //  A primeira aba que chegasse no backend ganhava, a segunda recebia 401 e perdia a sessão.
+  // 
+  // 
+  // correção: agora o localStorage é monitorado e lido novamente antes de tentar renovar, 
+  // para que a aba que perdeu o refresh token não tente renovar e derrube a sessão.
   const atual = lerSessao();
   if (atual?.accessToken && atual.accessToken !== sessao.accessToken) {
     return enviar(method, url, body, atual.accessToken);
@@ -84,9 +88,9 @@ async function requisitar(method, url, body) {
   try {
     novoAccess = await refreshTokens();
   } catch (e) {
-    // Só encerra a sessão quando o servidor diz que o refresh token não vale mais
-    // (401). Erro de rede, 5xx e 429 são falhas passageiras — deslogar nesses
-    // casos derrubava o usuário a cada instabilidade do servidor.
+    // antes da correção: qualquer erro de rede, falha no servidor, erro 500 (internal server error) 
+    // ou 429 (too many requests) derrubava o usuário.
+    // Agora, só encerra a sessão quando o servidor diz que o refresh token não vale mais (401). 
     if (e instanceof ApiError && e.status === 401) {
       limparSessao();
       window.location.assign('/');
