@@ -46,7 +46,11 @@ export default function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, on
       className={`timeblock timeblock--${ev.cat} ${layout && layout.width < 0.9 ? 'timeblock--multi' : ''} ${dragging ? 'is-dragging' : ''} ${ev.done ? 'timeblock--done' : ''}`}
       style={style}
       draggable="true"
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); wasDragged.current = true; }}
+      // setData é obrigatório: o Firefox NÃO inicia o arraste quando o
+      // dataTransfer fica vazio (o bloco não sai do lugar). O payload em si não
+      // é lido no drop — a coluna usa o evento guardado em `arrastando` —, mas
+      // precisa existir para o gesto começar.
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.id); onDragStart(ev); wasDragged.current = true; }}
       onDragEnd={() => { onDragEnd(); setTimeout(() => { wasDragged.current = false; }, 0); }}
       onClick={() => { if (!wasDragged.current && onOpen) onOpen(ev); }}
       title={ev.titulo}

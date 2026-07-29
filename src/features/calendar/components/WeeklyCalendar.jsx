@@ -262,7 +262,8 @@ function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDr
               className={`cal-pack-row${ev.done ? ' is-done' : ''}`}
               draggable="true"
               style={{ background: `color-mix(in srgb, ${cor} 10%, var(--color-card))`, borderColor: `color-mix(in srgb, ${cor} 40%, transparent)` }}
-              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); arrastou.current = true; }}
+              // setData é obrigatório para o Firefox iniciar o arraste (ver TimeBlock).
+              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.id); onDragStart(ev); arrastou.current = true; }}
               onDragEnd={() => { onDragEnd(); setTimeout(() => { arrastou.current = false; }, 0); }}
               onClick={() => { if (!arrastou.current && onOpen) onOpen(ev); }}
               title={ev.titulo}>
@@ -390,7 +391,8 @@ function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onDr
         // preso em true, bloqueando todos os cliques seguintes. O mousedown roda
         // antes do dragstart, então um arraste real ainda marca true a tempo.
         onMouseDown={() => { arrastou.current = false; }}
-        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); arrastou.current = true; }}
+        // setData é obrigatório para o Firefox iniciar o arraste (ver TimeBlock).
+        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.id); onDragStart(ev); arrastou.current = true; }}
         onDragEnd={() => { onDragEnd(); setTimeout(() => { arrastou.current = false; }, 0); }}
         onClick={() => { if (!arrastou.current && onOpen) onOpen(ev); }}
         title={ev.titulo}>
