@@ -56,6 +56,13 @@ export const endpoints = {
     pin: (id) => `${SVC.tasks}/notes/${id}/pin`,
   },
 
+  // Portabilidade: baixa TODAS as tarefas do usuário logado (com categoria,
+  // cronômetro e nota) em CSV ou JSON. Não há parâmetro de usuário — o backend
+  // sempre exporta o dono do token.
+  dados: {
+    exportar: (formato) => `${SVC.tasks}/me/export?format=${encodeURIComponent(formato)}`,
+  },
+
   categories: {
     list: `${SVC.tasks}/categories`,
     create: `${SVC.tasks}/categories`,

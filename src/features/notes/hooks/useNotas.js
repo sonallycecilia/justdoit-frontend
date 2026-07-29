@@ -49,8 +49,15 @@ export function useAtualizarNota() {
     onMutate: async ({ id, titulo, conteudo }) => {
       await qc.cancelQueries({ queryKey: ['notas'] });
       const anterior = qc.getQueryData(['notas']);
+      // updatedAt entra junto: sem isso o card mostra a hora antiga até o
+      // refetch do onSettled chegar. O servidor manda o valor definitivo depois.
+      const agora = new Date();
+      const local = new Date(agora.getTime() - agora.getTimezoneOffset() * 60_000)
+        .toISOString().slice(0, 23); // LocalDateTime do backend: sem fuso
       qc.setQueryData(['notas'], (notas) =>
-        (notas || []).map((n) => (n.id === id ? { ...n, title: titulo, content: conteudo } : n)));
+        (notas || []).map((n) => (n.id === id
+          ? { ...n, title: titulo, content: conteudo, updatedAt: local }
+          : n)));
       return { anterior };
     },
     onError: (_e, _v, ctx) => { if (ctx?.anterior) qc.setQueryData(['notas'], ctx.anterior); },

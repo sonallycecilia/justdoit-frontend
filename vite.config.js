@@ -42,4 +42,12 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
   },
+  // O Vitest lê este mesmo arquivo, então os testes já herdam o alias '@' e o
+  // plugin React (JSX) sem duplicar configuração.
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.js',
+    include: ['src/**/*.test.{js,jsx}'],
+  },
 });

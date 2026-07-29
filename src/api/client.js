@@ -59,14 +59,16 @@ async function tratarResposta(res) {
   return txt ? JSON.parse(txt) : null;
 }
 
-async function request(method, url, body) {
+// Faz a requisição com renovação de token e devolve a Response crua. Quem chama
+// decide como ler o corpo — JSON (request) ou binário (baixarArquivo).
+async function requisitar(method, url, body) {
   const sessao = lerSessao();
   const res = await enviar(method, url, body, sessao?.accessToken);
 
   const podeRenovar = (res.status === 401 || res.status === 403)
     && sessao?.refreshToken
     && url !== endpoints.auth.refresh;
-  if (!podeRenovar) return tratarResposta(res);
+  if (!podeRenovar) return res;
 
   // Outra aba pode ter renovado enquanto esta requisição estava em voo. Nesse
   // caso já existe um access token novo no storage, e refrescar de novo queimaria
@@ -74,7 +76,7 @@ async function request(method, url, body) {
   // backend, que revoga todas as sessões do usuário.
   const atual = lerSessao();
   if (atual?.accessToken && atual.accessToken !== sessao.accessToken) {
-    return enviar(method, url, body, atual.accessToken).then(tratarResposta);
+    return enviar(method, url, body, atual.accessToken);
   }
 
   let novoAccess;
@@ -91,7 +93,11 @@ async function request(method, url, body) {
     throw e;
   }
   // Refresh OK: refaz a requisição original; se ainda falhar, propaga o erro.
-  return enviar(method, url, body, novoAccess).then(tratarResposta);
+  return enviar(method, url, body, novoAccess);
+}
+
+async function request(method, url, body) {
+  return tratarResposta(await requisitar(method, url, body));
 }
 
 export const api = {
@@ -101,6 +107,32 @@ export const api = {
   patch: (url, body) => request('PATCH', url, body),
   remove: (url) => request('DELETE', url),
 };
+
+// Extrai o nome do arquivo do Content-Disposition. O backend expõe esse cabeçalho
+// no CORS; se algum proxy o engolir, devolve null e quem chama usa um nome padrão.
+function nomeNoCabecalho(disposition) {
+  if (!disposition) return null;
+  const casou = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  if (!casou) return null;
+  try { return decodeURIComponent(casou[1]); } catch { return casou[1]; }
+}
+
+// Baixa um arquivo (exportação de dados) pelo mesmo caminho de renovação de
+// token das demais chamadas. Devolve o corpo cru como Blob — nada de JSON.parse,
+// porque o CSV quebraria — junto do nome sugerido pelo servidor.
+export async function baixarArquivo(url) {
+  const res = await requisitar('GET', url);
+  if (!res.ok) {
+    // Mesmo quando o sucesso viria em CSV, o erro do backend vem em JSON.
+    let corpo = null;
+    try { corpo = await res.json(); } catch { /* corpo vazio/não-JSON */ }
+    throw new ApiError(corpo?.error || corpo?.message || `Erro ${res.status}`, res.status, corpo);
+  }
+  return {
+    blob: await res.blob(),
+    nomeArquivo: nomeNoCabecalho(res.headers.get('Content-Disposition')),
+  };
+}
 
 // GET que trata 404 como "ainda não existe" (configs de módulo, nota, timer…)
 // em vez de erro — o backend responde 404 até o primeiro PUT.

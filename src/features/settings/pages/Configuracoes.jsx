@@ -6,6 +6,8 @@ import Ic, { ICONS } from '@/components/Ic';
 import Sidebar from '@/components/Sidebar';
 import CategoryModal from '@/features/categories/components/CategoryModal';
 import ConfirmModal from '@/components/ConfirmModal';
+import ExportModal from '@/features/settings/components/ExportModal';
+import { useExportarDados } from '@/features/settings/hooks/useExportarDados';
 import {
   CAT_GENERICO,
   useCategorias,
@@ -381,6 +383,54 @@ function SecaoCategorias() {
   );
 }
 
+/* ─── Dados ─────────────────────────────────────────────────────────────── */
+function SecaoDados() {
+  const exportar = useExportarDados();
+  const [aberto, setAberto] = useState(false);
+  const [erro, setErro] = useState('');
+  const [baixado, setBaixado] = useState('');
+
+  function confirmar(formato) {
+    setErro('');
+    exportar.mutate(formato, {
+      onSuccess: (nome) => { setAberto(false); setBaixado(nome); },
+      onError: (e) => setErro(e.message || 'Não foi possível exportar seus dados. Tente novamente.'),
+    });
+  }
+
+  return (
+    <div className="set-section">
+      <div className="set-section__title">Dados</div>
+      <div className="card">
+        <div className="set-row">
+          <div className="set-row__main">
+            <div className="set-row__label">Exportar meus dados</div>
+            <div className="set-row__desc">
+              Baixe todas as suas tarefas em CSV ou JSON para backup ou análise externa
+            </div>
+          </div>
+          <button
+            className="btn btn--secondary btn--sm"
+            type="button"
+            onClick={() => { setBaixado(''); setAberto(true); }}
+          >
+            Exportar meus dados
+          </button>
+        </div>
+        {baixado && <div className="cat-msg">Arquivo <strong>{baixado}</strong> baixado.</div>}
+      </div>
+
+      <ExportModal
+        aberto={aberto}
+        processando={exportar.isPending}
+        erro={erro}
+        onExportar={confirmar}
+        onFechar={() => { setAberto(false); setErro(''); }}
+      />
+    </div>
+  );
+}
+
 /* ─── Página ────────────────────────────────────────────────────────────── */
 export default function Configuracoes() {
   const navigate = useNavigate();
@@ -490,21 +540,7 @@ export default function Configuracoes() {
 
           <SecaoCategorias />
 
-          <div className="set-section">
-            <div className="set-section__title">Dados</div>
-            <div className="card">
-              <div className="set-row">
-                <div className="set-row__main">
-                  <div className="set-row__label">Exportar tarefas <span className="set-soon">(em breve)</span></div>
-                  <div className="set-row__desc">Baixe seus dados em CSV ou JSON</div>
-                </div>
-                <div className="row" style={{ gap: 'var(--space-sm)' }}>
-                  <button className="btn btn--secondary btn--sm" disabled>CSV</button>
-                  <button className="btn btn--secondary btn--sm" disabled>JSON</button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SecaoDados />
 
           <div className="set-section">
             <div className="set-section__title">Excluir conta</div>

@@ -52,7 +52,7 @@ src/features/<nome>/
 | `calendar` | `/calendario` | Grade semanal com arrastar-e-soltar. `WeeklyCalendar`, `TimeBlock`, `EventDrawer`, `EventSummary` |
 | `dashboard` | `/visao-geral`, `/analise` | Visão geral e análise. Gráficos `CategoryChart`, `DeviationChart`, `RateRing` |
 | `notes` | `/anotacoes` | Anotações livres + `NoteComposer` (também usado no To Do) |
-| `settings` | `/configuracoes` | Conta, tema, categorias e exclusão de conta |
+| `settings` | `/configuracoes` | Conta, tema, categorias, exportação de dados (`ExportModal`) e exclusão de conta |
 
 ### Três decisões de estrutura que não são óbvias
 
@@ -69,7 +69,7 @@ Três arquivos, sem exceção — não há `fetch` solto espalhado pelas página
 | Arquivo | Responsabilidade |
 |---|---|
 | `api/endpoints.js` | **Todas** as URLs. Os caminhos refletem os controllers reais do backend (`/tasks/{id}/note`, `/cycle-config`, `/module-config`, `/timer`, `/focus-sessions`) |
-| `api/client.js` | `fetch` com refresh automático de token e `ApiError` tipado |
+| `api/client.js` | `fetch` com refresh automático de token e `ApiError` tipado. `baixarArquivo(url)` passa pelo mesmo caminho de renovação, mas devolve `Blob` (usado pela exportação — `JSON.parse` quebraria num CSV) |
 | `api/session.js` | Leitura/escrita da sessão em `localStorage` |
 
 O endereço do backend é resolvido **em tempo de execução** pelo hostname, sem variável de ambiente:
@@ -147,6 +147,8 @@ python run.py back     # só o backend
 | `npm run dev` | Servidor de desenvolvimento com HMR |
 | `npm run build` | Build de produção em `dist/` |
 | `npm run preview` | Serve o `dist/` para conferência |
+| `npm test` | Testes (Vitest + Testing Library, ambiente jsdom) |
+| `npm run test:watch` | Os mesmos testes em modo watch |
 
 ---
 
@@ -172,6 +174,7 @@ GitHub Pages via `.github/workflows/deploy.yml`, disparado por push na `main`. D
 | Estado do servidor | TanStack Query 5 |
 | Estado local | `useState` / `useReducer` — sem store global |
 | Estilos | CSS puro com custom properties |
+| Testes | Vitest + Testing Library (jsdom) — só devDependency |
 | Ícones | SVG inline via componente `Ic` — sem biblioteca externa |
 | Gráficos | SVG escrito à mão — sem Chart.js/Recharts |
 | Hospedagem | GitHub Pages + domínio próprio |
