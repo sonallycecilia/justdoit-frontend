@@ -61,7 +61,7 @@ export function useBlocos(from, to) {
 
 // As escritas são otimistas na UI do calendário (estado local `eventos`);
 // aqui só persistimos e invalidamos por prefixo para o refetch trazer a
-// verdade do servidor. O 400 do teto biológico é tratado pelo caller.
+// verdade do servidor.
 export function useCriarBloco() {
   const qc = useQueryClient();
   return useMutation({
