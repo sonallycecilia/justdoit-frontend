@@ -282,11 +282,6 @@ function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDr
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                 </button>
               )}
-              {onToggle && ev.taskId && (
-                <button className="cal-pack-row__act cal-pack-row__act--done" onClick={e => { e.stopPropagation(); onToggle(ev); }} title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}>
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                </button>
-              )}
               {onDelete && (
                 <button className="cal-pack-row__act cal-pack-row__act--del" onClick={e => { e.stopPropagation(); onDelete(ev); }} title="Excluir tarefa">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
@@ -406,11 +401,6 @@ function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onDr
         {onDrawer && (
           <button className="cal-allday__arrow" onClick={e => { e.stopPropagation(); onDrawer(ev); }} title="Abrir painel lateral">
             <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-          </button>
-        )}
-        {onToggle && ev.taskId && (
-          <button className="cal-allday__check" onClick={e => { e.stopPropagation(); onToggle(ev); }} title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}>
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
           </button>
         )}
         {onDelete && (
