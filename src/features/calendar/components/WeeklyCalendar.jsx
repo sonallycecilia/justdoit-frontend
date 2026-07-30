@@ -532,14 +532,18 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
             </div>
           ))}
         </div>
-        {(semHoraEvs.length > 0 || arrastando) && (
-          <LaneSemHora colunas={dias.map((d, di) => semHoraEvs.filter(ev => ev.d === di))}
-            categorias={categorias} onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onDeletePack={onDeletePack} onSoltar={soltarSemHora}
-            arrastando={!!arrastando}
-            onDragStart={setArrastando}
-            onDragEnd={() => { setArrastando(null); setOver(null); }}
-            onToggle={onToggle} />
-        )}
+        {/* A faixa fica SEMPRE montada, mesmo vazia. Antes ela aparecia com
+            `semHoraEvs.length > 0 || arrastando`: numa semana sem tarefas sem
+            horário, o `dragstart` ligava `arrastando`, a faixa montava no meio
+            do gesto e empurrava a grade 44px para baixo. Deslocar a origem do
+            arraste no instante em que ele começa faz o Chrome ABORTAR o drag —
+            o bloco não saía do lugar. Reservar a linha elimina o salto. */}
+        <LaneSemHora colunas={dias.map((d, di) => semHoraEvs.filter(ev => ev.d === di))}
+          categorias={categorias} onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onDeletePack={onDeletePack} onSoltar={soltarSemHora}
+          arrastando={!!arrastando}
+          onDragStart={setArrastando}
+          onDragEnd={() => { setArrastando(null); setOver(null); }}
+          onToggle={onToggle} />
       </div>
       <div className="cal-body">
         <div className="cal-rail">
