@@ -262,7 +262,8 @@ function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDr
               className={`cal-pack-row${ev.done ? ' is-done' : ''}`}
               draggable="true"
               style={{ background: `color-mix(in srgb, ${cor} 10%, var(--color-card))`, borderColor: `color-mix(in srgb, ${cor} 40%, transparent)` }}
-              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); arrastou.current = true; }}
+              // setData é obrigatório para o Firefox iniciar o arraste (ver TimeBlock).
+              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.id); onDragStart(ev); arrastou.current = true; }}
               onDragEnd={() => { onDragEnd(); setTimeout(() => { arrastou.current = false; }, 0); }}
               onClick={() => { if (!arrastou.current && onOpen) onOpen(ev); }}
               title={ev.titulo}>
@@ -279,11 +280,6 @@ function PacotePanel({ cluster, top, categorias, arrastandoId, onDragStart, onDr
               {onDrawer && (
                 <button className="cal-pack-row__act" onClick={e => { e.stopPropagation(); onDrawer(ev); }} title="Abrir painel lateral">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                </button>
-              )}
-              {onToggle && ev.taskId && (
-                <button className="cal-pack-row__act cal-pack-row__act--done" onClick={e => { e.stopPropagation(); onToggle(ev); }} title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}>
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                 </button>
               )}
               {onDelete && (
@@ -390,7 +386,8 @@ function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onDr
         // preso em true, bloqueando todos os cliques seguintes. O mousedown roda
         // antes do dragstart, então um arraste real ainda marca true a tempo.
         onMouseDown={() => { arrastou.current = false; }}
-        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(ev); arrastou.current = true; }}
+        // setData é obrigatório para o Firefox iniciar o arraste (ver TimeBlock).
+        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.id); onDragStart(ev); arrastou.current = true; }}
         onDragEnd={() => { onDragEnd(); setTimeout(() => { arrastou.current = false; }, 0); }}
         onClick={() => { if (!arrastou.current && onOpen) onOpen(ev); }}
         title={ev.titulo}>
@@ -404,11 +401,6 @@ function LaneSemHora({ colunas, categorias, onDragStart, onDragEnd, onOpen, onDr
         {onDrawer && (
           <button className="cal-allday__arrow" onClick={e => { e.stopPropagation(); onDrawer(ev); }} title="Abrir painel lateral">
             <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-          </button>
-        )}
-        {onToggle && ev.taskId && (
-          <button className="cal-allday__check" onClick={e => { e.stopPropagation(); onToggle(ev); }} title={ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}>
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
           </button>
         )}
         {onDelete && (
@@ -530,14 +522,18 @@ function WeekView({ dias, eventos, categorias, mover, moverSemHora, agendarSemHo
             </div>
           ))}
         </div>
-        {(semHoraEvs.length > 0 || arrastando) && (
-          <LaneSemHora colunas={dias.map((d, di) => semHoraEvs.filter(ev => ev.d === di))}
-            categorias={categorias} onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onDeletePack={onDeletePack} onSoltar={soltarSemHora}
-            arrastando={!!arrastando}
-            onDragStart={setArrastando}
-            onDragEnd={() => { setArrastando(null); setOver(null); }}
-            onToggle={onToggle} />
-        )}
+        {/* A faixa fica SEMPRE montada, mesmo vazia. Antes ela aparecia com
+            `semHoraEvs.length > 0 || arrastando`: numa semana sem tarefas sem
+            horário, o `dragstart` ligava `arrastando`, a faixa montava no meio
+            do gesto e empurrava a grade 44px para baixo. Deslocar a origem do
+            arraste no instante em que ele começa faz o Chrome ABORTAR o drag —
+            o bloco não saía do lugar. Reservar a linha elimina o salto. */}
+        <LaneSemHora colunas={dias.map((d, di) => semHoraEvs.filter(ev => ev.d === di))}
+          categorias={categorias} onOpen={onOpen} onDrawer={onDrawer} onDelete={onDelete} onDeletePack={onDeletePack} onSoltar={soltarSemHora}
+          arrastando={!!arrastando}
+          onDragStart={setArrastando}
+          onDragEnd={() => { setArrastando(null); setOver(null); }}
+          onToggle={onToggle} />
       </div>
       <div className="cal-body">
         <div className="cal-rail">

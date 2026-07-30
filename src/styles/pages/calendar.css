@@ -137,11 +137,6 @@
 .cal-allday__check.is-on svg { opacity: 1; transform: scale(1); stroke: #fff; }
 .cal-allday__chip:hover .cal-allday__check { opacity: 1; background: rgba(255,255,255,0.02); }
 
-.cal-pack-row__act--done { flex: none; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--color-border-strong); background: transparent; color: currentColor; transition: background var(--duration-fast), border-color var(--duration-fast); }
-.cal-pack-row__act--done.is-on { background: var(--color-success); border-color: var(--color-success); color: #fff; }
-.cal-pack-row__act--done svg { opacity: 0; transform: scale(0.8); transition: opacity var(--duration-fast), transform var(--duration-fast); width: 10px; height: 10px; }
-.cal-pack-row__act--done.is-on svg { opacity: 1; transform: scale(1); stroke: #fff; }
-
 .cal-monthpop__toggle { flex: none; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-strong); border-radius: 50%; background: transparent; color: currentColor; opacity: .7; cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast); }
 .cal-monthpop__toggle svg { opacity: 0; transform: scale(0.8); transition: opacity var(--duration-fast), transform var(--duration-fast); width: 10px; height: 10px; }
 .cal-monthpop__toggle.is-on { background: var(--color-success); border-color: var(--color-success); color: #fff; }
@@ -237,6 +232,16 @@
 .cal-pack-row:hover .cal-pack-row__act { opacity: 1; }
 .cal-pack-row__act:hover { background: var(--color-surface-sunken); }
 .cal-pack-row__act--del:hover { color: var(--color-danger, #d33); }
+
+/* Toggle de concluída: bolinha, igual à do chip "Sem horário" e à do bloco na
+   grade. Precisa vir DEPOIS de .cal-pack-row__act — o botão carrega as duas
+   classes e, com a mesma especificidade, a base é que valia (deixava o
+   toggle quadrado e sem borda). Sempre opaco: é estado, não ação de hover. */
+.cal-pack-row__act--done { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--color-border-strong); color: currentColor; opacity: 1; transition: background var(--duration-fast), border-color var(--duration-fast), box-shadow var(--duration-fast); }
+.cal-pack-row__act--done svg { opacity: 0; transform: scale(0.8); transition: opacity var(--duration-fast), transform var(--duration-fast); width: 10px; height: 10px; }
+.cal-pack-row__act--done:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+.cal-pack-row__act--done.is-on, .cal-pack-row__act--done.is-on:hover { background: var(--color-success); border-color: var(--color-success); color: #fff; }
+.cal-pack-row__act--done.is-on svg { opacity: 1; transform: scale(1); stroke: #fff; }
 
 /* Linha do "agora" */
 .cal-now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--color-danger); z-index: 4; }
