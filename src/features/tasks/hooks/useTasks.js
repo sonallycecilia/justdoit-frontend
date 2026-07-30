@@ -121,6 +121,7 @@ export function useRemoverTarefa() {
     onError: (_err, _id, ctx) => {
       if (ctx?.anterior) qc.setQueryData(['tarefas'], ctx.anterior);
     },
+    onSuccess: (_resp, id) => qc.removeQueries({ queryKey: ['tarefas', id], exact: true }),
     onSettled: () => qc.invalidateQueries({ queryKey: ['tarefas'] }),
   });
 }
