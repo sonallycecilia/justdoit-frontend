@@ -206,8 +206,7 @@ export function useSalvarCiclo(taskId) {
 }
 
 // ─── Cronômetro de execução + tempo estimado (timer) ─────────────────────────
-// O recurso /timer guarda os dois: actualSeconds (cronômetro) e
-// estimatedMinutes (duração estimada).
+// O recurso /timer guarda os dois: actualSeconds (cronômetro) e estimatedMinutes (duração estimada).
 // O PUT faz merge parcial: enviar só um campo não zera o outro (verificado).
 export function useTimer(taskId) {
   return useQuery({
