@@ -75,8 +75,6 @@ async function requisitar(method, url, body) {
   // antes da correção: ter duas abas abertas com a mesma sessão podia levar a um refresh token ser descartado,
   // se ambas abas tentassem renovar ao mesmo tempo.
   //  A primeira aba que chegasse no backend ganhava, a segunda recebia 401 e perdia a sessão.
-  // 
-  // 
   // correção: agora o localStorage é monitorado e lido novamente antes de tentar renovar, 
   // para que a aba que perdeu o refresh token não tente renovar e derrube a sessão.
   const atual = lerSessao();
