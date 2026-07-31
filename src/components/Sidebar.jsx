@@ -8,7 +8,7 @@ import { endpoints } from '@/api/endpoints';
 import { alternarTema } from '@/lib/theme';
 import { lerSessao, limparSessao } from '@/api/session';
 import { capitalizarNome, iniciais } from '@/lib/utils';
-import { useCategorias } from '@/features/categories/hooks/useCategories';
+import { useCategorias, useRemoverCategoria } from '@/features/categories/hooks/useCategories';
 import { useConta } from '@/features/auth/hooks/useConta';
 import { useAtualizarTarefa, useRemoverTarefa, useTarefas } from '@/features/tasks/hooks/useTasks';
 
@@ -21,12 +21,14 @@ export default function Sidebar({ ativa = 'dashboard' }) {
   const [expandidas, setExpandidas] = useState({});
   const [menuContexto, setMenuContexto] = useState(null);
   const [tarefaParaExcluir, setTarefaParaExcluir] = useState(null);
+  const [categoriaParaExcluir, setCategoriaParaExcluir] = useState(null);
   const [erroExclusao, setErroExclusao] = useState('');
 
   const { data: categorias } = useCategorias();
   const { data: tarefas } = useTarefas(categorias);
   const atualizarTarefa = useAtualizarTarefa();
   const removerTarefa = useRemoverTarefa();
+  const removerCategoria = useRemoverCategoria();
 
   // Nome/avatar: começa com o que há na sessão e atualiza com GET /auth/me.
   const sessao = lerSessao();
@@ -98,9 +100,9 @@ export default function Sidebar({ ativa = 'dashboard' }) {
       setTarefaParaExcluir(item);
     }
     if (acao === 'nova-categoria') setModalAberto(true);
-    if (acao === 'visualizar-categoria') {
-      setCatsVisiveis(true);
-      setExpandidas((m) => ({ ...m, [item.id]: true }));
+    if (acao === 'excluir-categoria') {
+      setErroExclusao('');
+      setCategoriaParaExcluir(item);
     }
   }
 
@@ -108,6 +110,13 @@ export default function Sidebar({ ativa = 'dashboard' }) {
     removerTarefa.mutate(tarefaParaExcluir.id, {
       onSuccess: () => setTarefaParaExcluir(null),
       onError: (erro) => setErroExclusao(erro.message || 'Não foi possível excluir a tarefa.'),
+    });
+  }
+
+  function confirmarExclusaoCategoria() {
+    removerCategoria.mutate(categoriaParaExcluir.id, {
+      onSuccess: () => setCategoriaParaExcluir(null),
+      onError: (erro) => setErroExclusao(erro.message || 'Não foi possível excluir a categoria.'),
     });
   }
 
@@ -275,7 +284,15 @@ export default function Sidebar({ ativa = 'dashboard' }) {
           ) : (
             <>
               <button type="button" role="menuitem" onClick={() => executar('nova-categoria')}>Criar nova categoria</button>
-              <button type="button" role="menuitem" onClick={() => executar('visualizar-categoria')}>Visualizar categoria</button>
+              <button
+                className="is-danger"
+                type="button"
+                role="menuitem"
+                disabled={menuContexto.item.id === 'generico'}
+                onClick={() => executar('excluir-categoria')}
+              >
+                Excluir categoria
+              </button>
             </>
           )}
         </div>
@@ -293,6 +310,23 @@ export default function Sidebar({ ativa = 'dashboard' }) {
         }}
       >
         <p>Tem certeza que deseja excluir “{tarefaParaExcluir?.titulo}”? Essa ação não pode ser desfeita.</p>
+      </ConfirmModal>
+
+      <ConfirmModal
+        aberto={Boolean(categoriaParaExcluir)}
+        titulo="Excluir categoria"
+        processando={removerCategoria.isPending}
+        erro={erroExclusao}
+        onConfirmar={confirmarExclusaoCategoria}
+        onFechar={() => {
+          setCategoriaParaExcluir(null);
+          setErroExclusao('');
+        }}
+      >
+        <p>
+          Tem certeza que deseja excluir “{categoriaParaExcluir?.nome}”?
+          As tarefas dessa categoria serão movidas para “Genérico”.
+        </p>
       </ConfirmModal>
     </aside>
   );
