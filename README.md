@@ -149,6 +149,20 @@ python run.py back     # só o backend
 | `npm run preview` | Serve o `dist/` para conferência |
 | `npm test` | Testes (Vitest + Testing Library, ambiente jsdom) |
 | `npm run test:watch` | Os mesmos testes em modo watch |
+| `npm run quality:lcp` | Mede o LCP em quatro execuções e valida o P75 |
+
+### Métrica de qualidade: LCP no P75
+
+`npm run quality:lcp` gera o build de produção, executa quatro medições Lighthouse
+da página inicial e calcula o percentil 75 pelo método *nearest rank*:
+
+```text
+P75 = valor na posição ceil(0,75 × N) das amostras ordenadas
+```
+
+A execução é aprovada quando o LCP no P75 é menor ou igual a 2.500 ms. O resultado
+detalhado é gravado em `quality-reports/lcp-p75.json` (diretório ignorado pelo Git).
+O limite pode ser alterado temporariamente pela variável `LCP_P75_LIMIT_MS`.
 
 ---
 

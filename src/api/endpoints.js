@@ -26,7 +26,7 @@ export const endpoints = {
     create: `${SVC.tasks}/tasks`,
     detail: (id) => `${SVC.tasks}/tasks/${id}`,
     update: (id) => `${SVC.tasks}/tasks/${id}`,
-    remove: (id) => `${SVC.tasks}/tasks/${id}`,
+    remove: (id, scope = 'INSTANCE') => `${SVC.tasks}/tasks/${id}?scope=${scope}`,
     complete: (id) => `${SVC.tasks}/tasks/${id}/complete`,
     reopen: (id) => `${SVC.tasks}/tasks/${id}/reopen`,
 
@@ -42,6 +42,9 @@ export const endpoints = {
     moduleConfig: (taskId) => `${SVC.tasks}/tasks/${taskId}/module-config`,
     timer: (taskId) => `${SVC.tasks}/tasks/${taskId}/timer`,
     timerLog: (taskId) => `${SVC.tasks}/tasks/${taskId}/timer/log`,
+    timerStart: (taskId) => `${SVC.tasks}/tasks/${taskId}/timer/start`,
+    timerStop: (taskId) => `${SVC.tasks}/tasks/${taskId}/timer/stop`,
+    activeTimer: `${SVC.tasks}/timers/active`,
     focusSessions: (taskId) => `${SVC.tasks}/tasks/${taskId}/focus-sessions`,
     focusSessionComplete: (taskId, sessionId) => `${SVC.tasks}/tasks/${taskId}/focus-sessions/${sessionId}/complete`,
   },

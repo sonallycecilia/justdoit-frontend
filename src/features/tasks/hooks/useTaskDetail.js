@@ -223,6 +223,43 @@ export function useTimer(taskId) {
   });
 }
 
+// O início do cronômetro vive no servidor. Assim, fechar a aba ou perder a rede
+// não perde o intervalo: ao voltar, a UI recupera taskId + startedAt e continua
+// exibindo o tempo derivado do relógio, sem depender de setInterval ter rodado.
+export function useCronometroAtivo(enabled = true) {
+  return useQuery({
+    queryKey: ['timer-active'],
+    queryFn: () => getOuNull(endpoints.tasks.activeTimer),
+    enabled,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useIniciarCronometro(taskId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post(endpoints.tasks.timerStart(taskId)),
+    onSuccess: (ativo) => qc.setQueryData(['timer-active'], ativo),
+  });
+}
+
+export function usePararCronometro(taskId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post(endpoints.tasks.timerStop(taskId)),
+    onSuccess: (timer) => {
+      qc.setQueryData(['timer-active'], null);
+      if (timer?.actualSeconds != null) {
+        qc.setQueryData(['timer', taskId], (atual) => ({
+          ...(atual || {}),
+          segundos: Number(timer.actualSeconds),
+        }));
+      }
+    },
+  });
+}
+
 // Soma segundos rodados (PATCH /timer/log) — chamado ao pausar/sair da página.
 export function useLogarTempo(taskId) {
   const qc = useQueryClient();
