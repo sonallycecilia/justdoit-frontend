@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import TimeBlock, { COR_PRIORIDADE } from '@/features/calendar/components/TimeBlock';
 import { useCategorias } from '@/features/categories/hooks/useCategories';
 import { useCriarTarefa, useRemoverTarefa, useTarefas, useToggleDone } from '@/features/tasks/hooks/useTasks';
+import RecurringDeleteModal from '@/features/tasks/components/RecurringDeleteModal';
 import { fmtHora, useAtualizarBloco, useBlocos, useCriarBloco, usePatchTarefa, useRemoverBloco } from '@/features/calendar/hooks/useTimeBlocks';
 import { prioridadeParaApi } from '@/features/tasks/lib/priority';
 import { toast } from '@/lib/toast';
@@ -148,6 +149,7 @@ function tarefasComoEventos(blocosExistentes, tarefas, posicionar) {
       id: 'task-' + t.id, taskId: t.id, ini, fim: ini + duracaoH, semHora: !t.hora,
       titulo: t.titulo, cat: CAT_MAP[t.cat] || 'generico', catNome: t.cat,
       prio: t.prioridade || 'normal', done: t.done, mod: null,
+      seriesId: t.seriesId, cycleType: t.cycleType,
       ...pos,
     });
     return acc;
@@ -165,6 +167,8 @@ function enriquecerComTarefa(b, tarefasMap) {
     catNome: t ? t.cat : 'Genérico',
     prio: t ? t.prioridade : 'normal',
     done: t ? t.done : false,
+    seriesId: t ? t.seriesId : null,
+    cycleType: t ? t.cycleType : null,
     mod: null,
   };
 }
@@ -1139,13 +1143,19 @@ export default function WeeklyCalendar({ onDrawer }) {
     }).catch(err => aoFalharPorTeto(err, () => setEventos(prevEventos)));
   }
 
-  function removerEvento(ev) {
-    setEventos(evs => evs.filter(e => e.id !== ev.id));
-    setEventosMes(evs => evs.filter(e => e.id !== ev.id));
+  function removerEvento(ev, scope = 'INSTANCE') {
+    const rootId = ev.seriesId || ev.taskId;
+    const manter = e => scope === 'INSTANCE'
+      ? e.id !== ev.id
+      : e.taskId !== rootId && e.seriesId !== rootId;
+    setEventos(evs => evs.filter(manter));
+    setEventosMes(evs => evs.filter(manter));
     setModalEv(null);
     if (ehPersistido(ev.id)) removerBloco.mutateAsync(ev.id).catch(() => {});
     // Remover o bloco do calendário também exclui a tarefa vinculada no banco.
-    if (ev.taskId) removerTarefa.mutateAsync(ev.taskId).catch(() => {});
+    if (ev.taskId) removerTarefa.mutateAsync({
+      id: ev.taskId, scope, seriesId: ev.seriesId,
+    }).catch(() => {});
   }
 
   // Pede confirmação (caixa estilizada) antes de excluir de fato.
@@ -1153,10 +1163,10 @@ export default function WeeklyCalendar({ onDrawer }) {
   // Exclusão do pacote "Sem horário" recolhido: remove todas as tarefas da
   // pilha de uma vez, com uma única confirmação.
   function pedirRemoverVarios(evs) { setModalEv(null); setConfirmarEv({ itens: evs.slice() }); }
-  function confirmarRemocao() {
+  function confirmarRemocao(scope = 'INSTANCE') {
     if (confirmarEv) {
       if (confirmarEv.itens) confirmarEv.itens.forEach(removerEvento);
-      else removerEvento(confirmarEv);
+      else removerEvento(confirmarEv, scope);
     }
     setConfirmarEv(null);
   }
@@ -1274,7 +1284,15 @@ export default function WeeklyCalendar({ onDrawer }) {
       </div>
 
       <TaskModal ev={modalEv} dia={modalEv ? (modalEv.iso != null ? diaDeIso(modalEv.iso) : dias[modalEv.d]) : null} categorias={categorias} onClose={() => setModalEv(null)} onUpdate={handleUpdate} onDelete={pedirRemover} />
-      {confirmarEv && (
+      {confirmarEv && (confirmarEv.seriesId || confirmarEv.cycleType) && (
+        <RecurringDeleteModal
+          tarefa={confirmarEv}
+          processando={removerTarefa.isPending}
+          onFechar={() => setConfirmarEv(null)}
+          onEscolher={confirmarRemocao}
+        />
+      )}
+      {confirmarEv && !(confirmarEv.seriesId || confirmarEv.cycleType) && (
         <ConfirmDialog titulo="Excluir tarefa" confirmar="Excluir"
           onConfirm={confirmarRemocao} onCancel={() => setConfirmarEv(null)}>
           {confirmarEv.itens

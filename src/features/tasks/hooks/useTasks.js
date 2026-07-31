@@ -15,6 +15,8 @@ export function tarefaDaApi(t, categorias) {
   const concluida = t.status === 'COMPLETED';
   return {
     id: t.id,
+    seriesId: t.seriesId || null,
+    cycleType: t.cycleType || null,
     titulo: t.title,
     descricao: t.description || '',
     cat: cat.nome,
@@ -111,11 +113,20 @@ export function useToggleDone() {
 export function useRemoverTarefa() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id) => api.remove(endpoints.tasks.remove(id)),
-    onMutate: async (id) => {
+    mutationFn: (entrada) => {
+      const { id, scope = 'INSTANCE' } = typeof entrada === 'string' ? { id: entrada } : entrada;
+      return api.remove(endpoints.tasks.remove(id, scope));
+    },
+    onMutate: async (entrada) => {
+      const { id, scope = 'INSTANCE', seriesId = null } =
+        typeof entrada === 'string' ? { id: entrada } : entrada;
       await qc.cancelQueries({ queryKey: ['tarefas'] });
       const anterior = qc.getQueryData(['tarefas']);
-      qc.setQueryData(['tarefas'], (lista) => (lista || []).filter((t) => t.id !== id));
+      qc.setQueryData(['tarefas'], (lista) => (lista || []).filter((t) => {
+        if (scope === 'INSTANCE') return t.id !== id;
+        const raiz = seriesId || id;
+        return t.id !== raiz && t.seriesId !== raiz;
+      }));
       return { anterior };
     },
     onError: (_err, _id, ctx) => {
