@@ -510,7 +510,15 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   // Exposta ao caller via ref: não há id para autosalvar antes do POST.
   async function criar() {
     const titulo = (tituloRef.current?.textContent || '').trim();
-    if (!titulo) { tituloRef.current?.focus(); return null; }
+    // Sem título não há POST — o backend exige o campo. Só mover o cursor para
+    // o campo passava despercebido: o clique em "Registrar tarefa" não gerava
+    // aviso, não navegava e nada aparecia na To Do, então parecia que o botão
+    // estava quebrado em vez de faltar um dado.
+    if (!titulo) {
+      toast('Dê um nome à tarefa antes de registrar.', 'error');
+      tituloRef.current?.focus();
+      return null;
+    }
     const dados = {
       titulo,
       descricao: (descRef.current?.textContent || '').trim(),
@@ -534,62 +542,70 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
       return null;
     }
 
-    if (novoId) {
-      // A tarefa existe no banco: o rascunho perdeu a razão de ser. Sai antes
-      // dos extras de propósito — mesmo que algum falhe, não há mais rascunho
-      // a restaurar, e sim uma tarefa a editar.
-      rascunho.limpar();
-      // Com o id definitivo, persiste o que foi configurado antes do POST —
-      // nada fica só neste navegador.
-      const pendencias = [];
-      for (const [i, s] of subsLocal.entries()) {
-        pendencias.push(
-          api.post(endpoints.tasks.subtasks.create(novoId), { title: s.titulo, position: i })
-            .then((criada) => (s.done && criada?.id
-              ? api.patch(endpoints.tasks.subtasks.toggle(novoId, criada.id))
-              : null)),
-        );
-      }
-      if (nota.trim()) pendencias.push(api.put(endpoints.tasks.note(novoId), { content: nota }));
-      if (cicloLocal !== 'none' && (cicloLocal !== 'custom' || customValido(cicloCustom))) {
-        pendencias.push(api.put(endpoints.tasks.cycleConfig(novoId), cicloParaApi(valorCiclo())));
-      }
-      // UM PUT só carregando os dois campos do timer. Nada de somar um
-      // PATCH /timer/log aqui: upsertTimer e logSeconds fazem find-or-create,
-      // e dois writes concorrentes na espera abaixo criariam duas linhas de
-      // timer para a mesma tarefa. O PUT faz merge parcial campo a campo.
-      const segCron = deltaNaoLogado.current;
-      if (durMin > 0 || segCron > 0) {
-        const timer = {};
-        if (durMin > 0) timer.estimatedMinutes = durMin;
-        if (segCron > 0) timer.actualSeconds = segCron; // tarefa nova: define, não incrementa
-        pendencias.push(api.put(endpoints.tasks.timer(novoId), timer));
-      }
-      for (const s of focoPendente.current) {
-        pendencias.push(api.post(endpoints.tasks.focusSessions(novoId), { ...s, sessionType: 'FOCUS', completed: true }));
-      }
-      if (Object.values(modsLocal).some(Boolean)) {
-        pendencias.push(api.put(endpoints.tasks.moduleConfig(novoId), {
-          focusEnabled: modsLocal.foco,
-          cycleEnabled: modsLocal.ciclo,
-          priorityEnabled: modsLocal.prioridade,
-          timerEnabled: modsLocal.tempo,
-          notesEnabled: modsLocal.notas,
-        }));
-      }
-
-      // allSettled, não all: a tarefa já está no banco: um extra que falhe não
-      // pode transformar "criada" em "não criada" aos olhos de quem usa. O que
-      // não gravou vira aviso, e o fluxo segue para a To Do.
-      const resultados = await Promise.allSettled(pendencias);
-      // Esvaziados aqui porque o editor desmonta na navegação que vem a seguir;
-      // não há segunda tentativa em que pudessem ser reenviados.
-      focoPendente.current = [];
-      deltaNaoLogado.current = 0;
-      if (resultados.some((r) => r.status === 'rejected')) {
-        toast('Tarefa criada, mas alguns detalhes não foram salvos.', 'error');
-      }
+    // Resposta 2xx sem id: não há para onde navegar nem em que tarefa gravar os
+    // extras. Antes isto caía no mesmo silêncio do título vazio — a tela ficava
+    // parada em /tasks/nova sem dizer nada. Vira erro visível, e o rascunho
+    // continua intacto para uma nova tentativa.
+    if (!novoId) {
+      aoErro(new Error('A tarefa foi enviada, mas o servidor não devolveu o identificador dela.'));
+      return null;
     }
+
+    // A tarefa existe no banco: o rascunho perdeu a razão de ser. Sai antes
+    // dos extras de propósito — mesmo que algum falhe, não há mais rascunho
+    // a restaurar, e sim uma tarefa a editar.
+    rascunho.limpar();
+    // Com o id definitivo, persiste o que foi configurado antes do POST —
+    // nada fica só neste navegador.
+    const pendencias = [];
+    for (const [i, s] of subsLocal.entries()) {
+      pendencias.push(
+        api.post(endpoints.tasks.subtasks.create(novoId), { title: s.titulo, position: i })
+          .then((criada) => (s.done && criada?.id
+            ? api.patch(endpoints.tasks.subtasks.toggle(novoId, criada.id))
+            : null)),
+      );
+    }
+    if (nota.trim()) pendencias.push(api.put(endpoints.tasks.note(novoId), { content: nota }));
+    if (cicloLocal !== 'none' && (cicloLocal !== 'custom' || customValido(cicloCustom))) {
+      pendencias.push(api.put(endpoints.tasks.cycleConfig(novoId), cicloParaApi(valorCiclo())));
+    }
+    // UM PUT só carregando os dois campos do timer. Nada de somar um
+    // PATCH /timer/log aqui: upsertTimer e logSeconds fazem find-or-create,
+    // e dois writes concorrentes na espera abaixo criariam duas linhas de
+    // timer para a mesma tarefa. O PUT faz merge parcial campo a campo.
+    const segCron = deltaNaoLogado.current;
+    if (durMin > 0 || segCron > 0) {
+      const timer = {};
+      if (durMin > 0) timer.estimatedMinutes = durMin;
+      if (segCron > 0) timer.actualSeconds = segCron; // tarefa nova: define, não incrementa
+      pendencias.push(api.put(endpoints.tasks.timer(novoId), timer));
+    }
+    for (const s of focoPendente.current) {
+      pendencias.push(api.post(endpoints.tasks.focusSessions(novoId), { ...s, sessionType: 'FOCUS', completed: true }));
+    }
+    if (Object.values(modsLocal).some(Boolean)) {
+      pendencias.push(api.put(endpoints.tasks.moduleConfig(novoId), {
+        focusEnabled: modsLocal.foco,
+        cycleEnabled: modsLocal.ciclo,
+        priorityEnabled: modsLocal.prioridade,
+        timerEnabled: modsLocal.tempo,
+        notesEnabled: modsLocal.notas,
+      }));
+    }
+
+    // allSettled, não all: a tarefa já está no banco: um extra que falhe não
+    // pode transformar "criada" em "não criada" aos olhos de quem usa. O que
+    // não gravou vira aviso, e o fluxo segue para a To Do.
+    const resultados = await Promise.allSettled(pendencias);
+    // Esvaziados aqui porque o editor desmonta na navegação que vem a seguir;
+    // não há segunda tentativa em que pudessem ser reenviados.
+    focoPendente.current = [];
+    deltaNaoLogado.current = 0;
+    if (resultados.some((r) => r.status === 'rejected')) {
+      toast('Tarefa criada, mas alguns detalhes não foram salvos.', 'error');
+    }
+
     onCriada?.(novoId);
     return novoId;
   }

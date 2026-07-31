@@ -72,6 +72,35 @@ describe('registrar tarefa em /tasks/nova', () => {
     expect(postsEmTasks()).toHaveLength(1);
   });
 
+  it('avisa que falta o título em vez de deixar o clique sem resposta', async () => {
+    const { container } = renderizarNova();
+    // Só a descrição preenchida: era aqui que o clique morria em silêncio.
+    container.querySelector('.edit-desc').textContent = 'Sem título ainda';
+
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar tarefa' }));
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Dê um nome à tarefa antes de registrar.');
+    });
+    expect(postsEmTasks()).toHaveLength(0);
+    expect(screen.queryByText('Cheguei na To Do')).not.toBeInTheDocument();
+  });
+
+  it('avisa quando o POST responde sem id, em vez de ficar parado na página', async () => {
+    api.post.mockImplementation((url) => (url === endpoints.tasks.create
+      ? Promise.resolve(null) // 201 com corpo vazio
+      : Promise.resolve({})));
+
+    const { container } = renderizarNova();
+    digitarTitulo(container, 'Comprar pão');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar tarefa' }));
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('não devolveu o identificador');
+    });
+    expect(screen.queryByText('Cheguei na To Do')).not.toBeInTheDocument();
+  });
+
   it('não navega nem cria nada quando o POST da tarefa falha', async () => {
     api.post.mockImplementation((url) => (url === endpoints.tasks.create
       ? Promise.reject(new Error('Category not found'))
