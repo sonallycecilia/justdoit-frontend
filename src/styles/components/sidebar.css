@@ -377,6 +377,63 @@ a.sidebar-task { text-decoration: none; }
   flex-direction: column;
 }
 
+/* ── Ações e Métricas da Categoria── */
+
+/* Agrupa a contagem e a setinha e empurra pro canto direito */
+.sidebar-cat__metrics {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto; 
+}
+
+/* Agrupa os botões de editar/excluir, mas esconde por padrão */
+.sidebar-cat__actions {
+  display: none; 
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+/* A mágica do hover: esconde a contagem e mostra os botões */
+.sidebar-cat__header:hover .sidebar-cat__metrics {
+  display: none;
+}
+.sidebar-cat__header:hover .sidebar-cat__actions {
+  display: flex;
+}
+
+/* Deixa os botões bonitos e alinhados com o design system */
+.sidebar-cat__actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+
+.sidebar-cat__actions button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sidebar-cat__actions button:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+/* Dá um destaque vermelho sutil na lixeira no hover */
+.sidebar-cat__actions button[title="Excluir categoria"]:hover {
+  color: var(--color-danger, #d6453c);
+}
+
 /* ---------- Responsivo ---------- */
 @media (max-width: 880px) {
   .sidebar { width: 72px; }

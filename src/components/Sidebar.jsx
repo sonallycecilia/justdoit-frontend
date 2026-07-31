@@ -10,12 +10,16 @@ import { capitalizarNome, iniciais } from '@/lib/utils';
 import { useCategorias } from '@/features/categories/hooks/useCategories';
 import { useConta } from '@/features/auth/hooks/useConta';
 import { useTarefas } from '@/features/tasks/hooks/useTasks';
+import ConfirmModal from '@/components/ConfirmModal'; 
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Sidebar({ ativa = 'dashboard' }) {
   const navigate = useNavigate();
   const [colapsada, setColapsada] = useState(() => localStorage.getItem('jdi-sidebar-collapsed') === 'true');
   const [catsVisiveis, setCatsVisiveis] = useState(true);
-  const [modalAberto, setModalAberto] = useState(false);
+  const [catEmEdicao, setCatEmEdicao] = useState(null); // null = fechado, 'nova' = criando, {id, nome} = editando
+  const [catParaExcluir, setCatParaExcluir] = useState(null);
+  const [processandoExclusao, setProcessandoExclusao] = useState(false);
   const [busca, setBusca] = useState('');
   const [expandidas, setExpandidas] = useState({});
 
@@ -29,6 +33,10 @@ export default function Sidebar({ ativa = 'dashboard' }) {
 
   const pendentes = useMemo(() => (tarefas || []).filter((t) => !t.done), [tarefas]);
 
+  const queryClient = useQueryClient();
+
+
+
   function sair() {
     api.post(endpoints.auth.logout).catch(() => {}).finally(() => {
       limparSessao();
@@ -41,11 +49,27 @@ export default function Sidebar({ ativa = 'dashboard' }) {
     setColapsada(novo);
     localStorage.setItem('jdi-sidebar-collapsed', String(novo));
   }
-
+  
   function tarefasDaCategoria(catNome) {
     const lista = pendentes.filter((t) => t.cat === catNome);
     if (!busca) return lista;
     return lista.filter((t) => t.titulo.toLowerCase().includes(busca.toLowerCase()));
+  }
+
+  // Lida com o delete direto do sidebar:
+  async function handleExcluirCategoria() {
+    if (!catParaExcluir) return;
+    setProcessandoExclusao(true);
+    try {
+      await api.remove(endpoints.categories.remove(catParaExcluir.id));
+      queryClient.invalidateQueries({ queryKey: ['categorias'] }); // Atualiza a lista na hora
+      setCatParaExcluir(null);
+    } catch (error) {
+      console.error('Falha ao excluir categoria', error);
+      // Dispara um toast de erro se tiver um configurado globalmente
+    } finally {
+      setProcessandoExclusao(false);
+    }
   }
 
   return (
@@ -91,7 +115,7 @@ export default function Sidebar({ ativa = 'dashboard' }) {
         <div className="sidebar__section">
           <span>Categorias</span>
           <div className="sidebar__section-actions">
-            <button className="sidebar__cat-toggle" onClick={() => setModalAberto(true)} aria-label="Nova categoria">
+            <button className="sidebar__cat-toggle" onClick={() => setCatEmEdicao('nova')} aria-label="Nova categoria">
               <Ic d={ICONS.plus} />
             </button>
             <button className="sidebar__cat-toggle" onClick={() => setCatsVisiveis((v) => !v)} aria-label="Ocultar categorias" aria-expanded={catsVisiveis}>
@@ -119,18 +143,50 @@ export default function Sidebar({ ativa = 'dashboard' }) {
               {categorias?.map((c) => {
                 const doGrupo = tarefasDaCategoria(c.nome);
                 const aberta = Boolean(expandidas[c.id]) || Boolean(busca);
+                
                 return (
                   <div className="sidebar-cat" key={c.id}>
-                    <button
+                    <div
                       className="sidebar-cat__header"
                       aria-expanded={aberta}
                       onClick={() => setExpandidas((m) => ({ ...m, [c.id]: !m[c.id] }))}
+                      role="button"
+                      tabIndex={0}
                     >
                       <span className="cat-dot" style={{ background: c.cor }} />
                       <span className="nav-item__label">{c.nome}</span>
-                      <span className="nav-item__count">{pendentes.filter((t) => t.cat === c.nome).length}</span>
-                      <span className="sidebar-cat__chevron"><Ic d={ICONS.chevron} /></span>
-                    </button>
+
+                      {/* Novos botões de ação */}
+                      <div className="sidebar-cat__actions">
+                        <button 
+                          type="button" 
+                          title="Editar categoria"
+                          onClick={(e) => { 
+                            e.stopPropagation(); // Impede que a sanfona abra/feche
+                            setCatEmEdicao(c); 
+                          }}
+                        >
+                          <Ic d={ICONS.pencil} />
+                        </button>
+                        <button 
+                          type="button" 
+                          title="Excluir categoria"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setCatParaExcluir(c); 
+                          }}
+                        >
+                          <Ic d={ICONS.trash} />
+                        </button>
+                      </div>
+
+                      {/* Contagem e seta originais */}
+                      <div className="sidebar-cat__metrics">
+                        <span className="nav-item__count">{pendentes.filter((t) => t.cat === c.nome).length}</span>
+                        <span className="sidebar-cat__chevron"><Ic d={ICONS.chevron} /></span>
+                      </div>
+                    </div>
+
                     {aberta && (
                       <div className="sidebar-cat__tasks">
                         {doGrupo.length === 0 && (
@@ -142,8 +198,6 @@ export default function Sidebar({ ativa = 'dashboard' }) {
                             key={t.id}
                             to={`/tasks/${t.id}`}
                             title={t.titulo}
-                            // Arrastável para o calendário: o payload leva só o id;
-                            // o calendário resolve a tarefa pelo cache ['tarefas'].
                             draggable
                             onDragStart={(e) => e.dataTransfer.setData('application/jdi-task', JSON.stringify({ id: t.id }))}
                           >
@@ -179,7 +233,25 @@ export default function Sidebar({ ativa = 'dashboard' }) {
         </div>
       </div>
 
-      <CategoryModal aberto={modalAberto} onFechar={() => setModalAberto(false)} />
+      {/* Modais da Sidebar */}
+      <CategoryModal 
+        aberto={Boolean(catEmEdicao)} 
+        onFechar={() => setCatEmEdicao(null)} 
+        categoria={catEmEdicao !== 'nova' ? catEmEdicao : null} 
+      />
+
+      <ConfirmModal
+        aberto={Boolean(catParaExcluir)}
+        titulo={`Excluir "${catParaExcluir?.nome}"?`}
+        processando={processandoExclusao}
+        onConfirmar={handleExcluirCategoria}
+        onFechar={() => setCatParaExcluir(null)}
+        rotuloConfirmar="Excluir Categoria"
+      >
+        <p style={{ fontSize: '14px', color: 'var(--color-text-soft)' }}>
+          Tem certeza que deseja excluir esta categoria? As tarefas associadas a ela ficarão sem categoria.
+        </p>
+      </ConfirmModal>
     </aside>
   );
 }
