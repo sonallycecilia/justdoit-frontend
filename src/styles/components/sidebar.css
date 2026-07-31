@@ -305,6 +305,44 @@ a.sidebar-task { text-decoration: none; }
   flex: none;
 }
 
+/* Menu aberto com o botão direito em tarefas e categorias. */
+.sidebar-context-menu {
+  position: fixed;
+  z-index: 120;
+  width: 202px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .2);
+}
+.sidebar-context-menu button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-soft);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.sidebar-context-menu button:hover,
+.sidebar-context-menu button:focus-visible {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  outline: none;
+}
+.sidebar-context-menu button.is-danger { color: var(--color-danger); }
+.sidebar-context-menu button.is-danger:hover { background: var(--color-priority-urgent-soft); }
+.sidebar-context-menu button:disabled { opacity: .45; cursor: not-allowed; }
+.sidebar-context-menu button:disabled:hover { background: transparent; color: var(--color-text-soft); }
+.sidebar-context-menu__separator { height: 1px; margin: 3px 4px; background: var(--color-border); }
+
 .sidebar__foot {
   margin-top: auto;
   display: flex; align-items: center; gap: 10px;

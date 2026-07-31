@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import ConfirmModal from '@/components/ConfirmModal';
 import Ic, { ICONS, Mark } from '@/components/Ic';
 import CategoryModal from '@/features/categories/components/CategoryModal';
 import { api } from '@/api/client';
@@ -9,7 +10,7 @@ import { lerSessao, limparSessao } from '@/api/session';
 import { capitalizarNome, iniciais } from '@/lib/utils';
 import { useCategorias } from '@/features/categories/hooks/useCategories';
 import { useConta } from '@/features/auth/hooks/useConta';
-import { useTarefas } from '@/features/tasks/hooks/useTasks';
+import { useAtualizarTarefa, useRemoverTarefa, useTarefas } from '@/features/tasks/hooks/useTasks';
 
 export default function Sidebar({ ativa = 'dashboard' }) {
   const navigate = useNavigate();
@@ -18,9 +19,14 @@ export default function Sidebar({ ativa = 'dashboard' }) {
   const [modalAberto, setModalAberto] = useState(false);
   const [busca, setBusca] = useState('');
   const [expandidas, setExpandidas] = useState({});
+  const [menuContexto, setMenuContexto] = useState(null);
+  const [tarefaParaExcluir, setTarefaParaExcluir] = useState(null);
+  const [erroExclusao, setErroExclusao] = useState('');
 
   const { data: categorias } = useCategorias();
   const { data: tarefas } = useTarefas(categorias);
+  const atualizarTarefa = useAtualizarTarefa();
+  const removerTarefa = useRemoverTarefa();
 
   // Nome/avatar: começa com o que há na sessão e atualiza com GET /auth/me.
   const sessao = lerSessao();
@@ -28,6 +34,24 @@ export default function Sidebar({ ativa = 'dashboard' }) {
   const nome = capitalizarNome(usuario?.name || sessao?.name || '') || 'Usuário';
 
   const pendentes = useMemo(() => (tarefas || []).filter((t) => !t.done), [tarefas]);
+
+  useEffect(() => {
+    if (!menuContexto) return undefined;
+    const fechar = () => setMenuContexto(null);
+    const aoTeclar = (e) => { if (e.key === 'Escape') fechar(); };
+    document.addEventListener('click', fechar);
+    document.addEventListener('contextmenu', fechar);
+    document.addEventListener('keydown', aoTeclar);
+    window.addEventListener('resize', fechar);
+    window.addEventListener('scroll', fechar, true);
+    return () => {
+      document.removeEventListener('click', fechar);
+      document.removeEventListener('contextmenu', fechar);
+      document.removeEventListener('keydown', aoTeclar);
+      window.removeEventListener('resize', fechar);
+      window.removeEventListener('scroll', fechar, true);
+    };
+  }, [menuContexto]);
 
   function sair() {
     api.post(endpoints.auth.logout).catch(() => {}).finally(() => {
@@ -46,6 +70,45 @@ export default function Sidebar({ ativa = 'dashboard' }) {
     const lista = pendentes.filter((t) => t.cat === catNome);
     if (!busca) return lista;
     return lista.filter((t) => t.titulo.toLowerCase().includes(busca.toLowerCase()));
+  }
+
+  function abrirMenu(e, tipo, item) {
+    e.preventDefault();
+    e.stopPropagation();
+    const largura = 210;
+    const altura = tipo === 'tarefa' ? 174 : 92;
+    setMenuContexto({
+      tipo,
+      item,
+      x: Math.max(8, Math.min(e.clientX, window.innerWidth - largura - 8)),
+      y: Math.max(8, Math.min(e.clientY, window.innerHeight - altura - 8)),
+    });
+  }
+
+  function executar(acao) {
+    const { item } = menuContexto;
+    setMenuContexto(null);
+    if (acao === 'nova-tarefa') navigate('/tasks/nova');
+    if (acao === 'editar-tarefa') navigate(`/tasks/${item.id}`);
+    if (acao === 'remover-categoria') {
+      atualizarTarefa.mutate({ id: item.id, dados: { ...item, categoriaId: null } });
+    }
+    if (acao === 'excluir-tarefa') {
+      setErroExclusao('');
+      setTarefaParaExcluir(item);
+    }
+    if (acao === 'nova-categoria') setModalAberto(true);
+    if (acao === 'visualizar-categoria') {
+      setCatsVisiveis(true);
+      setExpandidas((m) => ({ ...m, [item.id]: true }));
+    }
+  }
+
+  function confirmarExclusao() {
+    removerTarefa.mutate(tarefaParaExcluir.id, {
+      onSuccess: () => setTarefaParaExcluir(null),
+      onError: (erro) => setErroExclusao(erro.message || 'Não foi possível excluir a tarefa.'),
+    });
   }
 
   return (
@@ -125,6 +188,7 @@ export default function Sidebar({ ativa = 'dashboard' }) {
                       className="sidebar-cat__header"
                       aria-expanded={aberta}
                       onClick={() => setExpandidas((m) => ({ ...m, [c.id]: !m[c.id] }))}
+                      onContextMenu={(e) => abrirMenu(e, 'categoria', c)}
                     >
                       <span className="cat-dot" style={{ background: c.cor }} />
                       <span className="nav-item__label">{c.nome}</span>
@@ -146,6 +210,7 @@ export default function Sidebar({ ativa = 'dashboard' }) {
                             // o calendário resolve a tarefa pelo cache ['tarefas'].
                             draggable
                             onDragStart={(e) => e.dataTransfer.setData('application/jdi-task', JSON.stringify({ id: t.id }))}
+                            onContextMenu={(e) => abrirMenu(e, 'tarefa', t)}
                           >
                             <span className={`sidebar-task__prio sidebar-task__prio--${t.prioridade}`} />
                             <span className="sidebar-task__titulo">{t.titulo}</span>
@@ -180,6 +245,55 @@ export default function Sidebar({ ativa = 'dashboard' }) {
       </div>
 
       <CategoryModal aberto={modalAberto} onFechar={() => setModalAberto(false)} />
+
+      {menuContexto && (
+        <div
+          className="sidebar-context-menu"
+          role="menu"
+          aria-label={menuContexto.tipo === 'tarefa' ? 'Ações da tarefa' : 'Ações da categoria'}
+          style={{ left: menuContexto.x, top: menuContexto.y }}
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {menuContexto.tipo === 'tarefa' ? (
+            <>
+              <button type="button" role="menuitem" onClick={() => executar('nova-tarefa')}>Criar nova tarefa</button>
+              <button type="button" role="menuitem" onClick={() => executar('editar-tarefa')}>Editar tarefa</button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={menuContexto.item.categoriaId === 'generico'}
+                onClick={() => executar('remover-categoria')}
+              >
+                Remover da categoria
+              </button>
+              <div className="sidebar-context-menu__separator" />
+              <button className="is-danger" type="button" role="menuitem" onClick={() => executar('excluir-tarefa')}>
+                Excluir
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" role="menuitem" onClick={() => executar('nova-categoria')}>Criar nova categoria</button>
+              <button type="button" role="menuitem" onClick={() => executar('visualizar-categoria')}>Visualizar categoria</button>
+            </>
+          )}
+        </div>
+      )}
+
+      <ConfirmModal
+        aberto={Boolean(tarefaParaExcluir)}
+        titulo="Excluir tarefa"
+        processando={removerTarefa.isPending}
+        erro={erroExclusao}
+        onConfirmar={confirmarExclusao}
+        onFechar={() => {
+          setTarefaParaExcluir(null);
+          setErroExclusao('');
+        }}
+      >
+        <p>Tem certeza que deseja excluir “{tarefaParaExcluir?.titulo}”? Essa ação não pode ser desfeita.</p>
+      </ConfirmModal>
     </aside>
   );
 }
