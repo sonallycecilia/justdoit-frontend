@@ -35,8 +35,6 @@ const MOD_ICONE = {
   tempo: ICONS.clock, notas: ICONS.notes, subtarefas: ICONS.list,
 };
 
-
-
 const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, onCriada, onSalvo }, ref) {
   const { data: categorias } = useCategorias();
   const { data: tarefa, isLoading: carregandoTarefa } = useTarefa(taskId, categorias);
@@ -79,7 +77,6 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const [cicloLocal, setCicloLocal] = useState('none');
   const [cicloCustom, setCicloCustom] = useState({ count: 12, unit: 'horas', occurrences: 7, startIso: null });
   const [dur, setDur] = useState({ h: 0, m: 0 });
-  const [tetoAtingido, setTetoAtingido] = useState(false);
   const [nota, setNota] = useState('');
   const [subsLocal, setSubsLocal] = useState([]);
   const [subInput, setSubInput] = useState('');
@@ -132,15 +129,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   }
 
   function aoErro(e) {
-    // 400 = teto biológico: o task-service recusa quando a duração estimada
-    // estoura o limite de horas do dia. É a fonte da verdade — nunca validamos
-    // o teto no cliente.
-    if (e?.status === 400) {
-      toast(e.error || e.message || 'Limite de tempo do dia excedido.', 'error');
-      setTetoAtingido(true);
-    } else {
-      toast(e?.error || e?.message || 'Não foi possível salvar.', 'error');
-    }
+    toast(e?.error || e?.message || 'Não foi possível salvar.', 'error');
     setSalvo('erro');
     setTimeout(() => setSalvo(''), 2500);
   }
@@ -152,7 +141,6 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     if (!taskId) return;
     const titulo = (tituloRef.current?.textContent || '').trim();
     if (!titulo) return; // backend exige título; espera o usuário digitar
-    setTetoAtingido(false);
     const dados = {
       titulo,
       descricao: (descRef.current?.textContent || '').trim(),
@@ -219,7 +207,6 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     if (!taskId) return;
     clearTimeout(durTimer.current);
     durTimer.current = setTimeout(() => {
-      setTetoAtingido(false);
       salvarTempoEstimado.mutate(novo.h * 60 + novo.m, { onSuccess: flashSalvo, onError: aoErro });
     }, 600);
   }
@@ -427,7 +414,6 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     };
     const durMin = dur.h * 60 + dur.m;
     setCronRodando(false); // congela o cronômetro: o que for salvo é o que está na tela
-    setTetoAtingido(false);
     try {
       const resp = await criarTarefa.mutateAsync(dados);
       const novoId = resp?.id;
@@ -486,7 +472,6 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   useImperativeHandle(ref, () => ({
     criar,
     criando: criarTarefa.isPending,
-    tetoAtingido,
     salvo,
   }));
 
@@ -566,8 +551,8 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
         <div className="dur-pick">
           <Ic d={ICONS.clock} size={14} />
           <input
-            type="number" min={0} max={16} value={dur.h} aria-label="Horas estimadas"
-            onChange={(e) => mudarDur({ ...dur, h: Math.max(0, Math.min(16, parseInt(e.target.value, 10) || 0)) })}
+            type="number" min={0} value={dur.h} aria-label="Horas estimadas"
+            onChange={(e) => mudarDur({ ...dur, h: Math.max(0, parseInt(e.target.value, 10) || 0) })}
           />h
           <input
             type="number" min={0} max={55} step={5} value={dur.m} aria-label="Minutos estimados"
@@ -579,7 +564,6 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
 
         <span className={`badge badge--${prioridade}`}>{Priority.ROTULO[prioridade]}</span>
 
-        {tetoAtingido && <span className="dur-alert">Teto biológico atingido</span>}
         {salvo === 'ok' && <span className="badge badge--info">Salvo ✓</span>}
 
         {subs.length > 0 && (
@@ -838,4 +822,3 @@ function CicloCustom({ custom, onChange }) {
     </div>
   );
 }
-
