@@ -909,7 +909,7 @@ function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
 
 /* ── ConfirmDialog (confirmação estilizada) ───────────────── */
 const TRASH_PATH = 'M3 6h18|M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2|M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6';
-function ConfirmDialog({ titulo, confirmar, onConfirm, onCancel, children }) {
+export function ConfirmDialog({ titulo, confirmar, onConfirm, onCancel, children }) {
   return (
     <div className="task-modal__backdrop" onClick={onCancel}>
       <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
@@ -920,7 +920,9 @@ function ConfirmDialog({ titulo, confirmar, onConfirm, onCancel, children }) {
         <div className="confirm-dialog__msg">{children}</div>
         <div className="confirm-dialog__actions">
           <button className="btn btn--ghost btn--sm" onClick={onCancel}>Cancelar</button>
-          <button className="confirm-dialog__danger" onClick={onConfirm}>
+          {/* Sem argumento: onConfirm recebe o escopo da exclusão, e o evento
+              de clique não pode vazar para esse parâmetro. */}
+          <button className="confirm-dialog__danger" onClick={() => onConfirm()}>
             <Icon d={TRASH_PATH} size={14} />{confirmar || 'Excluir'}
           </button>
         </div>
@@ -1144,7 +1146,11 @@ export default function WeeklyCalendar({ onDrawer }) {
       })
   }
 
-  function removerEvento(ev, scope = 'INSTANCE') {
+  function removerEvento(ev, escopo) {
+    // O backend só aceita INSTANCE|SERIES: qualquer outra coisa chegando aqui
+    // (evento de clique, índice de forEach) viraria ?scope=… inválido e o
+    // DELETE falharia — a tarefa sumia da tela e voltava no refetch.
+    const scope = escopo === 'SERIES' ? 'SERIES' : 'INSTANCE';
     const rootId = ev.seriesId || ev.taskId;
     const manter = e => scope === 'INSTANCE'
       ? e.id !== ev.id
@@ -1156,7 +1162,11 @@ export default function WeeklyCalendar({ onDrawer }) {
     // Remover o bloco do calendário também exclui a tarefa vinculada no banco.
     if (ev.taskId) removerTarefa.mutateAsync({
       id: ev.taskId, scope, seriesId: ev.seriesId,
-    }).catch(() => {});
+    }).catch(() => {
+      // O refetch do onSettled traz a tarefa de volta; sem aviso, a exclusão
+      // parecia ter funcionado e desfeito sozinha.
+      toast('Não foi possível excluir a tarefa.', 'error');
+    });
   }
 
   // Pede confirmação (caixa estilizada) antes de excluir de fato.
@@ -1166,7 +1176,9 @@ export default function WeeklyCalendar({ onDrawer }) {
   function pedirRemoverVarios(evs) { setModalEv(null); setConfirmarEv({ itens: evs.slice() }); }
   function confirmarRemocao(scope = 'INSTANCE') {
     if (confirmarEv) {
-      if (confirmarEv.itens) confirmarEv.itens.forEach(removerEvento);
+      // forEach passa (item, índice, array) — sem o wrapper, o índice chegava
+      // em `escopo` e cada DELETE saía com ?scope=0, 1, 2…
+      if (confirmarEv.itens) confirmarEv.itens.forEach(ev => removerEvento(ev, scope));
       else removerEvento(confirmarEv, scope);
     }
     setConfirmarEv(null);
