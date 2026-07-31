@@ -4,6 +4,7 @@ import Ic, { ICONS } from '@/components/Ic';
 import Sidebar from '@/components/Sidebar';
 import CategorySelect from '@/features/categories/components/CategorySelect';
 import NoteComposer from '@/features/notes/components/NoteComposer';
+import RecurringDeleteModal from '@/features/tasks/components/RecurringDeleteModal';
 import { useCategorias } from '@/features/categories/hooks/useCategories';
 import { useRemoverTarefa, useTarefas, useToggleDone } from '@/features/tasks/hooks/useTasks';
 import * as Priority from '@/features/tasks/lib/priority';
@@ -20,9 +21,17 @@ const DATAS = [
   { valor: 'week', rotulo: 'Esta semana' },
 ];
 
+// Ocorrências materializadas existem para preencher o calendário. A To Do
+// mostra somente a tarefa-modelo (seriesId nulo), evitando repetir a série.
+export function selecionarOcorrenciasPertinentes(tarefas) {
+  return tarefas.filter((tarefa) => !tarefa.seriesId);
+}
+
 export default function Todo() {
   const navigate = useNavigate();
   const [filtros, setFiltros] = useState({ cat: 'all', status: 'open', date: 'all' });
+  const [excluindo, setExcluindo] = useState(null);
+  const [erroExclusao, setErroExclusao] = useState('');
 
   const { data: categorias } = useCategorias();
   const { data: tarefas, isLoading, isError, refetch } = useTarefas(categorias);
@@ -39,7 +48,7 @@ export default function Todo() {
       if (filtros.date === 'week' && !['past', 'today', 'week'].includes(t.quando)) return false;
       return true;
     };
-    return (tarefas || []).filter(passa).sort(Priority.comparar);
+    return selecionarOcorrenciasPertinentes((tarefas || []).filter(passa)).sort(Priority.comparar);
   }, [tarefas, filtros]);
 
   const grupos = useMemo(() => Priority.agrupar(visiveis), [visiveis]);
@@ -154,7 +163,15 @@ export default function Todo() {
                           aria-label="Excluir tarefa"
                           title="Excluir tarefa"
                           disabled={remover.isPending}
-                          onClick={(e) => { e.stopPropagation(); remover.mutate(t.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (t.seriesId || t.cycleType) {
+                              setErroExclusao('');
+                              setExcluindo(t);
+                            } else {
+                              remover.mutate({ id: t.id });
+                            }
+                          }}
                         >
                           <Ic d={ICONS.trash} />
                         </button>
@@ -167,6 +184,20 @@ export default function Todo() {
           </div>
         </div>
       </main>
+      <RecurringDeleteModal
+        tarefa={excluindo}
+        processando={remover.isPending}
+        erro={erroExclusao}
+        onFechar={() => !remover.isPending && setExcluindo(null)}
+        onEscolher={(scope) => remover.mutate({
+          id: excluindo.id,
+          scope,
+          seriesId: excluindo.seriesId,
+        }, {
+          onSuccess: () => setExcluindo(null),
+          onError: (e) => setErroExclusao(e.message || 'Não foi possível excluir a tarefa.'),
+        })}
+      />
     </div>
   );
 }

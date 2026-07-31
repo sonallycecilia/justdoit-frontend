@@ -17,7 +17,8 @@ import { useCategorias } from '@/features/categories/hooks/useCategories';
 import { useAtualizarTarefa, useCriarTarefa, useTarefa, useToggleDone } from '@/features/tasks/hooks/useTasks';
 import {
   MODULOS_PADRAO, cicloParaApi,
-  useCiclo, useCriarSubtarefa, useLogarTempo, useModulos, useNota,
+  useCiclo, useCriarSubtarefa, useCronometroAtivo, useIniciarCronometro, useModulos, useNota,
+  usePararCronometro,
   useRegistrarCicloFoco, useRemoverSubtarefa, useSalvarCiclo, useSalvarModulos,
   useApagarNota, useSalvarNota, useSalvarTempoEstimado, useSubtarefas, useTimer,
   useToggleSubtarefa, useZerarTempo,
@@ -44,6 +45,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const { data: modsServidor } = useModulos(taskId);
   const { data: cicloServidor } = useCiclo(taskId);
   const { data: timerServidor } = useTimer(taskId);
+  const { data: cronAtivo, isFetched: cronAtivoConsultado } = useCronometroAtivo(Boolean(taskId));
   const segundosServidor = timerServidor?.segundos;
 
   const criarTarefa = useCriarTarefa();
@@ -56,7 +58,8 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const apagarNota = useApagarNota(taskId);
   const salvarMods = useSalvarModulos(taskId);
   const salvarCiclo = useSalvarCiclo(taskId);
-  const logarTempo = useLogarTempo(taskId);
+  const iniciarCronometro = useIniciarCronometro(taskId);
+  const pararCronometro = usePararCronometro(taskId);
   const zerarTempo = useZerarTempo(taskId);
   const salvarTempoEstimado = useSalvarTempoEstimado(taskId);
   const registrarFoco = useRegistrarCicloFoco(taskId);
@@ -265,54 +268,92 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   // ── Cronômetro de execução ────────────────────────────────────────────────
   const [cronSegundos, setCronSegundos] = useState(0);
   const [cronRodando, setCronRodando] = useState(false);
+  const [inicioPersistido, setInicioPersistido] = useState(null);
+  const [cronErro, setCronErro] = useState('');
   const deltaNaoLogado = useRef(0);
 
   // `taskId` entra nas deps para ressincronizar ao trocar de tarefa: sem ele,
   // duas tarefas com o mesmo total de segundos não disparavam o efeito e o
   // mostrador ficava com o valor da anterior.
   useEffect(() => {
-    if (segundosServidor !== undefined && !cronRodando) {
-      setCronSegundos(segundosServidor + deltaNaoLogado.current);
+    if (!taskId || !cronAtivoConsultado) return;
+    if (cronAtivo?.taskId === taskId) {
+      setInicioPersistido(cronAtivo.startedAt);
+      setCronRodando(true);
+    } else {
+      setInicioPersistido(null);
+      setCronRodando(false);
+      setCronSegundos(Number(segundosServidor ?? 0));
     }
-  }, [segundosServidor, taskId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cronAtivo, cronAtivoConsultado, segundosServidor, taskId]);
 
-  // Trocar de tarefa nunca deixa o cronômetro da anterior correndo.
-  useEffect(() => { setCronRodando(false); }, [taskId]);
+  useEffect(() => {
+    if (taskId && !cronRodando && segundosServidor !== undefined) {
+      setCronSegundos(Number(segundosServidor));
+    }
+  }, [cronRodando, segundosServidor, taskId]);
 
   useEffect(() => {
     if (!cronRodando) return;
-    const h = setInterval(() => {
+    const inicioMs = inicioPersistido ? new Date(inicioPersistido).getTime() : null;
+    const atualizar = () => {
+      if (taskId && Number.isFinite(inicioMs)) {
+        const decorridos = Math.max(0, Math.floor((Date.now() - inicioMs) / 1000));
+        setCronSegundos(Number(segundosServidor ?? 0) + decorridos);
+        return;
+      }
       deltaNaoLogado.current += 1;
       setCronSegundos((s) => s + 1);
+    };
+    atualizar();
+    const h = setInterval(() => {
+      atualizar();
     }, 1000);
     return () => clearInterval(h);
-  }, [cronRodando]);
+  }, [cronRodando, inicioPersistido, segundosServidor, taskId]);
 
-  function toggleCron() {
-    if (cronRodando) {
-      setCronRodando(false);
-      const delta = deltaNaoLogado.current;
-      if (taskId && delta > 0) { deltaNaoLogado.current = 0; logarTempo.mutate(delta); }
-    } else setCronRodando(true);
-  }
-
-  function resetCron() {
-    setCronRodando(false);
-    deltaNaoLogado.current = 0;
-    setCronSegundos(0);
-    if (taskId) zerarTempo.mutate();
-  }
-
-  // Ao desmontar — ou ao trocar de tarefa — envia o delta (fire-and-forget).
-  // Zerar o ref é obrigatório: sem isso os mesmos segundos seriam logados de
-  // novo na tarefa seguinte.
-  useEffect(() => () => {
-    const delta = deltaNaoLogado.current;
-    if (taskId && delta > 0) {
-      deltaNaoLogado.current = 0;
-      api.patch(endpoints.tasks.timerLog(taskId), { seconds: delta }).catch(() => {});
+  async function toggleCron() {
+    setCronErro('');
+    if (!taskId) {
+      setCronRodando((rodando) => !rodando);
+      return;
     }
-  }, [taskId]);
+    try {
+      if (cronRodando) {
+        const timer = await pararCronometro.mutateAsync();
+        setCronSegundos(Number(timer?.actualSeconds ?? cronSegundos));
+        setInicioPersistido(null);
+        setCronRodando(false);
+      } else {
+        const ativo = await iniciarCronometro.mutateAsync();
+        setInicioPersistido(ativo.startedAt);
+        setCronRodando(true);
+      }
+    } catch (erro) {
+      setCronErro(erro?.status === 409
+        ? 'Já existe um cronômetro ativo em outra tarefa.'
+        : 'Não foi possível sincronizar o cronômetro. Tente novamente.');
+    }
+  }
+
+  async function resetCron() {
+    setCronErro('');
+    if (!taskId) {
+      setCronRodando(false);
+      deltaNaoLogado.current = 0;
+      setCronSegundos(0);
+      return;
+    }
+    try {
+      if (cronRodando) await pararCronometro.mutateAsync();
+      await zerarTempo.mutateAsync();
+      setInicioPersistido(null);
+      setCronRodando(false);
+      setCronSegundos(0);
+    } catch {
+      setCronErro('Não foi possível zerar o cronômetro.');
+    }
+  }
 
   // ── Pomodoro ──────────────────────────────────────────────────────────────
   // `focos` conta fases de foco concluídas — é o gatilho da gravação, não um
@@ -710,11 +751,22 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
             </div>
             <div className="timer">
               <div className="timer__display">{formatarTempo(cronSegundos)}</div>
+              {cronErro && <div className="text-danger" role="alert">{cronErro}</div>}
               <div className="timer__actions">
-                <button className="btn btn--primary btn--md" onClick={toggleCron}>
+                <button
+                  className="btn btn--primary btn--md"
+                  onClick={toggleCron}
+                  disabled={iniciarCronometro.isPending || pararCronometro.isPending}
+                >
                   {cronRodando ? 'Pausar' : cronSegundos > 0 ? 'Continuar' : 'Iniciar'}
                 </button>
-                <button className="btn btn--secondary btn--md" onClick={resetCron}>Zerar</button>
+                <button
+                  className="btn btn--secondary btn--md"
+                  onClick={resetCron}
+                  disabled={zerarTempo.isPending || pararCronometro.isPending}
+                >
+                  Zerar
+                </button>
               </div>
             </div>
           </div>

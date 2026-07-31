@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "quality:lcp": "npm run build && lhci collect && node scripts/assert-lcp-p75.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
@@ -17,6 +18,7 @@
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

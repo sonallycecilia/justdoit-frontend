@@ -4,7 +4,7 @@
 // As estatísticas vêm do backend via useAnaliseSemanal — o dashboard antigo
 // somava totais guardados em localStorage (FOCO_DIARIO / TEMPO_DIARIO), que a
 // regra de ouro do app React não permite.
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Ic, { ICONS } from '@/components/Ic';
 import Sidebar from '@/components/Sidebar';
@@ -14,6 +14,7 @@ import { useConta } from '@/features/auth/hooks/useConta';
 import { useRemoverTarefa, useTarefas, useToggleDone } from '@/features/tasks/hooks/useTasks';
 import { lerSessao } from '@/api/session';
 import * as Priority from '@/features/tasks/lib/priority';
+import RecurringDeleteModal from '@/features/tasks/components/RecurringDeleteModal';
 import { capitalizarNome, dataCurta, horas, saudacao } from '@/lib/utils';
 
 const ATALHOS = [
@@ -33,6 +34,8 @@ export default function VisaoGeral() {
 
   const toggleDone = useToggleDone();
   const remover = useRemoverTarefa();
+  const [excluindo, setExcluindo] = useState(null);
+  const [erroExclusao, setErroExclusao] = useState('');
 
   // Atrasadas entram junto das de hoje — são pendências do dia na prática.
   const doDia = useMemo(
@@ -157,7 +160,15 @@ export default function VisaoGeral() {
                         aria-label="Excluir tarefa"
                         title="Excluir tarefa"
                         disabled={remover.isPending}
-                        onClick={(e) => { e.stopPropagation(); remover.mutate(t.id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (t.seriesId || t.cycleType) {
+                            setErroExclusao('');
+                            setExcluindo(t);
+                          } else {
+                            remover.mutate({ id: t.id });
+                          }
+                        }}
                       >
                         <Ic d={ICONS.trash} />
                       </button>
@@ -184,6 +195,18 @@ export default function VisaoGeral() {
           </section>
         </div>
       </main>
+      <RecurringDeleteModal
+        tarefa={excluindo}
+        processando={remover.isPending}
+        erro={erroExclusao}
+        onFechar={() => !remover.isPending && setExcluindo(null)}
+        onEscolher={(scope) => remover.mutate({
+          id: excluindo.id, scope, seriesId: excluindo.seriesId,
+        }, {
+          onSuccess: () => setExcluindo(null),
+          onError: (e) => setErroExclusao(e.message || 'Não foi possível excluir a tarefa.'),
+        })}
+      />
     </div>
   );
 }
