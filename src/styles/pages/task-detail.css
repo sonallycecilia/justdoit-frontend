@@ -87,6 +87,19 @@
 /* Chips de meta (categoria, data, prioridade) */
 .detail__chips { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin: 0 0 var(--space-xl) 0px; }
 
+/* A prioridade da tarefa é editável mesmo sem o módulo de prioridade ativo. */
+.priority-pick { position: relative; }
+.priority-pick__btn { cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.priority-pick__btn.is-open { outline: 2px solid var(--color-accent-soft); }
+.priority-pick__menu {
+  position: absolute; z-index: 30; top: calc(100% + 6px); left: 0;
+  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+  min-width: 150px; padding: 6px;
+  background: var(--color-card); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+}
+.priority-pick__menu .prio-opt { width: 100%; }
+
 /* ---------- Painel de módulos ativáveis (RF05) ---------- */
 .modules { margin-bottom: var(--space-xl); }
 .modules__title { font-size: var(--font-size-xs); font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-faint); margin-bottom: var(--space-md); }

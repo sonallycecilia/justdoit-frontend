@@ -71,6 +71,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const [hora, setHora] = useState(null); // { h, m } | null
   const [horaAberta, setHoraAberta] = useState(false);
   const [prioridade, setPrioridade] = useState('normal');
+  const [prioridadeAberta, setPrioridadeAberta] = useState(false);
   const [catId, setCatId] = useState(null);
   const [salvo, setSalvo] = useState(''); // '', 'ok', 'erro'
 
@@ -209,6 +210,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
 
   function mudarPrioridade(n) {
     setPrioridade(n);
+    setPrioridadeAberta(false);
     persistir({ prioridade: n });
   }
 
@@ -577,7 +579,37 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
 
         <CategorySelect categorias={cats} valor={cat?.nome} onChange={mudarCategoria} />
 
-        <span className={`badge badge--${prioridade}`}>{Priority.ROTULO[prioridade]}</span>
+        <div className="priority-pick">
+          <button
+            className={`badge badge--${prioridade} priority-pick__btn ${prioridadeAberta ? 'is-open' : ''}`}
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded={prioridadeAberta}
+            onClick={() => setPrioridadeAberta((v) => !v)}
+          >
+            <Ic d={ICONS.flag} size={12} />
+            <span>{Priority.ROTULO[prioridade]}</span>
+            <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} />
+          </button>
+          {prioridadeAberta && (
+            <div className="priority-pick__menu" role="listbox" aria-label="Prioridade da tarefa">
+              {Priority.NIVEIS.map((n) => (
+                <button
+                  key={n}
+                  className={`prio-opt ${n === prioridade ? 'is-on' : ''}`}
+                  style={{ color: Priority.COR[n] }}
+                  type="button"
+                  role="option"
+                  aria-selected={n === prioridade}
+                  onClick={() => mudarPrioridade(n)}
+                >
+                  <span className="prio-opt__dot" style={{ background: Priority.COR[n] }} />
+                  <span style={{ color: 'var(--color-text-soft)' }}>{Priority.ROTULO[n]}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {tetoAtingido && <span className="dur-alert">Teto biológico atingido</span>}
         {salvo === 'ok' && <span className="badge badge--info">Salvo ✓</span>}
