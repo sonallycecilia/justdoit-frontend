@@ -116,18 +116,6 @@ function ehPersistido(id) {
   return typeof id === 'string' && id.indexOf('ext-') !== 0 && id.indexOf('task-') !== 0;
 }
 
-/* ── TETO BIOLÓGICO ────────────────────────────────────────
-   O limite de horas por dia é validado pelo BACKEND (task-service), que é a
-   fonte da verdade: ao mover/agendar, o PUT/POST devolve 400 se o dia estourar.
-   O calendário NÃO recalcula o teto localmente — os moves são otimistas e,
-   quando o 400 chega, `aoFalharPorTeto` desfaz a mudança visual e mostra o
-   motivo vindo do backend. Outros erros (rede etc.) seguem otimistas. */
-// Exportado para o EventSummary (drawer lateral), que também escreve horário.
-export function aoFalharPorTeto(err, reverter) {
-  if (!err || err.status !== 400) return;
-  if (typeof reverter === 'function') reverter();
-  toast(err.error || err.message || 'Teto biológico atingido: esse dia já está cheio.', 'error');
-}
 
 // Tarefas com data viram eventos "virtuais" no calendário, para que uma tarefa
 // agendada apareça no dia mesmo sem ter um bloco de tempo criado. Tarefas sem
@@ -1024,7 +1012,10 @@ export default function WeeklyCalendar({ onDrawer }) {
     setEventos(evs => evs.map(ev => ev.id === id ? novo : ev));
     if (ehPersistido(id)) atualizarBloco.mutateAsync({ ...novo, iso: dias[novoDia].iso }).catch(() => {});
     sincronizarAgendaTarefa(atual.taskId, dias[novoDia] && dias[novoDia].iso, novaIni)
-      .catch(err => aoFalharPorTeto(err, () => setEventos(prevEventos)));
+     .catch(() => {
+          toast('Não foi possível salvar a alteração.', 'error');
+          setEventos(prevEventos); 
+        })
   }
 
   // Zera a hora da tarefa (mantendo a data) — usado ao mover para "Sem horário".
@@ -1068,9 +1059,11 @@ export default function WeeklyCalendar({ onDrawer }) {
       catNome: task.cat, prio: task.prioridade || 'normal', done: false, mod: null,
     }]);
     limparHoraTarefa(taskId, iso)
-      .catch(err => aoFalharPorTeto(err, () => setEventos(prevEventos)));
-  }
-
+      .catch(() => {
+          toast('Não foi possível salvar a alteração.', 'error');
+          setEventos(prevEventos); 
+        })
+      }
   // Move um evento da vista "mês" para outro dia (só muda a data ISO; a hora é
   // preservada). Persiste o bloco e sincroniza a data da tarefa vinculada.
   function moverMes(id, novoIso) {
@@ -1082,9 +1075,11 @@ export default function WeeklyCalendar({ onDrawer }) {
     setEventosMes(evs => evs.map(ev => ev.id === id ? novo : ev));
     if (ehPersistido(id)) atualizarBloco.mutateAsync(novo).catch(() => {});
     sincronizarAgendaTarefa(atual.taskId, novoIso, atual.ini)
-      .catch(err => aoFalharPorTeto(err, () => setEventosMes(prevEventosMes)));
-  }
-
+     .catch(() => {
+        toast('Não foi possível salvar a alteração.', 'error');
+        setEventosMes(prevEventosMes); 
+      })
+    }
   // Cria o bloco no schedule-service para um evento já vinculado a uma tarefa.
   function criarBlocoDoEvento(ev) {
     criarBloco.mutateAsync({ ...ev, iso: dias[ev.d].iso }).then(salvo => {
@@ -1119,7 +1114,10 @@ export default function WeeklyCalendar({ onDrawer }) {
     if (orig && !orig.dataIso) {
       sincronizarAgendaTarefa(taskId, dia && dia.iso, ini)
         .then(() => criarBlocoDoEvento(novoEv))
-        .catch(err => aoFalharPorTeto(err, () => setEventos(prevEventos)));
+        .catch(() => {
+          toast('Não foi possível salvar a alteração.', 'error');
+          setEventos(prevEventos);
+        })
       return;
     }
 
@@ -1136,7 +1134,10 @@ export default function WeeklyCalendar({ onDrawer }) {
       const evNovo = { ...novoEv, taskId: nova.id };
       setEventos(evs => evs.map(e => e.id === novoEv.id ? evNovo : e));
       criarBlocoDoEvento(evNovo);
-    }).catch(err => aoFalharPorTeto(err, () => setEventos(prevEventos)));
+    }).catch(() => {
+        toast('Não foi possível salvar a alteração.', 'error');
+        setEventos(prevEventos);
+      })
   }
 
   function removerEvento(ev) {

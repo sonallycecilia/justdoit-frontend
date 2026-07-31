@@ -1,8 +1,10 @@
-// Compositor de anotação reutilizável (topo do To Do e da aba Anotações).
+// composer da nota reutilizável 
 // Guarda um rascunho local enquanto digita e, ao criar, grava no backend
 // (POST /notes) e limpa o bloco para a próxima.
 import { useEffect, useRef, useState } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
+
+// grava o rascunho no localStorage para não perder o que o usuário digitou se ele sair da página
 import {
   gravarRascunho,
   gravarRascunhoTitulo,
@@ -13,65 +15,100 @@ import {
 } from '@/features/notes/hooks/useNotas';
 
 export default function NoteComposer() {
+  
+
   const [titulo, setTitulo] = useState(() => lerRascunhoTitulo());
   const [texto, setTexto] = useState(() => lerRascunho());
-  const [hint, setHint] = useState(null); // { texto } visível por alguns segundos
+  
+  // Estado para a mensagem de "feedback" ("salvo automaticamente").
+  const [hint, setHint] = useState(null); 
+  
   const hintTimer = useRef(null);
+  
+  // conecta com o backend para criar a nota (POST /notes) e devolve o status da requisição
   const criar = useCriarNota();
 
+  // quando o usuário sai dessa página e o componente morre,
+  // ele limpa o cronômetro para evitar erros no navegador.
   useEffect(() => () => clearTimeout(hintTimer.current), []);
 
+  /**
+   * Função auxiliar para piscar uma mensagem na tela e sumir depois.
+   */
   function flashHint(txt, ms = 2000) {
     setHint(txt);
-    clearTimeout(hintTimer.current);
-    hintTimer.current = setTimeout(() => setHint(null), ms);
+    clearTimeout(hintTimer.current); // Se o usuário digitar muito rápido, cancela o timer anterior e cria um novo
+    hintTimer.current = setTimeout(() => setHint(null), ms); 
   }
 
+  // Quando o usuário digita no campo de Título:
   function aoDigitarTitulo(e) {
-    setTitulo(e.target.value);
-    gravarRascunhoTitulo(e.target.value);
-    flashHint('salvo automaticamente');
+    setTitulo(e.target.value); // 1. Atualiza a tela.
+    gravarRascunhoTitulo(e.target.value); // 2. Salva silenciosamente no navegador.
+    flashHint('salvo automaticamente'); // 3. Dá o feedback visual.
   }
 
+  // Quando o usuário digita na área de texto:
   function aoDigitar(e) {
     setTexto(e.target.value);
     gravarRascunho(e.target.value);
     flashHint('salvo automaticamente');
   }
 
+  /**
+   * envio para o Backend.
+   */
   function criarNota() {
     const conteudo = texto.trim();
+    
+    // Trava de segurança: não deixa mandar nota vazia nem clicar duas vezes seguidas (isPending).
     if (!conteudo || criar.isPending) return;
+    
+    // Dispara a requisição POST para o backend
     criar.mutate({ titulo, conteudo }, {
+      // Se o backend devolver HTTP 201 (Sucesso):
       onSuccess: () => {
-        setTitulo('');
-        setTexto('');
-        limparRascunho();
-        flashHint('nota criada ✓', 2500);
+        setTitulo(''); // Limpa o campo título na tela
+        setTexto('');  // Limpa o campo de texto na tela
+        limparRascunho(); // Limpa o localStorage
+        flashHint('nota criada ✓', 2500); // Mostra sucesso
       },
-      onError: () => flashHint('erro ao criar', 3000),
+      // Se a internet cair ou o backend der erro 500:
+      onError: () => flashHint('erro ao criar', 3000), 
     });
   }
 
+  /**
+   * Acessibilidade e Agilidade (Atalhos de Teclado)
+   */
   function aoTeclar(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); criarNota(); }
+    // Se o usuário apertar Ctrl + Enter (ou Command + Enter no Mac), salva a nota!
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { 
+      e.preventDefault(); 
+      criarNota(); 
+    }
   }
 
   return (
     <div className="notepad">
+      {/* Cabeçalho com o ícone e a mensagem que pisca */}
       <div className="notepad__head">
         <span className="notepad__label"><Ic d={ICONS.notes} />Nova anotação</span>
         <span className={`notepad__hint ${hint ? 'is-visible' : ''}`}>{hint || 'salvo automaticamente'}</span>
       </div>
+      
+      {/* Input de linha única para o Título */}
       <input
         className="notepad__title"
         type="text"
-        maxLength={255}
+        maxLength={255} 
         placeholder="Título (opcional)"
         value={titulo}
         onChange={aoDigitarTitulo}
         onKeyDown={aoTeclar}
       />
+      
+      {/* Área de texto multi-linhas para a nota */}
       <textarea
         className="notepad__area"
         placeholder="Escreva uma anotação…"
@@ -79,11 +116,14 @@ export default function NoteComposer() {
         onChange={aoDigitar}
         onKeyDown={aoTeclar}
       />
+      
+      {/* Rodapé com botão de criar */}
       <div className="notepad__foot">
         <span className="notepad__foot-tip">Ctrl + Enter para criar</span>
         <button
           className="btn btn--primary btn--sm"
           type="button"
+          // O botão fica cinza (desativado) se o texto estiver vazio ou se já estiver salvando
           disabled={!texto.trim() || criar.isPending}
           onClick={criarNota}
         >

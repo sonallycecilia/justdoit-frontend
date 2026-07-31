@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import Ic, { ICONS } from '@/components/Ic';
 import TaskEditor from '@/features/tasks/components/TaskEditor';
 import { fmtHora, useAtualizarBloco } from '@/features/calendar/hooks/useTimeBlocks';
-import { aoFalharPorTeto } from '@/features/calendar/components/WeeklyCalendar';
+import { toast } from '@/lib/toast';
 import { dataRelativa, deIso } from '@/lib/utils';
 
 function ehBlocoPersistido(id) {
@@ -28,8 +28,7 @@ export default function EventSummary({ ev, dias }) {
   const diaEv = ev.iso ? null : (dias && dias[ev.d]);
   const iso = ev.iso || (diaEv && diaEv.iso);
 
-  // Depois que o editor persistiu a tarefa, move o bloco para bater com ela.
-  // O teto biológico continua sendo decidido pelo backend (400).
+ // Depois que o editor persistiu a tarefa, move o bloco para bater com ela.
   function sincronizarBloco(dados) {
     if (!ehBlocoPersistido(ev.id)) return;
     const novoIso = dados.dataIso || iso;
@@ -38,7 +37,9 @@ export default function EventSummary({ ev, dias }) {
     const duracao = (ev.fim ?? 0) - (ev.ini ?? 0);
     atualizarBloco
       .mutateAsync({ ...ev, iso: novoIso, ini: novoIni, fim: novoIni + (duracao > 0 ? duracao : 1) })
-      .catch((err) => aoFalharPorTeto(err, () => {}));
+      .catch(() => {
+        toast('Não foi possível sincronizar o bloco no calendário.', 'error');
+      });
   }
 
   return (
