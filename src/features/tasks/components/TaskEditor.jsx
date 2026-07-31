@@ -23,6 +23,7 @@ import {
   useApagarNota, useSalvarNota, useSalvarTempoEstimado, useSubtarefas, useTimer,
   useToggleSubtarefa, useZerarTempo,
 } from '@/features/tasks/hooks/useTaskDetail';
+import { useRascunhoTarefa } from '@/features/tasks/hooks/useRascunhoTarefa';
 import * as Priority from '@/features/tasks/lib/priority';
 import { TIPOS, customValido, fimPrevisto, rotuloCiclo } from '@/features/tasks/lib/cycle';
 import { dataIso, dataRelativa, deIso, fmtHoraMin, formatarMinSeg, formatarTempo, hoje, pct } from '@/lib/utils';
@@ -123,6 +124,67 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   useEffect(() => { if (notaServidor !== undefined) setNota(notaServidor); }, [notaServidor]);
   useEffect(() => { if ((subsServidor || []).length > 0) setSubToggleLocal(true); }, [subsServidor]);
 
+  // ── Rascunho (só no modo criação) ─────────────────────────────────────────
+  const rascunho = useRascunhoTarefa(!taskId);
+  const rascunhoLido = useRef(false);
+
+  // Restaura uma única vez, no monte. Roda ANTES de `categorias` chegar, então
+  // o effect de categoria acima não sobrescreve o catId restaurado (ele só
+  // preenche quando ainda não há nenhum).
+  useEffect(() => {
+    if (taskId || rascunhoLido.current) return;
+    rascunhoLido.current = true;
+    const r = rascunho.ler();
+    if (!r) return;
+    if (tituloRef.current) tituloRef.current.textContent = r.titulo || '';
+    if (descRef.current) descRef.current.textContent = r.descricao || '';
+    if (r.dataIso) setDataSel(deIso(r.dataIso));
+    if (r.hora) {
+      const [h, m] = r.hora.split(':').map(Number);
+      setHora({ h, m });
+    }
+    if (r.prioridade) setPrioridade(r.prioridade);
+    if (r.categoriaId) setCatId(r.categoriaId);
+    if (r.dur) setDur(r.dur);
+    if (r.mods) setModsLocal(r.mods);
+    if (r.ciclo) setCicloLocal(r.ciclo);
+    if (r.cicloCustom) setCicloCustom(r.cicloCustom);
+    if (r.nota) setNota(r.nota);
+    if (r.subs?.length) { setSubsLocal(r.subs); setSubToggleLocal(true); }
+    else if (r.subtarefasAberto) setSubToggleLocal(true);
+  }, [taskId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Título e descrição vivem no DOM (contentEditable), por isso são lidos das
+  // refs em vez de virem do estado.
+  function montarRascunho() {
+    return {
+      titulo: (tituloRef.current?.textContent || '').trim(),
+      descricao: (descRef.current?.textContent || '').trim(),
+      categoriaId: catId,
+      prioridade,
+      dataIso: dataIso(dataSel),
+      hora: hora ? fmtHoraMin(hora.h, hora.m) : null,
+      dur,
+      mods: modsLocal,
+      ciclo: cicloLocal,
+      cicloCustom,
+      nota,
+      subs: subsLocal,
+      subtarefasAberto: subTogglelocal,
+    };
+  }
+
+  function salvarRascunho() {
+    if (!taskId) rascunho.agendar(montarRascunho());
+  }
+
+  // Campos controlados: o rascunho acompanha o estado. O texto não entra aqui
+  // (não é estado) — ele chama salvarRascunho() direto no onInput.
+  useEffect(() => {
+    if (taskId || !rascunhoLido.current) return;
+    salvarRascunho();
+  }, [taskId, dataSel, hora, prioridade, catId, dur, modsLocal, cicloLocal, cicloCustom, nota, subsLocal, subTogglelocal]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const subs = taskId ? (subsServidor || []) : subsLocal;
   const cats = categorias || [];
   const cat = cats.find((c) => c.id === catId) || cats[0];
@@ -165,7 +227,9 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   // Título e descrição são contentEditable não controlados: salvam com debounce.
   const textoTimer = useRef(null);
   function aoDigitarTexto() {
-    if (!taskId) return;
+    // Sem id não há o que atualizar no backend; o que foi digitado vai para o
+    // rascunho local para não se perder se a página for deixada antes do POST.
+    if (!taskId) { salvarRascunho(); return; }
     clearTimeout(textoTimer.current);
     textoTimer.current = setTimeout(() => persistir(), 700);
   }
@@ -457,59 +521,77 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     };
     const durMin = dur.h * 60 + dur.m;
     setCronRodando(false); // congela o cronômetro: o que for salvo é o que está na tela
+
+    // O POST da tarefa fica SOZINHO no try: só ele decide se houve criação.
+    // Enquanto os extras dividiam este bloco, um PUT de módulo que falhasse
+    // levava tudo para o catch — a tarefa ficava no banco, a tela dizia que não
+    // salvou e o usuário reenviava, criando uma segunda tarefa igual.
+    let novoId;
     try {
-      const resp = await criarTarefa.mutateAsync(dados);
-      const novoId = resp?.id;
-      if (novoId) {
-        // Com o id definitivo, persiste o que foi configurado antes do POST —
-        // nada fica só neste navegador.
-        const pendencias = [];
-        for (const [i, s] of subsLocal.entries()) {
-          pendencias.push(
-            api.post(endpoints.tasks.subtasks.create(novoId), { title: s.titulo, position: i })
-              .then((criada) => (s.done && criada?.id
-                ? api.patch(endpoints.tasks.subtasks.toggle(novoId, criada.id))
-                : null)),
-          );
-        }
-        if (nota.trim()) pendencias.push(api.put(endpoints.tasks.note(novoId), { content: nota }));
-        if (cicloLocal !== 'none' && (cicloLocal !== 'custom' || customValido(cicloCustom))) {
-          pendencias.push(api.put(endpoints.tasks.cycleConfig(novoId), cicloParaApi(valorCiclo())));
-        }
-        // UM PUT só carregando os dois campos do timer. Nada de somar um
-        // PATCH /timer/log aqui: upsertTimer e logSeconds fazem find-or-create,
-        // e dois writes concorrentes no Promise.all abaixo criariam duas linhas
-        // de timer para a mesma tarefa. O PUT faz merge parcial campo a campo.
-        const segCron = deltaNaoLogado.current;
-        if (durMin > 0 || segCron > 0) {
-          const timer = {};
-          if (durMin > 0) timer.estimatedMinutes = durMin;
-          if (segCron > 0) timer.actualSeconds = segCron; // tarefa nova: define, não incrementa
-          pendencias.push(api.put(endpoints.tasks.timer(novoId), timer));
-        }
-        for (const s of focoPendente.current) {
-          pendencias.push(api.post(endpoints.tasks.focusSessions(novoId), { ...s, sessionType: 'FOCUS', completed: true }));
-        }
-        if (Object.values(modsLocal).some(Boolean)) {
-          pendencias.push(api.put(endpoints.tasks.moduleConfig(novoId), {
-            focusEnabled: modsLocal.foco,
-            cycleEnabled: modsLocal.ciclo,
-            priorityEnabled: modsLocal.prioridade,
-            timerEnabled: modsLocal.tempo,
-            notesEnabled: modsLocal.notas,
-          }));
-        }
-        await Promise.all(pendencias);
-        // Esvaziam só após gravar, para não duplicar numa segunda tentativa.
-        focoPendente.current = [];
-        deltaNaoLogado.current = 0;
-      }
-      onCriada?.(novoId);
-      return novoId;
+      novoId = (await criarTarefa.mutateAsync(dados))?.id;
     } catch (e) {
       aoErro(e);
       return null;
     }
+
+    if (novoId) {
+      // A tarefa existe no banco: o rascunho perdeu a razão de ser. Sai antes
+      // dos extras de propósito — mesmo que algum falhe, não há mais rascunho
+      // a restaurar, e sim uma tarefa a editar.
+      rascunho.limpar();
+      // Com o id definitivo, persiste o que foi configurado antes do POST —
+      // nada fica só neste navegador.
+      const pendencias = [];
+      for (const [i, s] of subsLocal.entries()) {
+        pendencias.push(
+          api.post(endpoints.tasks.subtasks.create(novoId), { title: s.titulo, position: i })
+            .then((criada) => (s.done && criada?.id
+              ? api.patch(endpoints.tasks.subtasks.toggle(novoId, criada.id))
+              : null)),
+        );
+      }
+      if (nota.trim()) pendencias.push(api.put(endpoints.tasks.note(novoId), { content: nota }));
+      if (cicloLocal !== 'none' && (cicloLocal !== 'custom' || customValido(cicloCustom))) {
+        pendencias.push(api.put(endpoints.tasks.cycleConfig(novoId), cicloParaApi(valorCiclo())));
+      }
+      // UM PUT só carregando os dois campos do timer. Nada de somar um
+      // PATCH /timer/log aqui: upsertTimer e logSeconds fazem find-or-create,
+      // e dois writes concorrentes na espera abaixo criariam duas linhas de
+      // timer para a mesma tarefa. O PUT faz merge parcial campo a campo.
+      const segCron = deltaNaoLogado.current;
+      if (durMin > 0 || segCron > 0) {
+        const timer = {};
+        if (durMin > 0) timer.estimatedMinutes = durMin;
+        if (segCron > 0) timer.actualSeconds = segCron; // tarefa nova: define, não incrementa
+        pendencias.push(api.put(endpoints.tasks.timer(novoId), timer));
+      }
+      for (const s of focoPendente.current) {
+        pendencias.push(api.post(endpoints.tasks.focusSessions(novoId), { ...s, sessionType: 'FOCUS', completed: true }));
+      }
+      if (Object.values(modsLocal).some(Boolean)) {
+        pendencias.push(api.put(endpoints.tasks.moduleConfig(novoId), {
+          focusEnabled: modsLocal.foco,
+          cycleEnabled: modsLocal.ciclo,
+          priorityEnabled: modsLocal.prioridade,
+          timerEnabled: modsLocal.tempo,
+          notesEnabled: modsLocal.notas,
+        }));
+      }
+
+      // allSettled, não all: a tarefa já está no banco: um extra que falhe não
+      // pode transformar "criada" em "não criada" aos olhos de quem usa. O que
+      // não gravou vira aviso, e o fluxo segue para a To Do.
+      const resultados = await Promise.allSettled(pendencias);
+      // Esvaziados aqui porque o editor desmonta na navegação que vem a seguir;
+      // não há segunda tentativa em que pudessem ser reenviados.
+      focoPendente.current = [];
+      deltaNaoLogado.current = 0;
+      if (resultados.some((r) => r.status === 'rejected')) {
+        toast('Tarefa criada, mas alguns detalhes não foram salvos.', 'error');
+      }
+    }
+    onCriada?.(novoId);
+    return novoId;
   }
 
   useImperativeHandle(ref, () => ({

@@ -5,7 +5,7 @@ import Ic, { ICONS, Mark } from '@/components/Ic';
 import DatePicker from '@/components/DatePicker';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
-import { gravarSessao } from '@/api/session';
+import { useIniciarSessao } from '@/features/auth/hooks/useSessao';
 import { alternarTema } from '@/lib/theme';
 import { capitalizarNome, dataIso } from '@/lib/utils';
 
@@ -13,6 +13,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Signup() {
   const navigate = useNavigate();
+  const iniciarSessao = useIniciarSessao();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [nascimento, setNascimento] = useState(null); // Date
@@ -62,7 +63,7 @@ export default function Signup() {
     onSuccess: (res) => {
       // Conta nova nasce como sessão curta (equivalente ao "Manter conectado"
       // desmarcado), igual ao prazo que o /auth/register emite.
-      gravarSessao(
+      iniciarSessao(
         { accessToken: res.accessToken, refreshToken: res.refreshToken, name: capitalizarNome(nome) },
         { lembrar: false },
       );

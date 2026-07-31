@@ -6,10 +6,11 @@ import { useMutation } from '@tanstack/react-query';
 import Ic, { ICONS } from '@/components/Ic';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
-import { gravarSessao } from '@/api/session';
+import { useIniciarSessao } from '@/features/auth/hooks/useSessao';
 
 export default function LoginForm() {
   const navigate = useNavigate();
+  const iniciarSessao = useIniciarSessao();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [verSenha, setVerSenha] = useState(false);
@@ -24,7 +25,9 @@ export default function LoginForm() {
       rememberMe: lembrar,
     }),
     onSuccess: (res) => {
-      gravarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken }, { lembrar });
+      // Entrar descarta o cache da sessão anterior (ver useSessao): sem isso,
+      // trocar de conta na mesma aba mostrava os dados do usuário antigo.
+      iniciarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken }, { lembrar });
       navigate('/visao-geral', { replace: true });
     },
   });

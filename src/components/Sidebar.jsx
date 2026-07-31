@@ -6,14 +6,16 @@ import CategoryModal from '@/features/categories/components/CategoryModal';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
 import { alternarTema } from '@/lib/theme';
-import { lerSessao, limparSessao } from '@/api/session';
+import { lerSessao } from '@/api/session';
 import { capitalizarNome, iniciais } from '@/lib/utils';
 import { useCategorias, useRemoverCategoria } from '@/features/categories/hooks/useCategories';
 import { useConta } from '@/features/auth/hooks/useConta';
+import { useEncerrarSessao } from '@/features/auth/hooks/useSessao';
 import { useAtualizarTarefa, useRemoverTarefa, useTarefas } from '@/features/tasks/hooks/useTasks';
 
 export default function Sidebar({ ativa = 'dashboard' }) {
   const navigate = useNavigate();
+  const encerrarSessao = useEncerrarSessao();
   const [colapsada, setColapsada] = useState(() => localStorage.getItem('jdi-sidebar-collapsed') === 'true');
   const [catsVisiveis, setCatsVisiveis] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
@@ -57,7 +59,7 @@ export default function Sidebar({ ativa = 'dashboard' }) {
 
   function sair() {
     api.post(endpoints.auth.logout).catch(() => {}).finally(() => {
-      limparSessao();
+      encerrarSessao();
       navigate('/', { replace: true });
     });
   }

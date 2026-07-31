@@ -4,7 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
-import { gravarSessao, limparSessao } from '@/api/session';
+import { gravarSessao } from '@/api/session';
+import { useEncerrarSessao } from '@/features/auth/hooks/useSessao';
 
 export function useConta() {
   return useQuery({
@@ -34,9 +35,12 @@ export function useAtualizarConta() {
 }
 
 export function useExcluirConta() {
+  const encerrarSessao = useEncerrarSessao();
   return useMutation({
     mutationFn: () => api.remove(endpoints.auth.me),
-    onSuccess: () => limparSessao(),
+    // A conta deixou de existir no backend: o cache dela não pode sobreviver
+    // para a próxima sessão desta mesma aba.
+    onSuccess: () => encerrarSessao(),
   });
 }
 

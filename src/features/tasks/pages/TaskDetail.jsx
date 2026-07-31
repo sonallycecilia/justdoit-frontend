@@ -64,9 +64,16 @@ export default function TaskDetail() {
                   </button>
                 </>
               ) : (
-                <button className="btn btn--primary btn--md" onClick={registrar} disabled={criando}>
-                  {criando ? 'Salvando…' : 'Registrar tarefa'}
-                </button>
+                <>
+                  {/* Contraponto explícito ao aviso de autosave da edição: aqui
+                      o que existe é rascunho local, e só o botão grava. */}
+                  <span className="text-soft" style={{ fontSize: 'var(--font-size-sm)' }}>
+                    Rascunho guardado neste navegador — registre para salvar
+                  </span>
+                  <button className="btn btn--primary btn--md" onClick={registrar} disabled={criando}>
+                    {criando ? 'Salvando…' : 'Registrar tarefa'}
+                  </button>
+                </>
               )}
             </div>
           </div>
