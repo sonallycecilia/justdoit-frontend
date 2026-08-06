@@ -13,6 +13,6 @@ __pycache__/
 *.pyc
 node_modules/
 dist/
-docs/
+
 .lighthouseci/
 quality-reports/
