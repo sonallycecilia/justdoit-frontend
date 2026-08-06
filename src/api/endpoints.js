@@ -47,6 +47,10 @@ export const endpoints = {
     activeTimer: `${SVC.tasks}/timers/active`,
     focusSessions: (taskId) => `${SVC.tasks}/tasks/${taskId}/focus-sessions`,
     focusSessionComplete: (taskId, sessionId) => `${SVC.tasks}/tasks/${taskId}/focus-sessions/${sessionId}/complete`,
+
+    // Agregado do período (tarefas, concluídas e tempo executado por dia) numa
+    // requisição só. Período máximo de 92 dias; o dashboard pede uma semana.
+    report: (de, ate) => `${SVC.tasks}/tasks/report?from=${de}&to=${ate}`,
   },
 
   // Anotações livres do usuário (não ligadas a tarefas) — task-service.
@@ -79,5 +83,16 @@ export const endpoints = {
     create: `${SVC.sched}/time-blocks`,
     update: (id) => `${SVC.sched}/time-blocks/${id}`,
     remove: (id) => `${SVC.sched}/time-blocks/${id}`,
+  },
+
+  // Plano semanal (schedule-service). `atual` acha o plano pela data da segunda,
+  // que é o que o frontend conhece — o id só existiria na resposta do POST e se
+  // perderia no primeiro reload. O POST é idempotente (200 se a semana já existe).
+  // O GET do resumo LÊ o que está salvo; quem calcula é o POST.
+  weeklyPlans: {
+    atual: (weekStart) => `${SVC.sched}/weekly-plans?weekStart=${weekStart}`,
+    create: `${SVC.sched}/weekly-plans`,
+    close: (id) => `${SVC.sched}/weekly-plans/${id}/close`,
+    summary: (id) => `${SVC.sched}/weekly-plans/${id}/summary`,
   },
 };

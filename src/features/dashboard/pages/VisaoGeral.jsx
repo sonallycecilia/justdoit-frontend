@@ -24,6 +24,17 @@ const ATALHOS = [
   { to: '/configuracoes', icon: ICONS.settings, titulo: 'Configurações', desc: 'Perfil e categorias' },
 ];
 
+// De onde veio o tempo de hoje. As duas formas de registrar trabalho (Pomodoro e
+// cronômetro) somam no total, então dizer só "em N ciclos" seria falso para quem
+// usa o cronômetro.
+export function origemDoTempo({ ciclos, cronometroMinutos }) {
+  const partes = [];
+  if (ciclos) partes.push(`${ciclos} ${ciclos === 1 ? 'ciclo' : 'ciclos'} de Pomodoro`);
+  if (cronometroMinutos > 0) partes.push(`${horas(cronometroMinutos / 60)} no cronômetro`);
+  if (!partes.length) return 'nenhum tempo registrado hoje';
+  return partes.join(' · ');
+}
+
 export default function VisaoGeral() {
   const navigate = useNavigate();
 
@@ -44,8 +55,11 @@ export default function VisaoGeral() {
   );
 
   const primeiroNome = capitalizarNome(usuario?.name || lerSessao()?.name || '').split(' ')[0];
-  const execPct = analise.totalPlan ? Math.round((analise.totalReal / analise.totalPlan) * 100) : 0;
-  const diff = analise.totalReal - analise.totalPlan;
+  // Aqui a referência é o ESTIMADO das tarefas, não o agendado do calendário:
+  // a Visão Geral é sobre tarefas, e a estimativa existe mesmo para quem não usa
+  // a agenda. A Análise mostra as duas grandezas lado a lado.
+  const execPct = analise.totalEstimado ? Math.round((analise.totalExecutado / analise.totalEstimado) * 100) : 0;
+  const diff = analise.totalExecutado - analise.totalEstimado;
 
   return (
     <div className="app">
@@ -67,6 +81,12 @@ export default function VisaoGeral() {
           </header>
 
           <section className="section">
+            {analise.erro && (
+              <div className="card" style={{ padding: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
+                Não foi possível carregar as estatísticas da semana.{' '}
+                <button className="link" onClick={analise.recarregar}>Tentar de novo</button>
+              </div>
+            )}
             <div className="stats-grid">
               <div className="stat">
                 <span className="stat__label"><Ic d={ICONS.checkCircle} /> Concluídas</span>
@@ -77,11 +97,9 @@ export default function VisaoGeral() {
               </div>
 
               <div className="stat">
-                <span className="stat__label"><Ic d={ICONS.clock} /> Foco hoje</span>
-                <span className="stat__value">{horas(analise.foco.minutos / 60)}</span>
-                <span className="stat__hint">
-                  em {analise.foco.ciclos} {analise.foco.ciclos === 1 ? 'ciclo' : 'ciclos'} de Pomodoro
-                </span>
+                <span className="stat__label"><Ic d={ICONS.clock} /> Tempo hoje</span>
+                <span className="stat__value">{horas(analise.hoje.minutos / 60)}</span>
+                <span className="stat__hint">{origemDoTempo(analise.hoje)}</span>
               </div>
 
               <div className="stat stat--wide">
@@ -89,7 +107,7 @@ export default function VisaoGeral() {
                 <div className="progress" style={{ marginTop: 6 }}>
                   <div className="progress__head">
                     <span className="progress__label">
-                      {horas(analise.totalPlan)} planejadas · {horas(analise.totalReal)} executadas
+                      {horas(analise.totalEstimado)} estimadas · {horas(analise.totalExecutado)} executadas
                     </span>
                     <span className="progress__value">{execPct}%</span>
                   </div>
@@ -98,9 +116,16 @@ export default function VisaoGeral() {
                   </div>
                 </div>
                 <span className="stat__hint">
-                  {analise.totalPlan
+                  {analise.totalEstimado
                     ? `desvio de ${diff >= 0 ? '+' : '−'}${horas(Math.abs(diff))} esta semana`
                     : 'defina o tempo estimado das tarefas para acompanhar o desvio'}
+                  {/* Tarefa sem data conta no total, mas não tem dia no gráfico
+                      da Análise. Dizer de onde vem essa parte evita a impressão
+                      de que os dois números se contradizem. */}
+                  {analise.estimadoSemData > 0 && (
+                    <> · {horas(analise.estimadoSemData)} em {analise.tarefasSemData}{' '}
+                      {analise.tarefasSemData === 1 ? 'tarefa sem data' : 'tarefas sem data'}</>
+                  )}
                 </span>
               </div>
             </div>
@@ -149,6 +174,16 @@ export default function VisaoGeral() {
                           {t.cat}
                         </span>
                         {t.hora && <span className="task__time">{t.hora}</span>}
+                        {/* Estimativa da tarefa (vem no próprio GET /tasks, via
+                            estimatedMinutes: nenhuma requisição a mais). É a
+                            grandeza que alimenta o card "Tempo executado" ali em
+                            cima, então vê-la por tarefa mostra de onde vem o
+                            total da semana. */}
+                        {t.duracaoMin > 0 && (
+                          <span className="task__est" title="Tempo estimado">
+                            tempo {horas(t.duracaoMin / 60)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="task__right">

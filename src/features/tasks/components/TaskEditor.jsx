@@ -7,6 +7,7 @@
 // para gravar, então os campos ficam locais e o caller salva via `salvar()`
 // exposto por `onPronto`.
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Ic, { ICONS } from '@/components/Ic';
 import DatePicker from '@/components/DatePicker';
 import TimePicker from '@/components/TimePicker';
@@ -14,7 +15,7 @@ import CategorySelect from '@/features/categories/components/CategorySelect';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
 import { useCategorias } from '@/features/categories/hooks/useCategories';
-import { useAtualizarTarefa, useCriarTarefa, useTarefa, useToggleDone } from '@/features/tasks/hooks/useTasks';
+import { invalidarMetricas, useAtualizarTarefa, useCriarTarefa, useTarefa, useToggleDone } from '@/features/tasks/hooks/useTasks';
 import {
   MODULOS_PADRAO, cicloParaApi,
   useCiclo, useCriarSubtarefa, useCronometroAtivo, useIniciarCronometro, useModulos, useNota,
@@ -38,6 +39,7 @@ const MOD_ICONE = {
 };
 
 const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, onCriada, onSalvo }, ref) {
+  const qc = useQueryClient();
   const { data: categorias } = useCategorias();
   const { data: tarefa, isLoading: carregandoTarefa } = useTarefa(taskId, categorias);
 
@@ -605,6 +607,12 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     if (resultados.some((r) => r.status === 'rejected')) {
       toast('Tarefa criada, mas alguns detalhes não foram salvos.', 'error');
     }
+
+    // O tempo estimado e as sessões de foco desta tarefa foram gravados aqui em
+    // cima com `api` direto, fora de qualquer mutation — então nada invalidaria o
+    // relatório da semana por conta própria, e o dashboard só veria a tarefa nova
+    // um minuto depois. É este o "criei a tarefa e não computou nada".
+    invalidarMetricas(qc);
 
     onCriada?.(novoId);
     return novoId;

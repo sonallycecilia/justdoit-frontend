@@ -118,12 +118,21 @@ function ehPersistido(id) {
 }
 
 
+// Altura do evento virtual na grade, em horas. É FIXA de propósito: não
+// acompanha a estimativa da tarefa. Quem estima 3h numa tarefa não pediu que ela
+// tomasse três faixas da agenda — a estimativa serve à Visão Geral e à Análise,
+// e aqui só empurrava o resto do dia para fora da tela. A grandeza continua
+// visível, como texto dentro do bloco (`estimadoMin` → "est. 3h").
+// Bloco REAL (arrastado para a grade) mantém a duração que o usuário deu a ele:
+// ali o tamanho é um compromisso de agenda, não uma estimativa.
+const ALTURA_VIRTUAL_H = 1;
+
 // Tarefas com data viram eventos "virtuais" no calendário, para que uma tarefa
 // agendada apareça no dia mesmo sem ter um bloco de tempo criado. Tarefas sem
 // hora caem na faixa "Sem horário". Deduplica contra os blocos reais (por
 // taskId). `posicionar` mapeia a tarefa → posição no modelo da UI (semana usa
 // índice de dia `d`; mês usa data ISO). Retorna null para descartar a tarefa.
-function tarefasComoEventos(blocosExistentes, tarefas, posicionar) {
+export function tarefasComoEventos(blocosExistentes, tarefas, posicionar) {
   const comBloco = new Set((blocosExistentes || []).map(b => b.taskId).filter(Boolean));
   return (tarefas || []).reduce((acc, t) => {
     if (!t.dataIso || comBloco.has(t.id)) return acc;
@@ -131,10 +140,10 @@ function tarefasComoEventos(blocosExistentes, tarefas, posicionar) {
     if (!pos) return acc;
     const [hh, mm] = t.hora ? String(t.hora).split(':').map(Number) : [START, 0];
     const ini = (hh || 0) + (mm || 0) / 60;
-    const duracaoH = (t.duracaoMin || 60) / 60;
 
     acc.push({
-      id: 'task-' + t.id, taskId: t.id, ini, fim: ini + duracaoH, semHora: !t.hora,
+      id: 'task-' + t.id, taskId: t.id, ini, fim: ini + ALTURA_VIRTUAL_H, semHora: !t.hora,
+      estimadoMin: t.duracaoMin || null,
       titulo: t.titulo, cat: CAT_MAP[t.cat] || 'generico', catNome: t.cat,
       prio: t.prioridade || 'normal', done: t.done, mod: null,
       seriesId: t.seriesId, cycleType: t.cycleType,

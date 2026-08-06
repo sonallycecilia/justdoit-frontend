@@ -83,6 +83,10 @@
 .timeblock__prio { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
 .timeblock__title { font-size: var(--font-size-sm); font-weight: var(--weight-semibold); line-height: 1.2; padding-right: 16px; overflow-wrap: anywhere; word-break: break-word; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .timeblock__meta { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; opacity: .85; }
+/* Estimativa dentro do bloco: some antes da hora quando o bloco é estreito
+   (vista Dia lado a lado), porque a hora é a informação de posição. */
+.timeblock__est { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }
+.timeblock--multi .timeblock__est { display: none; }
 .timeblock--estudos { background: var(--color-priority-low-soft); border-color: color-mix(in srgb, var(--color-cat-estudos) 40%, transparent); color: var(--color-cat-estudos); }
 .timeblock--casa { background: var(--color-priority-important-soft); border-color: color-mix(in srgb, var(--color-cat-casa) 40%, transparent); color: var(--color-cat-casa); }
 .timeblock--generico { background: var(--color-surface-sunken); border-color: color-mix(in srgb, var(--color-cat-generico) 45%, transparent); color: var(--color-text-soft); }

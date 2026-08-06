@@ -58,6 +58,19 @@ describe('TimeBlock — arraste', () => {
     expect(dataTransfer.effectAllowed).toBe('move');
   });
 
+  it('mostra a estimativa da tarefa, já que a altura do bloco não a representa', () => {
+    render(<TimeBlock ev={{ ...EV, id: 'task-1', estimadoMin: 180 }} rowH={56} startHour={6}
+      onDragStart={vi.fn()} onDragEnd={vi.fn()} />);
+
+    expect(screen.getByText('tempo 3h')).toBeInTheDocument();
+  });
+
+  it('omite a estimativa quando a tarefa não tem uma', () => {
+    montar();
+
+    expect(screen.queryByText(/^tempo /)).not.toBeInTheDocument();
+  });
+
   it('não abre o modal no clique que encerra um arraste', () => {
     const onOpen = vi.fn();
     render(<TimeBlock ev={EV} rowH={56} startHour={6} onDragStart={vi.fn()} onDragEnd={vi.fn()} onOpen={onOpen} />);

@@ -3,6 +3,7 @@
 // UMD do app antigo — globais viraram exports.
 import { useRef } from 'react';
 import { fmtHora } from '@/features/calendar/hooks/useTimeBlocks';
+import { horas } from '@/lib/utils';
 
 export const COR_PRIORIDADE = {
   urgent: 'var(--color-priority-urgent)',
@@ -76,6 +77,13 @@ export default function TimeBlock({ ev, rowH, startHour, catCor, onDragStart, on
           <span className="timeblock__title">{ev.titulo}</span>
           <span className="timeblock__meta">
             <span>{ev.semHora ? 'Sem hora' : fmtHora(ev.ini)}</span>
+            {/* Estimativa da tarefa. O evento virtual tem altura fixa, então sem
+                este texto uma tarefa de 3h ficaria idêntica a uma de 15 min. */}
+            {ev.estimadoMin > 0 && (
+              <span className="timeblock__est" title="Tempo estimado da tarefa">
+                tempo {horas(ev.estimadoMin / 60)}
+              </span>
+            )}
             {ev.mod && ICONES_MOD[ev.mod] && (
               <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 {ICONES_MOD[ev.mod].split(' M').map((d, i) => <path key={i} d={(i ? 'M' : '') + d} />)}

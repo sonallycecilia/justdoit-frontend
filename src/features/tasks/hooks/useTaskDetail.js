@@ -4,6 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, getOuNull } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
+import { invalidarMetricas } from '@/features/tasks/hooks/useTasks';
 
 // ─── Subtarefas ───────────────────────────────────────────────────────────────
 export function useSubtarefas(taskId) {
@@ -255,6 +256,7 @@ export function usePararCronometro(taskId) {
           segundos: Number(timer.actualSeconds),
         }));
       }
+      invalidarMetricas(qc);
     },
   });
 }
@@ -268,6 +270,7 @@ export function useLogarTempo(taskId) {
       if (resp?.actualSeconds != null) {
         qc.setQueryData(['timer', taskId], (t) => ({ ...(t || {}), segundos: Number(resp.actualSeconds) }));
       }
+      invalidarMetricas(qc);
     },
   });
 }
@@ -277,7 +280,10 @@ export function useZerarTempo(taskId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.put(endpoints.tasks.timer(taskId), { actualSeconds: 0 }),
-    onSuccess: () => qc.setQueryData(['timer', taskId], (t) => ({ ...(t || {}), segundos: 0 })),
+    onSuccess: () => {
+      qc.setQueryData(['timer', taskId], (t) => ({ ...(t || {}), segundos: 0 }));
+      invalidarMetricas(qc);
+    },
   });
 }
 
@@ -293,6 +299,8 @@ export function useSalvarTempoEstimado(taskId) {
       }
       // A lista de tarefas expõe duracaoMin (via estimatedMinutes) p/ o calendário.
       qc.invalidateQueries({ queryKey: ['tarefas'] });
+      // E a estimativa é o "estimado" do relatório da semana.
+      invalidarMetricas(qc);
     },
   });
 }
@@ -321,6 +329,9 @@ export function useRegistrarCicloFoco(taskId) {
         endedAt,
         completed: true,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['foco', taskId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['foco', taskId] });
+      invalidarMetricas(qc);
+    },
   });
 }

@@ -35,6 +35,7 @@
 .task__cat { display: inline-flex; align-items: center; gap: 5px; font-size: var(--font-size-xs); color: var(--color-text-muted); }
 .task__cat-dot { width: 7px; height: 7px; border-radius: 50%; }
 .task__time { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); }
+.task__est { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-faint); white-space: nowrap; }
 .task__right { display: flex; align-items: center; gap: var(--space-sm); flex: none; }
 
 /* Botão de excluir tarefa (após a prioridade) */
