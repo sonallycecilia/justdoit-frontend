@@ -24,6 +24,7 @@ export function tarefaDaApi(t, categorias) {
     categoriaId: t.categoryId || 'generico',
     prioridade: prioridadeDaApi(t.priority),
     done: concluida,
+    criadaEm: t.createdAt || null,
     dataIso: t.dueDate || null,
     data: dataObj ? dataRelativa(dataObj) : 'Sem data',
     quando,
@@ -124,7 +125,10 @@ async function registrarTempoDaConclusao(id) {
   const estimadoMin = Number(timer?.estimatedMinutes || 0);
   if (estimadoMin <= 0) return false;
   if (Number(timer?.actualSeconds || 0) > 0) return false;
-  await api.patch(endpoints.tasks.timerLog(id), { seconds: estimadoMin * 60 });
+  await api.patch(endpoints.tasks.timerLog(id), {
+    seconds: estimadoMin * 60,
+    source: 'COMPLETION_ESTIMATE',
+  });
   return true;
 }
 

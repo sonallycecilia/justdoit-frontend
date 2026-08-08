@@ -1,21 +1,20 @@
 // Aba "Análise": agendado vs. estimado vs. executado, alocação por categoria,
 // taxa de conclusão e insights — tudo derivado de dados reais do backend.
 //
-// Enquanto a semana está aberta os números são ao vivo. Ao fechar a semana
-// (PATCH /weekly-plans/{id}/close), o schedule-service grava o retrato e a tela
-// passa a exibi-lo congelado: é assim que uma semana antiga deixa de depender do
-// estado ATUAL das tarefas.
-import { useState } from 'react';
+// O usuário escolhe qualquer semana desde a criação da conta. As semanas são
+// calendários fixos de domingo a sábado e os números vêm do período escolhido.
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
 import Sidebar from '@/components/Sidebar';
 import CategoryChart from '@/features/dashboard/components/CategoryChart';
+import CategoryExecution from '@/features/dashboard/components/CategoryExecution';
 import DeviationChart, { SERIES } from '@/features/dashboard/components/DeviationChart';
 import RateRing from '@/features/dashboard/components/RateRing';
 import { useAnaliseSemanal } from '@/features/dashboard/hooks/useAnalytics';
-import { usePlanoSemanal } from '@/features/dashboard/hooks/useWeeklyPlan';
+import { useConta } from '@/features/auth/hooks/useConta';
 import { useCategorias } from '@/features/categories/hooks/useCategories';
 import { useTarefas } from '@/features/tasks/hooks/useTasks';
-import { horas } from '@/lib/utils';
+import { deIso, horas, intervaloSemana } from '@/lib/utils';
 
 function Vazio({ children }) {
   return <div style={{ color: 'var(--color-text-subtle)', padding: 'var(--space-md)' }}>{children}</div>;
@@ -34,8 +33,33 @@ function explicarErro(erro) {
   return 'Sem conexão com o servidor. Confira se o task-service (8081) e o schedule-service (8082) estão de pé.';
 }
 
+function dataDaConta(usuario, tarefas) {
+  const valor = usuario?.createdAt || usuario?.createdDate || usuario?.created_at;
+  const conta = valor ? new Date(valor) : null;
+  if (conta && !Number.isNaN(conta.getTime())) return conta;
+
+  const datasDasTarefas = (tarefas || [])
+    .map((t) => t.criadaEm && new Date(t.criadaEm))
+    .filter((d) => d && !Number.isNaN(d.getTime()));
+  if (datasDasTarefas.length) return new Date(Math.min(...datasDasTarefas));
+  return new Date();
+}
+
+function listarSemanas(desde) {
+  const primeira = intervaloSemana(desde);
+  const atual = intervaloSemana();
+  const semanas = [];
+  const cursor = new Date(atual.inicio);
+
+  while (cursor >= primeira.inicio) {
+    semanas.push(intervaloSemana(cursor));
+    cursor.setDate(cursor.getDate() - 7);
+  }
+  return semanas;
+}
+
 // Frases geradas a partir dos números da semana.
-function montarInsights({ conclusao, categorias, totalAgendado, totalEstimado, totalExecutado }) {
+function montarInsights({ conclusao, categorias, totalAgendado, totalEstimado, totalExecutado, geral }) {
   const itens = [];
 
   if (conclusao.total) {
@@ -45,7 +69,8 @@ function montarInsights({ conclusao, categorias, totalAgendado, totalEstimado, t
       icone: pct >= 60 ? ICONS.checkCircle : ICONS.flag,
       texto: (
         <>
-          Você concluiu <strong>{conclusao.feitas} de {conclusao.total}</strong> tarefas da semana
+          Você concluiu <strong>{conclusao.feitas} de {conclusao.total}</strong>{' '}
+          {geral ? 'tarefas no período' : 'tarefas da semana'}
           (<strong>{pct}%</strong>).{' '}
           {pct >= 60 ? 'Bom ritmo, siga assim.' : 'Vale revisar o que ficou para trás.'}
         </>
@@ -104,18 +129,46 @@ function montarInsights({ conclusao, categorias, totalAgendado, totalEstimado, t
 }
 
 export default function Analise() {
+  const { data: usuario } = useConta();
   const { data: categorias } = useCategorias();
   const { data: tarefas, isLoading } = useTarefas(categorias);
-  const analise = useAnaliseSemanal(tarefas);
-  const semanaPlano = usePlanoSemanal(analise.semana);
-  const [confirmando, setConfirmando] = useState(false);
+  const [semanaSelecionada, setSemanaSelecionada] = useState(() => intervaloSemana().inicioIso);
+  const [menuSemanasAberto, setMenuSemanasAberto] = useState(false);
+  const [categoriaModo, setCategoriaModo] = useState('estimado');
+  const menuSemanasRef = useRef(null);
+  const inicioConta = useMemo(() => dataDaConta(usuario, tarefas), [usuario, tarefas]);
+  const semanas = useMemo(
+    () => listarSemanas(inicioConta),
+    [inicioConta],
+  );
+  const geral = semanaSelecionada === 'overall';
+  const analise = useAnaliseSemanal(
+    tarefas,
+    geral ? undefined : deIso(semanaSelecionada),
+    { geral, inicio: inicioConta },
+  );
+
+  useEffect(() => {
+    if (!menuSemanasAberto) return undefined;
+    const fecharAoClicarFora = (e) => {
+      if (!menuSemanasRef.current?.contains(e.target)) setMenuSemanasAberto(false);
+    };
+    const fecharComEscape = (e) => {
+      if (e.key === 'Escape') setMenuSemanasAberto(false);
+    };
+    document.addEventListener('mousedown', fecharAoClicarFora);
+    document.addEventListener('keydown', fecharComEscape);
+    return () => {
+      document.removeEventListener('mousedown', fecharAoClicarFora);
+      document.removeEventListener('keydown', fecharComEscape);
+    };
+  }, [menuSemanasAberto]);
 
   const carregando = isLoading || analise.carregando;
   // "Pronto" é o único estado em que um card pode afirmar algo sobre a semana:
   // carregando ainda não sabe, e com erro os zeros não significam "vazio".
   const pronto = !carregando && !analise.erro;
   const insights = montarInsights(analise);
-  const { fechada, resumo, fechar } = semanaPlano;
 
   return (
     <div className="app">
@@ -126,44 +179,59 @@ export default function Analise() {
           <header className="page__head">
             <div>
               <div className="page__eyebrow">
-                Semana de {analise.semana.rotulo}
-                {fechada && ' · fechada'}
+                {geral ? 'Desde a criação da conta' : `Semana de ${analise.semana.rotulo}`}
               </div>
-              <h1 className="page__title">Análise semanal</h1>
+              <h1 className="page__title">{geral ? 'Visão geral' : 'Análise semanal'}</h1>
             </div>
             <div className="page__head-actions">
-              {!fechada && !confirmando && (
-                <button className="btn btn--secondary btn--md" onClick={() => setConfirmando(true)}>
-                  Fechar semana
+              <div className="an-week-pick" ref={menuSemanasRef}>
+                <button
+                  className="btn btn--secondary btn--md an-week-pick__button"
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={menuSemanasAberto}
+                  onClick={() => setMenuSemanasAberto((aberto) => !aberto)}
+                >
+                  <Ic d={ICONS.calendar} />
+                  {geral ? 'Visão geral' : 'Escolher semana'}
+                  <Ic d={ICONS.chevron} />
                 </button>
-              )}
-              {!fechada && confirmando && (
-                <>
-                  <button className="btn btn--secondary btn--md" onClick={() => setConfirmando(false)}>
-                    Cancelar
-                  </button>
-                  <button className="btn btn--primary btn--md"
-                          disabled={fechar.isPending}
-                          onClick={() => fechar.mutate(undefined, { onSuccess: () => setConfirmando(false) })}>
-                    {fechar.isPending ? 'Fechando…' : 'Confirmar fechamento'}
-                  </button>
-                </>
-              )}
+                {menuSemanasAberto && (
+                  <div className="an-week-pick__menu" role="listbox" aria-label="Semanas disponíveis">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={geral}
+                      className={geral ? 'is-selected' : ''}
+                      onClick={() => {
+                        setSemanaSelecionada('overall');
+                        setMenuSemanasAberto(false);
+                      }}
+                    >
+                      <span>Visão geral</span>
+                      <small>Todo o período</small>
+                    </button>
+                    {semanas.map((semana, indice) => (
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={semana.inicioIso === semanaSelecionada}
+                        className={semana.inicioIso === semanaSelecionada ? 'is-selected' : ''}
+                        key={semana.inicioIso}
+                        onClick={() => {
+                          setSemanaSelecionada(semana.inicioIso);
+                          setMenuSemanasAberto(false);
+                        }}
+                      >
+                        <span>{semana.rotulo}</span>
+                        {indice === 0 && <small>Semana atual</small>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </header>
-
-          {confirmando && !fechada && (
-            <div className="card an-card" style={{ marginBottom: 'var(--space-md)' }}>
-              Fechar a semana guarda o retrato dela como está agora. Depois disso os
-              totais param de mudar, mesmo que você edite as tarefas.
-            </div>
-          )}
-
-          {fechar.isError && (
-            <div className="card an-card" style={{ marginBottom: 'var(--space-md)' }}>
-              Não foi possível fechar a semana. {explicarErro(fechar.error)}
-            </div>
-          )}
 
           {analise.erro && (
             <div className="card an-card" style={{ marginBottom: 'var(--space-md)' }}>
@@ -180,7 +248,9 @@ export default function Analise() {
           <div className="an-grid">
             <div className="card an-card an-wide">
               <div className="an-card__head">
-                <span className="an-card__title">Agendado, estimado e executado</span>
+                <span className="an-card__title">
+                  Agendado, estimado e executado{geral && ' por dia da semana'}
+                </span>
                 <div className="an-legend">
                   {SERIES.map((s) => (
                     <span className="an-legend__item" key={s.chave}>
@@ -192,7 +262,7 @@ export default function Analise() {
               {carregando && <Vazio>Calculando…</Vazio>}
               {!carregando && analise.erro && <Vazio>Dados indisponíveis.</Vazio>}
               {pronto && !analise.temDados && (
-                <Vazio>Nada agendado nem executado nesta semana.</Vazio>
+                <Vazio>Nada agendado nem executado {geral ? 'neste período' : 'nesta semana'}.</Vazio>
               )}
               {pronto && analise.temDados && <DeviationChart dados={analise.desvio} />}
               {/* O gráfico é por DIA, então tarefa sem data não cabe nele — mas
@@ -201,61 +271,97 @@ export default function Analise() {
               {pronto && analise.estimadoSemData > 0 && (
                 <p className="an-card__hint" style={{ marginTop: 'var(--space-sm)' }}>
                   Mais {horas(analise.estimadoSemData)} estimadas em{' '}
-                  {analise.tarefasSemData}{' '}
-                  {analise.tarefasSemData === 1 ? 'tarefa sem data' : 'tarefas sem data'},
+                  {analise.tarefasSemDataComEstimativa}{' '}
+                  {analise.tarefasSemDataComEstimativa === 1 ? 'tarefa sem data' : 'tarefas sem data'},
                   que contam no total mas não têm dia no gráfico.
                 </p>
+              )}
+            </div>
+
+            <div className="card an-card an-wide">
+              <div className="an-card__head">
+                <span className="an-card__title">Execução por categoria</span>
+                <span className="an-card__hint">
+                  {geral ? 'tarefas desde a criação da conta' : 'tarefas previstas para a semana'}
+                </span>
+              </div>
+              {carregando && <Vazio>Calculando…</Vazio>}
+              {!carregando && analise.erro && <Vazio>Dados indisponíveis.</Vazio>}
+              {pronto && !analise.execucaoPorCategoria.length && (
+                <Vazio>Não há tarefas com data {geral ? 'neste período' : 'nesta semana'}.</Vazio>
+              )}
+              {pronto && analise.execucaoPorCategoria.length > 0 && (
+                <CategoryExecution categorias={analise.execucaoPorCategoria} />
               )}
             </div>
 
             <div className="card an-card">
               <div className="an-card__head">
                 <span className="an-card__title">Tempo por categoria</span>
-                <span className="an-card__hint">tempo estimado</span>
+                <div className="an-card__switch" aria-label="Grandeza do tempo por categoria">
+                  <button className={categoriaModo === 'estimado' ? 'is-on' : ''}
+                          onClick={() => setCategoriaModo('estimado')}>Estimado</button>
+                  <button className={categoriaModo === 'executado' ? 'is-on' : ''}
+                          onClick={() => setCategoriaModo('executado')}>Executado</button>
+                </div>
               </div>
               {carregando && <Vazio>Calculando…</Vazio>}
               {!carregando && analise.erro && <Vazio>Dados indisponíveis.</Vazio>}
-              {pronto && !analise.categorias.length && (
+              {pronto && !(categoriaModo === 'estimado' ? analise.categorias : analise.categoriasExecutadas).length && (
                 <Vazio>Defina o tempo estimado das tarefas para ver a distribuição.</Vazio>
               )}
-              {pronto && analise.categorias.length > 0 && <CategoryChart dados={analise.categorias} />}
+              {pronto && (categoriaModo === 'estimado' ? analise.categorias : analise.categoriasExecutadas).length > 0 && (
+                <CategoryChart dados={categoriaModo === 'estimado' ? analise.categorias : analise.categoriasExecutadas} />
+              )}
             </div>
 
             <div className="card an-card">
               <div className="an-card__head">
-                <span className="an-card__title">Conclusão da semana</span>
+                <span className="an-card__title">{geral ? 'Conclusão geral' : 'Conclusão da semana'}</span>
               </div>
               {carregando && <Vazio>Calculando…</Vazio>}
               {!carregando && analise.erro && <Vazio>Dados indisponíveis.</Vazio>}
-              {pronto && !analise.temTarefas && <Vazio>Sem tarefas nesta semana.</Vazio>}
+              {pronto && !analise.temTarefas && <Vazio>Sem tarefas {geral ? 'neste período' : 'nesta semana'}.</Vazio>}
               {pronto && analise.temTarefas && <RateRing conclusao={analise.conclusao} />}
             </div>
 
-            {fechada && resumo && (
+            <div className="card an-card an-wide">
+              <div className="an-card__head">
+                <span className="an-card__title">Cobertura do planejamento</span>
+                <span className="an-card__hint">agenda ÷ estimativa</span>
+              </div>
+              {pronto && analise.totalEstimado <= 0 && <Vazio>Defina estimativas para medir a cobertura.</Vazio>}
+              {pronto && analise.totalEstimado > 0 && (
+                <div className="progress">
+                  <div className="progress__head">
+                    <span className="progress__label">
+                      {horas(analise.totalAgendado)} agendadas de {horas(analise.totalEstimado)} estimadas
+                    </span>
+                    <span className="progress__value">{Math.round(analise.coberturaPlanejamento * 100)}%</span>
+                  </div>
+                  <div className="progress__track">
+                    <div className="progress__fill" style={{ width: `${Math.min(100, analise.coberturaPlanejamento * 100)}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {pronto && analise.maioresDesvios.length > 0 && (
               <div className="card an-card an-wide">
                 <div className="an-card__head">
-                  <span className="an-card__title">Retrato da semana fechada</span>
-                  <span className="an-card__hint">gravado no fechamento, não muda mais</span>
+                  <span className="an-card__title">Maiores desvios por tarefa</span>
+                  <span className="an-card__hint">executado − estimado</span>
                 </div>
-                <div className="stats-grid">
-                  <div className="stat">
-                    <span className="stat__label">Agendado</span>
-                    <span className="stat__value">{horas((resumo.totalScheduledMinutes || 0) / 60)}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat__label">Estimado</span>
-                    <span className="stat__value">{horas((resumo.totalEstimatedMinutes || 0) / 60)}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat__label">Executado</span>
-                    <span className="stat__value">{horas((resumo.totalActualSeconds || 0) / 3600)}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat__label">Concluídas</span>
-                    <span className="stat__value">
-                      {resumo.completedTasks || 0} <small>/ {resumo.totalTasks || 0}</small>
-                    </span>
-                  </div>
+                <div className="an-deviations">
+                  {analise.maioresDesvios.map((t) => (
+                    <a className="an-deviation" href={`/tasks/${t.id}`} key={t.id}>
+                      <span>{t.titulo}</span>
+                      <small>{horas(t.estimado)} estimadas · {horas(t.executado)} executadas</small>
+                      <strong className={t.desvio > 0 ? 'is-over' : ''}>
+                        {t.desvio >= 0 ? '+' : '−'}{horas(Math.abs(t.desvio))}
+                      </strong>
+                    </a>
+                  ))}
                 </div>
               </div>
             )}
@@ -263,11 +369,15 @@ export default function Analise() {
             <div className="card an-card an-wide">
               <div className="an-card__head">
                 <span className="an-card__title">Resumo e insights</span>
-                <span className="an-card__hint">Gerado a partir da sua semana</span>
+                <span className="an-card__hint">
+                  {geral ? 'Gerado a partir de todo o período' : 'Gerado a partir da sua semana'}
+                </span>
               </div>
               {carregando && <Vazio>Calculando…</Vazio>}
               {!carregando && analise.erro && <Vazio>Dados indisponíveis.</Vazio>}
-              {pronto && !insights.length && <Vazio>Ainda não há dados suficientes nesta semana.</Vazio>}
+              {pronto && !insights.length && (
+                <Vazio>Ainda não há dados suficientes {geral ? 'neste período' : 'nesta semana'}.</Vazio>
+              )}
               {pronto && insights.length > 0 && (
                 <div className="an-insights">
                   {insights.map((i, idx) => (

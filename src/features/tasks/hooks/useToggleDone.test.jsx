@@ -53,7 +53,10 @@ describe('concluir tarefa → tempo executado', () => {
     await alternar(true);
 
     expect(api.patch).toHaveBeenCalledWith(endpoints.tasks.complete(ID));
-    expect(logsDeTempo()).toEqual([[endpoints.tasks.timerLog(ID), { seconds: 5400 }]]);
+    expect(logsDeTempo()).toEqual([[endpoints.tasks.timerLog(ID), {
+      seconds: 5400,
+      source: 'COMPLETION_ESTIMATE',
+    }]]);
   });
 
   it('não sobrescreve tempo que foi medido de verdade', async () => {

@@ -95,4 +95,8 @@ export const endpoints = {
     close: (id) => `${SVC.sched}/weekly-plans/${id}/close`,
     summary: (id) => `${SVC.sched}/weekly-plans/${id}/summary`,
   },
+
+  analytics: {
+    overall: (from, to) => `${SVC.sched}/analytics/overall?from=${from}&to=${to}`,
+  },
 };

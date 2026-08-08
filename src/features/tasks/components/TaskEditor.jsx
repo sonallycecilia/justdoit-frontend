@@ -272,16 +272,15 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   }
 
   // Duração estimada vive no /timer (o TaskRequest descarta o campo).
-  const durTimer = useRef(null);
+  function salvarDuracao(novo) {
+    salvarTempoEstimado.mutate(novo.h * 60 + novo.m, { onSuccess: flashSalvo, onError: aoErro });
+  }
+
   function mudarDur(novo) {
     setDur(novo);
     if (!taskId) return;
-    clearTimeout(durTimer.current);
-    durTimer.current = setTimeout(() => {
-      salvarTempoEstimado.mutate(novo.h * 60 + novo.m, { onSuccess: flashSalvo, onError: aoErro });
-    }, 600);
+    salvarDuracao(novo);
   }
-  useEffect(() => () => clearTimeout(durTimer.current), []);
 
   const notaTimer = useRef(null);
   function aoDigitarNota(valor) {

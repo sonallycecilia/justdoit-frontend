@@ -140,13 +140,15 @@ describe('useAnaliseSemanal', () => {
     expect(result.current.totalEstimado).toBe(5); // 2h com data + 3h sem data
   });
 
-  it('não conta como sem data a tarefa que não tem estimativa nenhuma', async () => {
+  it('conta tarefas sem data mesmo sem estimativa e independentemente do status', async () => {
     const result = await analisar([
       { id: 'b', dataIso: null, duracaoMin: null, done: false, cat: 'Estudo' },
+      { id: 'c', dataIso: null, duracaoMin: null, done: true, cat: 'Estudo' },
     ], { report: relatorio({}) });
 
     expect(result.current.estimadoSemData).toBe(0);
-    expect(result.current.tarefasSemData).toBe(0);
+    expect(result.current.tarefasSemData).toBe(2);
+    expect(result.current.tarefasSemDataComEstimativa).toBe(0);
   });
 
   it('mantém a tarefa sem data fora das séries por dia, que não têm onde pendurá-la', async () => {
@@ -184,7 +186,7 @@ describe('useAnaliseSemanal', () => {
   });
 
   it('soma Pomodoro e cronômetro no tempo de hoje, mantendo a origem separável', async () => {
-    const hoje = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+    const hoje = new Date().getDay();
 
     const result = await analisar([], {
       report: relatorio({ [hoje]: { focusSeconds: 3000, focusSessions: 2, timerSeconds: 1800 } }),
@@ -196,6 +198,50 @@ describe('useAnaliseSemanal', () => {
       cronometroMinutos: 30,
       ciclos: 2,
     });
+  });
+
+  it('não repete tarefas sem data ao consultar uma semana histórica', async () => {
+    responder({ report: relatorio({}) });
+    const historica = new Date(semana.inicio);
+    historica.setDate(historica.getDate() - 7);
+    const { result } = renderHook(
+      () => useAnaliseSemanal([
+        { id: 'sem-data', dataIso: null, duracaoMin: 120, done: false, cat: 'Estudo' },
+      ], historica),
+      { wrapper: criarWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.carregando).toBe(false));
+    expect(result.current.tarefasSemData).toBe(0);
+    expect(result.current.estimadoSemData).toBe(0);
+  });
+
+  it('busca a visão geral em uma chamada ao schedule-service e soma os relatórios recebidos', async () => {
+    const inicio = new Date();
+    inicio.setDate(inicio.getDate() - 100);
+    api.get.mockImplementation((url) => {
+      if (url.includes('/analytics/overall')) {
+        const parcial = {
+          ...relatorio({}),
+          totalTasks: 1,
+          dueTasksCompleted: 1,
+          totalEstimatedMinutes: 60,
+        };
+        return Promise.resolve({ reports: [parcial, parcial], timeBlocks: [] });
+      }
+      return Promise.reject(new Error(`URL inesperada: ${url}`));
+    });
+
+    const { result } = renderHook(
+      () => useAnaliseSemanal([], undefined, { geral: true, inicio }),
+      { wrapper: criarWrapper() },
+    );
+    await waitFor(() => expect(result.current.carregando).toBe(false));
+
+    const consultas = api.get.mock.calls.filter(([url]) => url.includes('/analytics/overall'));
+    expect(consultas).toHaveLength(1);
+    expect(result.current.totalEstimado).toBe(2);
+    expect(result.current.conclusao).toEqual({ feitas: 2, total: 2 });
   });
 
   it('conta o tempo do cronômetro no executado do dia', async () => {

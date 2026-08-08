@@ -47,10 +47,15 @@ export default function VisaoGeral() {
   const remover = useRemoverTarefa();
   const [excluindo, setExcluindo] = useState(null);
   const [erroExclusao, setErroExclusao] = useState('');
+  const [semDataAberta, setSemDataAberta] = useState(false);
 
   // Atrasadas entram junto das de hoje — são pendências do dia na prática.
   const doDia = useMemo(
     () => (tarefas || []).filter((t) => ['today', 'past'].includes(t.quando)).sort(Priority.comparar),
+    [tarefas],
+  );
+  const tarefasSemData = useMemo(
+    () => (tarefas || []).filter((t) => !t.dataIso).sort(Priority.comparar),
     [tarefas],
   );
 
@@ -115,18 +120,49 @@ export default function VisaoGeral() {
                     <div className="progress__fill" style={{ width: `${Math.min(execPct, 100)}%` }} />
                   </div>
                 </div>
-                <span className="stat__hint">
+                <div className="stat__hint stat__hint--undated">
                   {analise.totalEstimado
                     ? `desvio de ${diff >= 0 ? '+' : '−'}${horas(Math.abs(diff))} esta semana`
                     : 'defina o tempo estimado das tarefas para acompanhar o desvio'}
+                  {analise.totalInferido > 0 && (
+                    <> · {horas(analise.totalMedido)} medidas e {horas(analise.totalInferido)} inferidas ao concluir</>
+                  )}
                   {/* Tarefa sem data conta no total, mas não tem dia no gráfico
                       da Análise. Dizer de onde vem essa parte evita a impressão
                       de que os dois números se contradizem. */}
-                  {analise.estimadoSemData > 0 && (
-                    <> · {horas(analise.estimadoSemData)} em {analise.tarefasSemData}{' '}
-                      {analise.tarefasSemData === 1 ? 'tarefa sem data' : 'tarefas sem data'}</>
+                  {analise.tarefasSemData > 0 && (
+                    <> · {analise.tarefasSemData}{' '}
+                      {analise.tarefasSemData === 1 ? 'tarefa sem data' : 'tarefas sem data'}
+                      {analise.estimadoSemData > 0 && ` (${horas(analise.estimadoSemData)} estimadas)`}</>
                   )}
-                </span>
+                  {analise.tarefasSemData > 0 && (
+                    <button
+                      type="button"
+                      className={`stat__expand${semDataAberta ? ' is-open' : ''}`}
+                      aria-label={semDataAberta ? 'Ocultar tarefas sem data' : 'Ver tarefas sem data'}
+                      aria-expanded={semDataAberta}
+                      onClick={() => setSemDataAberta((aberta) => !aberta)}
+                    >
+                      <Ic d={ICONS.plus} />
+                    </button>
+                  )}
+                </div>
+                {semDataAberta && tarefasSemData.length > 0 && (
+                  <div className="stat__undated-list">
+                    {tarefasSemData.map((t) => (
+                      <button
+                        type="button"
+                        className="stat__undated-task"
+                        key={t.id}
+                        onClick={() => navigate(`/tasks/${t.id}`)}
+                      >
+                        <span className={`stat__undated-status${t.done ? ' is-done' : ''}`} />
+                        <span className={`stat__undated-title${t.done ? ' is-done' : ''}`}>{t.titulo}</span>
+                        {t.duracaoMin > 0 && <small>{horas(t.duracaoMin / 60)}</small>}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </section>
