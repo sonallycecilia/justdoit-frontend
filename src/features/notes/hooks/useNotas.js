@@ -56,7 +56,7 @@ export function useAtualizarNota() {
         .toISOString().slice(0, 23); // LocalDateTime do backend: sem fuso
       qc.setQueryData(['notas'], (notas) =>
         (notas || []).map((n) => (n.id === id
-          ? { ...n, title: titulo, content: conteudo, updatedAt: local }
+          ? { ...n, titulo, conteudo, atualizadaEm: local }
           : n)));
       return { anterior };
     },

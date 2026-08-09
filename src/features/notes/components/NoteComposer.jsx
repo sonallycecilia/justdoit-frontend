@@ -3,6 +3,7 @@
 // (POST /notes) e limpa o bloco para a próxima.
 import { useEffect, useRef, useState } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
+import RichTextEditor from '@/features/notes/components/RichTextEditor';
 
 // grava o rascunho no localStorage para não perder o que o usuário digitou se ele sair da página
 import {
@@ -59,13 +60,11 @@ export default function NoteComposer() {
    * envio para o Backend.
    */
   function criarNota() {
-    const conteudo = texto.trim();
-    
     // Trava de segurança: não deixa mandar nota vazia nem clicar duas vezes seguidas (isPending).
-    if (!conteudo || criar.isPending) return;
+    if (!texto.trim() || criar.isPending) return;
     
-    // Dispara a requisição POST para o backend
-    criar.mutate({ titulo, conteudo }, {
+    // Envia o documento estruturado sem tags HTML (contrato aceito pelo backend).
+    criar.mutate({ titulo, conteudo: texto }, {
       // Se o backend devolver HTTP 201 (Sucesso):
       onSuccess: () => {
         setTitulo(''); // Limpa o campo título na tela
@@ -109,11 +108,10 @@ export default function NoteComposer() {
       />
       
       {/* Área de texto multi-linhas para a nota */}
-      <textarea
-        className="notepad__area"
+      <RichTextEditor
         placeholder="Escreva uma anotação…"
         value={texto}
-        onChange={aoDigitar}
+        onChange={(valor) => aoDigitar({ target: { value: valor } })}
         onKeyDown={aoTeclar}
       />
       

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
 import NoteComposer from '@/features/notes/components/NoteComposer';
+import RichTextContent from '@/features/notes/components/RichTextContent';
+import RichTextEditor from '@/features/notes/components/RichTextEditor';
 import Sidebar from '@/components/Sidebar';
 import { useAtualizarNota, useFixarNota, useNotas, useRemoverNota } from '@/features/notes/hooks/useNotas';
 
@@ -20,7 +22,11 @@ function formatarData(iso) {
 // Título exibido: o próprio título, ou a 1ª linha não vazia do conteúdo.
 function tituloDe(n) {
   if (n.titulo && n.titulo.trim()) return n.titulo.trim();
-  const linha = (n.conteudo || '').split('\n').map((l) => l.trim()).find(Boolean);
+  const texto = (n.conteudo || '')
+    .replace(/^jdi:rich-text:/, '')
+    .replace(/"text":"([^"]+)"/g, '$1\n')
+    .replace(/<[^>]*>/g, ' ');
+  const linha = texto.split('\n').map((l) => l.trim()).find(Boolean);
   return linha || 'Sem título';
 }
 
@@ -45,12 +51,10 @@ function NoteCard({ nota }) {
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
         />
-        <textarea
-          className="note-edit__body"
-          maxLength={10000}
-          placeholder="Conteúdo…"
+        <RichTextEditor
+          placeholder="Conteúdo da nota…"
           value={conteudo}
-          onChange={(e) => setConteudo(e.target.value)}
+          onChange={setConteudo}
           autoFocus
         />
         <div className="note-edit__actions">
@@ -93,7 +97,7 @@ function NoteCard({ nota }) {
         <h3 className="note-card__title">{tituloDe(nota)}</h3>
         {nota.fixada && <span className="note-card__pin-badge"><Ic d={ICONS.pin} />Fixada</span>}
       </div>
-      {nota.conteudo && <p className="note-card__body">{nota.conteudo}</p>}
+      {nota.conteudo && <RichTextContent className="note-card__body">{nota.conteudo}</RichTextContent>}
       <div className="note-card__foot">
         <span className="note-card__date">{formatarData(nota.atualizadaEm || nota.criadaEm)}</span>
         <div className="note-card__actions">
