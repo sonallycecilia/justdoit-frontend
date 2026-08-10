@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import TimeBlock, { COR_PRIORIDADE } from '@/features/calendar/components/TimeBlock';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import { useCategorias } from '@/features/categories/hooks/useCategories';
 import { useCriarTarefa, useRemoverTarefa, useTarefas, useToggleDone } from '@/features/tasks/hooks/useTasks';
 import RecurringDeleteModal from '@/features/tasks/components/RecurringDeleteModal';
@@ -759,6 +760,9 @@ export function TimePickerInline({ ini, fim, onChange }) {
 
 /* ── TaskModal (popup centralizado) ──────────────────────── */
 function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
+  const dialogRef = useRef(null);
+  const closeRef = useRef(null);
+  useModalA11y({ aberto: true, containerRef: dialogRef, initialFocusRef: closeRef, onFechar: onClose });
   const [dateOpen, setDateOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   if (!ev) return null;
@@ -802,13 +806,13 @@ function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
 
   return (
     <div className="task-modal__backdrop" onClick={onClose}>
-      <div className="task-modal" onClick={e => e.stopPropagation()}>
+      <div ref={dialogRef} className="task-modal" role="dialog" aria-modal="true" aria-labelledby="calendar-task-modal-title" tabIndex={-1} onClick={e => e.stopPropagation()}>
 
         {/* Cabeçalho */}
         <div className="task-modal__head">
           <span className="task-modal__head-cat" style={{ background: corCategoria(categorias, ev) }}></span>
-          <span className={`task-modal__title${ev.done ? ' is-done' : ''}`}>{ev.titulo}</span>
-          <button className="btn-icon task-modal__close" onClick={onClose} aria-label="Fechar">
+          <span id="calendar-task-modal-title" className={`task-modal__title${ev.done ? ' is-done' : ''}`}>{ev.titulo}</span>
+          <button ref={closeRef} className="btn-icon task-modal__close" onClick={onClose} aria-label="Fechar">
             <Icon d="M18 6 6 18|M6 6l12 12" />
           </button>
         </div>
@@ -1286,7 +1290,7 @@ export default function WeeklyCalendar({ onDrawer }) {
           </div>
         </div>
 
-        <div className="cal-scroll">
+        <div className="cal-scroll" tabIndex={0} aria-label="Grade do calendário">
           {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} moverSemHora={moverParaSemHora} agendarSemHora={agendarSemHora} adicionar={adicionar} onOpen={openModal} onDrawer={temDrawer ? openDrawer : undefined} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} onToggle={toggleEvento} />}
           {vista === 'dia' && <DayView dia={diaAtual} eventos={eventos} categorias={categorias} onOpen={openModal} onDrawer={temDrawer ? openDrawer : undefined} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} onToggle={toggleEvento} />}
           {vista === 'mes' && <MonthView mesData={mesData} eventos={eventosMes} categorias={categorias} onOpen={openModal} mover={moverMes} onToggle={toggleEvento} />}

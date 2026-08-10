@@ -1,8 +1,9 @@
 // Overlays da landing: Recursos, Sobre e Legal (Termos/Privacidade).
 // Port de landing.js + scripts/features/auth/legal.js — mesmo conteúdo e mesmas
 // classes CSS, só que como componentes controlados.
-import { useEffect } from 'react';
+import { useRef } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 const RECURSOS = [
   {
@@ -50,31 +51,21 @@ const EQUIPE = [
   { iniciais: 'LC', nome: 'Laryssa Costa' },
 ];
 
-// Fecha no Esc enquanto o overlay estiver aberto.
-function useEsc(aberto, onFechar) {
-  useEffect(() => {
-    if (!aberto) return;
-    const onKey = (e) => { if (e.key === 'Escape') onFechar(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [aberto, onFechar]);
-}
-
 function Overlay({ aberto, onFechar, titulo, subtitulo, largo = true, children }) {
-  useEsc(aberto, onFechar);
+  const dialogRef = useRef(null);
+  const closeRef = useRef(null);
+  useModalA11y({ aberto, containerRef: dialogRef, initialFocusRef: closeRef, onFechar });
+  if (!aberto) return null;
   return (
     <div
-      className={`recursos-overlay ${aberto ? 'is-open' : ''}`}
-      role="dialog"
-      aria-modal="true"
-      aria-hidden={!aberto}
+      className="recursos-overlay is-open"
       onClick={onFechar}
     >
-      <div className={`recursos-panel ${largo ? '' : 'sobre-panel'}`} onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className={`recursos-panel ${largo ? '' : 'sobre-panel'}`} role="dialog" aria-modal="true" aria-labelledby="landing-overlay-title" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="recursos-head">
-          <h2>{titulo}</h2>
+          <h2 id="landing-overlay-title">{titulo}</h2>
           <p>{subtitulo}</p>
-          <button className="recursos-close" type="button" onClick={onFechar} aria-label="Fechar">
+          <button ref={closeRef} className="recursos-close" type="button" onClick={onFechar} aria-label="Fechar">
             <Ic d={ICONS.close} />
           </button>
         </div>
@@ -180,17 +171,19 @@ const LEGAL = {
 
 // `chave` é 'termos' | 'privacidade' | null (fechado).
 export function LegalModal({ chave, onFechar }) {
-  useEsc(Boolean(chave), onFechar);
+  const dialogRef = useRef(null);
+  const closeRef = useRef(null);
+  useModalA11y({ aberto: Boolean(chave), containerRef: dialogRef, initialFocusRef: closeRef, onFechar });
   if (!chave) return null;
 
   const doc = LEGAL[chave];
   return (
     <div className="legal-modal">
       <div className="legal-modal__backdrop" onClick={onFechar} />
-      <div className="legal-modal__card" role="dialog" aria-modal="true" aria-label={doc.titulo}>
+      <div ref={dialogRef} className="legal-modal__card" role="dialog" aria-modal="true" aria-labelledby="legal-modal-title" tabIndex={-1}>
         <div className="legal-modal__head">
-          <h2 className="legal-modal__title">{doc.titulo}</h2>
-          <button type="button" className="legal-modal__close" onClick={onFechar} aria-label="Fechar">
+          <h2 id="legal-modal-title" className="legal-modal__title">{doc.titulo}</h2>
+          <button ref={closeRef} type="button" className="legal-modal__close" onClick={onFechar} aria-label="Fechar">
             <Ic d={ICONS.close} />
           </button>
         </div>

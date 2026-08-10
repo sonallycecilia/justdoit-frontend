@@ -20,3 +20,5 @@ docs/*
 !docs/quality/*.md
 .lighthouseci/
 quality-reports/
+playwright-report/
+test-results/

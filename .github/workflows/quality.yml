@@ -20,6 +20,7 @@ jobs:
           node-version: 22.22.2
           cache: npm
       - run: npm ci
+      - run: npx playwright install --with-deps chromium
 
       - name: Executar testes
         id: tests
@@ -32,6 +33,11 @@ jobs:
         id: lcp
         continue-on-error: true
         run: npm run quality:lcp
+
+      - name: Executar métrica de acessibilidade
+        id: accessibility
+        continue-on-error: true
+        run: npm run quality:a11y
 
       - name: Gerar relatórios por atributo
         if: always()
@@ -50,9 +56,11 @@ jobs:
             docs/quality/*.md
             quality-reports/**
             .lighthouseci/*.json
+            playwright-report/**
+            test-results/**
 
       - name: Aplicar gates
-        if: always() && (steps.tests.outcome != 'success' || steps.lcp.outcome != 'success')
+        if: always() && (steps.tests.outcome != 'success' || steps.lcp.outcome != 'success' || steps.accessibility.outcome != 'success')
         run: |
-          echo 'Testes ou LCP P75 falharam.' >&2
+          echo 'Testes, LCP P75 ou acessibilidade falharam.' >&2
           exit 1

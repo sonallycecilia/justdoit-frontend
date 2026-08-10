@@ -32,10 +32,16 @@ if (existsSync(junitPath)) {
 }
 
 const lcp = await readJson(resolve(evidenceDir, 'lcp-p75.json'));
+const accessibility = await readJson(resolve(evidenceDir, 'accessibility.json'));
 const lcpStatus = lcp ? (lcp.passed ? 'APROVADA' : 'REPROVADA') : 'NÃO EXECUTADA';
 const lcpSamples = lcp ? lcp.samplesMs.join(', ') : '—';
 const lcpValue = lcp ? `${lcp.valueMs} ms` : '—';
 const lcpLimit = lcp ? `${lcp.limitMs} ms` : '2500 ms';
+const accessibilityStatus = accessibility
+  ? (accessibility.passed ? 'APROVADA' : 'REPROVADA')
+  : 'NÃO EXECUTADA';
+const accessibilityDenominator = accessibility?.denominator ?? '—';
+const accessibilityResult = accessibility ? `${accessibility.numerator}/${accessibility.denominator} (${accessibility.percentage}%)` : '—';
 
 const header = `> Gerado automaticamente.  
 > Commit: \`${commit}\`  
@@ -50,7 +56,7 @@ ${header}
 |---|---|---:|---:|---:|
 | Taxa de conclusão de tarefas | NÃO IMPLEMENTADA | Jornadas iniciadas (não coletadas) | — | Não definida |
 | Tempo para concluir uma operação | NÃO IMPLEMENTADA | Operações concluídas (não coletadas) | — | Não definido |
-| Conformidade de acessibilidade | PARCIAL / NÃO MENSURADA | Critérios WCAG aplicáveis (não definidos) | — | Não definido |
+| Conformidade de acessibilidade automatizada | ${accessibilityStatus} | ${accessibilityDenominator} verificações regra-página | ${accessibilityResult} | 100%; 0 violações |
 
 ## Evidência auxiliar
 
@@ -58,7 +64,7 @@ ${header}
 |---|---|---:|---:|---:|
 | Suíte Vitest | ${tests.status} | ${tests.total} casos executados | ${tests.passed} passaram; ${tests.failed} falharam | 0 falhas |
 
-Os testes de componentes e hooks dão suporte aos fluxos, mas não medem jornadas reais. O Lighthouse está configurado somente para desempenho; não há execução de axe nem cálculo de conformidade WCAG.
+Os testes de componentes e hooks dão suporte aos fluxos, mas não medem jornadas reais. A acessibilidade usa axe-core em Chromium sobre ${accessibility?.surfacesAudited ?? 0}/${accessibility?.surfacesExpected ?? 11} rotas. O denominador soma, por rota, as regras WCAG que o axe pôde aprovar ou reprovar; itens inconclusivos (${accessibility?.incomplete ?? '—'}) exigem revisão manual e ficam fora da porcentagem. Navegação por teclado dos diálogos é testada no Vitest. Leitores de tela continuam como verificação manual.
 `, 'utf8');
 
 await writeFile(resolve(outputDir, 'desempenho.md'), `# Desempenho
