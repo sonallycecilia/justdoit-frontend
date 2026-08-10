@@ -1,12 +1,13 @@
 // Aba "Anotações": todas as notas do usuário (fixada primeiro, ordem do
-// servidor), com fixar, editar inline e excluir com confirmação.
+// servidor), com categorias, visualização expandida, edição e exclusão.
 import { useState } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
 import NoteComposer from '@/features/notes/components/NoteComposer';
 import RichTextContent from '@/features/notes/components/RichTextContent';
-import RichTextEditor from '@/features/notes/components/RichTextEditor';
+import NoteExpandedModal from '@/features/notes/components/NoteExpandedModal';
 import Sidebar from '@/components/Sidebar';
-import { useAtualizarNota, useFixarNota, useNotas, useRemoverNota } from '@/features/notes/hooks/useNotas';
+import { categoriaPorId, useCategorias } from '@/features/categories/hooks/useCategories';
+import { useFixarNota, useNotas, useRemoverNota } from '@/features/notes/hooks/useNotas';
 
 function formatarData(iso) {
   if (!iso) return '';
@@ -30,47 +31,12 @@ function tituloDe(n) {
   return linha || 'Sem título';
 }
 
-function NoteCard({ nota }) {
-  // 'normal' | 'editando' | 'confirmando'
+function NoteCard({ nota, categorias, onExpandir }) {
+  // 'normal' | 'confirmando'
   const [modo, setModo] = useState('normal');
-  const [titulo, setTitulo] = useState(nota.titulo);
-  const [conteudo, setConteudo] = useState(nota.conteudo);
-
-  const atualizar = useAtualizarNota();
   const remover = useRemoverNota();
   const fixar = useFixarNota();
-
-  if (modo === 'editando') {
-    return (
-      <article className="note-card note-card--editing">
-        <input
-          className="note-edit__title"
-          type="text"
-          maxLength={255}
-          placeholder="Título (opcional)"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-        />
-        <RichTextEditor
-          placeholder="Conteúdo da nota…"
-          value={conteudo}
-          onChange={setConteudo}
-          autoFocus
-        />
-        <div className="note-edit__actions">
-          <button className="btn btn--secondary btn--sm" type="button" onClick={() => setModo('normal')}>Cancelar</button>
-          <button
-            className="btn btn--primary btn--sm"
-            type="button"
-            disabled={atualizar.isPending}
-            onClick={() => atualizar.mutate({ id: nota.id, titulo, conteudo }, { onSuccess: () => setModo('normal') })}
-          >
-            Salvar
-          </button>
-        </div>
-      </article>
-    );
-  }
+  const categoria = categoriaPorId(categorias, nota.categoriaId);
 
   if (modo === 'confirmando') {
     return (
@@ -94,7 +60,10 @@ function NoteCard({ nota }) {
   return (
     <article className={`note-card ${nota.fixada ? 'note-card--pinned' : ''} ${fixar.isPending ? 'is-busy' : ''}`}>
       <div className="note-card__top">
-        <h3 className="note-card__title">{tituloDe(nota)}</h3>
+        <div>
+          <h3 className="note-card__title">{tituloDe(nota)}</h3>
+          <span className="note-card__category"><i style={{ background: categoria.cor }} />{categoria.nome}</span>
+        </div>
         {nota.fixada && <span className="note-card__pin-badge"><Ic d={ICONS.pin} />Fixada</span>}
       </div>
       {nota.conteudo && <RichTextContent className="note-card__body">{nota.conteudo}</RichTextContent>}
@@ -112,9 +81,9 @@ function NoteCard({ nota }) {
           </button>
           <button
             className="note-act"
-            title="Editar"
-            aria-label="Editar"
-            onClick={() => { setTitulo(nota.titulo); setConteudo(nota.conteudo); setModo('editando'); }}
+            title="Abrir e editar"
+            aria-label={`Abrir e editar ${tituloDe(nota)}`}
+            onClick={() => onExpandir(nota)}
           >
             <Ic d={ICONS.edit} />
           </button>
@@ -129,6 +98,8 @@ function NoteCard({ nota }) {
 
 export default function Anotacoes() {
   const { data: notas, isLoading, isError, refetch } = useNotas();
+  const { data: categorias = [] } = useCategorias();
+  const [notaExpandida, setNotaExpandida] = useState(null);
 
   return (
     <div className="app">
@@ -167,10 +138,11 @@ export default function Anotacoes() {
           )}
 
           <div className="notes-list">
-            {notas?.map((n) => <NoteCard key={n.id} nota={n} />)}
+            {notas?.map((n) => <NoteCard key={n.id} nota={n} categorias={categorias} onExpandir={setNotaExpandida} />)}
           </div>
         </div>
       </main>
+      <NoteExpandedModal nota={notaExpandida} categorias={categorias} onFechar={() => setNotaExpandida(null)} />
     </div>
   );
 }
