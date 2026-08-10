@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 // Modal de confirmação — reusa os estilos .cat-modal da sidebar.
 // Passando `exigeTexto`, o botão só habilita quando o usuário digita
@@ -17,20 +18,15 @@ export default function ConfirmModal({
 }) {
   const [digitado, setDigitado] = useState('');
   const confirmRef = useRef(null);
+  const dialogRef = useRef(null);
 
   useEffect(() => {
     if (aberto) {
       setDigitado('');
-      setTimeout(() => confirmRef.current?.focus(), 0);
     }
   }, [aberto]);
 
-  useEffect(() => {
-    if (!aberto) return;
-    const onKey = (e) => { if (e.key === 'Escape' && !processando) onFechar(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [aberto, processando, onFechar]);
+  useModalA11y({ aberto, containerRef: dialogRef, initialFocusRef: confirmRef, onFechar, closeOnEscape: !processando });
 
   if (!aberto) return null;
 
@@ -39,9 +35,9 @@ export default function ConfirmModal({
   return (
     <div className="cat-modal">
       <div className="cat-modal__backdrop" onClick={() => !processando && onFechar()} />
-      <div className="cat-modal__card" role="dialog" aria-modal="true" aria-label={titulo}>
+      <div ref={dialogRef} className="cat-modal__card" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" tabIndex={-1}>
         <div className="cat-modal__head">
-          <h3 className="cat-modal__title">{titulo}</h3>
+          <h3 id="confirm-modal-title" className="cat-modal__title">{titulo}</h3>
         </div>
         {children}
         {exigeTexto && (
@@ -53,7 +49,7 @@ export default function ConfirmModal({
             onChange={(e) => setDigitado(e.target.value)}
           />
         )}
-        {erro && <div className="cat-modal__error">{erro}</div>}
+        {erro && <div className="cat-modal__error" role="alert">{erro}</div>}
         <div className="cat-modal__actions">
           <button className="btn btn--secondary btn--sm" type="button" onClick={onFechar} disabled={processando}>
             Cancelar

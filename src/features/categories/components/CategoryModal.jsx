@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
 import { CORES_CATEGORIA as CORES } from '@/lib/cores';
 import { CAT_GENERICO, useAtualizarCategoria, useCriarCategoria } from '@/features/categories/hooks/useCategories';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 // Janela de categoria — cria (POST /categories) ou edita (PUT /categories/{id})
 // no backend e invalida as queries ao concluir. Passar `categoria` liga o modo
@@ -12,6 +13,7 @@ export default function CategoryModal({ aberto, categoria, onFechar }) {
   const [cor, setCor] = useState(CORES[0]);
   const [erro, setErro] = useState('');
   const inputRef = useRef(null);
+  const dialogRef = useRef(null);
 
   const criar = useCriarCategoria();
   const atualizar = useAtualizarCategoria();
@@ -25,18 +27,9 @@ export default function CategoryModal({ aberto, categoria, onFechar }) {
     setErro('');
     criar.reset();
     atualizar.reset();
-    setTimeout(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }, 0);
   }, [aberto, categoria]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!aberto) return;
-    const onKey = (e) => { if (e.key === 'Escape') onFechar(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [aberto, onFechar]);
+  useModalA11y({ aberto, containerRef: dialogRef, initialFocusRef: inputRef, onFechar });
 
   if (!aberto) return null;
 
@@ -60,9 +53,9 @@ export default function CategoryModal({ aberto, categoria, onFechar }) {
   return (
     <div className="cat-modal">
       <div className="cat-modal__backdrop" onClick={onFechar} />
-      <div className="cat-modal__card" role="dialog" aria-modal="true" aria-label={editando ? 'Editar categoria' : 'Nova categoria'}>
+      <div ref={dialogRef} className="cat-modal__card" role="dialog" aria-modal="true" aria-labelledby="category-modal-title" tabIndex={-1}>
         <div className="cat-modal__head">
-          <h3 className="cat-modal__title">{editando ? 'Editar categoria' : 'Nova categoria'}</h3>
+          <h3 id="category-modal-title" className="cat-modal__title">{editando ? 'Editar categoria' : 'Nova categoria'}</h3>
           <button className="cat-modal__close" type="button" onClick={onFechar} aria-label="Fechar">
             <Ic d={ICONS.close} />
           </button>
@@ -78,6 +71,7 @@ export default function CategoryModal({ aberto, categoria, onFechar }) {
               tabIndex={0}
               aria-label="Selecionar cor"
               onClick={() => setCor(c)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCor(c); } }}
             />
           ))}
         </div>
@@ -92,7 +86,7 @@ export default function CategoryModal({ aberto, categoria, onFechar }) {
           onChange={(e) => setNome(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') salvar(); }}
         />
-        {erro && <div className="cat-modal__error">{erro}</div>}
+        {erro && <div className="cat-modal__error" role="alert">{erro}</div>}
         <div className="cat-modal__actions">
           <button className="btn btn--secondary btn--sm" type="button" onClick={onFechar}>Cancelar</button>
           <button className="btn btn--primary btn--sm" type="button" onClick={salvar} disabled={mutation.isPending}>

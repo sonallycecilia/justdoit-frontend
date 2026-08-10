@@ -92,7 +92,7 @@
 .mkt-foot__in { display:flex; align-items:center; justify-content:space-between; padding:28px 0; flex-wrap:wrap; gap:16px; }
 .mkt-foot__brand { display:flex; align-items:center; gap:9px; color:var(--color-text); }
 .mkt-brand__word--foot { font-size:1.125rem; }
-.mkt-foot__tag { font-size:var(--font-size-xs); letter-spacing:0.07em; text-transform:uppercase; color:var(--brand-sage); }
+.mkt-foot__tag { font-size:var(--font-size-xs); letter-spacing:0.07em; text-transform:uppercase; color:var(--color-text-muted); }
 .mkt-foot__links { display:flex; gap:22px; }
 .mkt-foot__links a { font-size:var(--font-size-sm); color:var(--color-text-muted); text-decoration:none; }
 .mkt-foot__links a:hover { color:var(--color-text); }
