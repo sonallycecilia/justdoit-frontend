@@ -4,6 +4,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Ic, { ICONS } from '@/components/Ic';
 import RichTextEditor from '@/features/notes/components/RichTextEditor';
+import CategorySelect from '@/features/categories/components/CategorySelect';
+import { useCategorias, CAT_GENERICO } from '@/features/categories/hooks/useCategories';
 
 // grava o rascunho no localStorage para não perder o que o usuário digitou se ele sair da página
 import {
@@ -20,6 +22,8 @@ export default function NoteComposer() {
 
   const [titulo, setTitulo] = useState(() => lerRascunhoTitulo());
   const [texto, setTexto] = useState(() => lerRascunho());
+  const [categoria, setCategoria] = useState(CAT_GENERICO);
+  const { data: categorias = [] } = useCategorias();
   
   // Estado para a mensagem de "feedback" ("salvo automaticamente").
   const [hint, setHint] = useState(null); 
@@ -64,11 +68,12 @@ export default function NoteComposer() {
     if (!texto.trim() || criar.isPending) return;
     
     // Envia o documento estruturado sem tags HTML (contrato aceito pelo backend).
-    criar.mutate({ titulo, conteudo: texto }, {
+    criar.mutate({ titulo, conteudo: texto, categoriaId: categoria.id }, {
       // Se o backend devolver HTTP 201 (Sucesso):
       onSuccess: () => {
         setTitulo(''); // Limpa o campo título na tela
         setTexto('');  // Limpa o campo de texto na tela
+        setCategoria(CAT_GENERICO);
         limparRascunho(); // Limpa o localStorage
         flashHint('nota criada ✓', 2500); // Mostra sucesso
       },
@@ -114,6 +119,11 @@ export default function NoteComposer() {
         onChange={(valor) => aoDigitar({ target: { value: valor } })}
         onKeyDown={aoTeclar}
       />
+
+      <div className="notepad__category">
+        <span className="notepad__category-label">Categoria</span>
+        <CategorySelect categorias={categorias} valor={categoria.nome} onChange={setCategoria} />
+      </div>
       
       {/* Rodapé com botão de criar */}
       <div className="notepad__foot">

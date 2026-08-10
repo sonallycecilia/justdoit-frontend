@@ -12,6 +12,7 @@ function notaDaApi(n) {
     id: n.id,
     titulo: n.title || '',
     conteudo: n.content || '',
+    categoriaId: n.categoryId || null,
     fixada: Boolean(n.pinned),
     criadaEm: n.createdAt || null,
     atualizadaEm: n.updatedAt || null,
@@ -23,6 +24,7 @@ function notaParaApi(d) {
   return {
     title: d.titulo && d.titulo.trim() ? d.titulo.trim() : null,
     content: d.conteudo != null && String(d.conteudo).trim() ? d.conteudo : null,
+    categoryId: d.categoriaId && d.categoriaId !== 'generico' ? d.categoriaId : null,
   };
 }
 
@@ -46,7 +48,7 @@ export function useAtualizarNota() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...dados }) => api.put(endpoints.notes.update(id), notaParaApi(dados)),
-    onMutate: async ({ id, titulo, conteudo }) => {
+    onMutate: async ({ id, titulo, conteudo, categoriaId }) => {
       await qc.cancelQueries({ queryKey: ['notas'] });
       const anterior = qc.getQueryData(['notas']);
       // updatedAt entra junto: sem isso o card mostra a hora antiga até o
@@ -56,7 +58,7 @@ export function useAtualizarNota() {
         .toISOString().slice(0, 23); // LocalDateTime do backend: sem fuso
       qc.setQueryData(['notas'], (notas) =>
         (notas || []).map((n) => (n.id === id
-          ? { ...n, titulo, conteudo, atualizadaEm: local }
+          ? { ...n, titulo, conteudo, categoriaId: categoriaId === 'generico' ? null : categoriaId, atualizadaEm: local }
           : n)));
       return { anterior };
     },
