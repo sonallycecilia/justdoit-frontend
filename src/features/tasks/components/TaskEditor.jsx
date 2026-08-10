@@ -606,6 +606,11 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
       toast('Tarefa criada, mas alguns detalhes não foram salvos.', 'error');
     }
 
+    // O POST inicial invalida a lista antes de os detalhes terminarem. Quando um
+    // ciclo é salvo, o backend cria as ocorrências futuras nesse segundo passo;
+    // invalide novamente para a To Do e o calendário receberem essas ocorrências.
+    if (cicloLocal !== 'none') qc.invalidateQueries({ queryKey: ['tarefas'] });
+
     onCriada?.(novoId);
     return novoId;
   }
