@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "quality:lcp": "npm run build && lhci collect && node scripts/assert-lcp-p75.mjs"
+    "quality:lcp": "npm run build && lhci collect && node scripts/assert-lcp-p75.mjs",
+    "quality:report": "node scripts/generate-quality-reports.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
