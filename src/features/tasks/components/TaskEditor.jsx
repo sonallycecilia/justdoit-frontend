@@ -32,6 +32,14 @@ import { toast } from '@/lib/toast';
 
 const FOCO_MIN = 25;
 const PAUSA_MIN = 5;
+const LEMBRETES = [
+  { minutos: 15, rotulo: '15 min antes' },
+  { minutos: 30, rotulo: '30 min antes' },
+  { minutos: 60, rotulo: '1 hora antes' },
+  { minutos: 120, rotulo: '2 horas antes' },
+  { minutos: 1440, rotulo: '1 dia antes' },
+  { minutos: 10080, rotulo: '1 semana antes' },
+];
 const LABEL_MOD = { foco: 'Foco', ciclo: 'Ciclo', prioridade: 'Prioridade', tempo: 'Tempo', notas: 'Notas', subtarefas: 'Subtarefas' };
 const MOD_ICONE = {
   foco: ICONS.target, ciclo: ICONS.cycle, prioridade: ICONS.flag,
@@ -73,6 +81,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const [dataSel, setDataSel] = useState(hoje());
   const [dataAberta, setDataAberta] = useState(false);
   const [hora, setHora] = useState(null); // { h, m } | null
+  const [lembreteMinutosAntes, setLembreteMinutosAntes] = useState(null);
   const [horaAberta, setHoraAberta] = useState(false);
   const [prioridade, setPrioridade] = useState('normal');
   const [prioridadeAberta, setPrioridadeAberta] = useState(false);
@@ -104,7 +113,8 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     if (tarefa.hora) {
       const [h, m] = tarefa.hora.split(':').map(Number);
       setHora({ h, m });
-    }
+    } else setHora(null);
+    setLembreteMinutosAntes(tarefa.lembreteMinutosAntes ?? null);
     setPrioridade(tarefa.prioridade || 'normal');
   }, [taskId, tarefa]);
 
@@ -145,6 +155,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
       const [h, m] = r.hora.split(':').map(Number);
       setHora({ h, m });
     }
+    if (r.lembreteMinutosAntes) setLembreteMinutosAntes(r.lembreteMinutosAntes);
     if (r.prioridade) setPrioridade(r.prioridade);
     if (r.categoriaId) setCatId(r.categoriaId);
     if (r.dur) setDur(r.dur);
@@ -166,6 +177,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
       prioridade,
       dataIso: dataIso(dataSel),
       hora: hora ? fmtHoraMin(hora.h, hora.m) : null,
+      lembreteMinutosAntes,
       dur,
       mods: modsLocal,
       ciclo: cicloLocal,
@@ -185,7 +197,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   useEffect(() => {
     if (taskId || !rascunhoLido.current) return;
     salvarRascunho();
-  }, [taskId, dataSel, hora, prioridade, catId, dur, modsLocal, cicloLocal, cicloCustom, nota, subsLocal, subTogglelocal]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [taskId, dataSel, hora, lembreteMinutosAntes, prioridade, catId, dur, modsLocal, cicloLocal, cicloCustom, nota, subsLocal, subTogglelocal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const subs = taskId ? (subsServidor || []) : subsLocal;
   const cats = categorias || [];
@@ -216,6 +228,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
       prioridade,
       dataIso: dataIso(dataSel),
       hora: hora ? fmtHoraMin(hora.h, hora.m) : null,
+      lembreteMinutosAntes,
       ...mudancas,
     };
     atualizarTarefa.mutate({ id: taskId, dados }, {
@@ -261,7 +274,17 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   function limparHora() {
     if (isReadOnly) return;
     setHora(null);
-    persistir({ hora: null });
+    setLembreteMinutosAntes(null);
+    persistir({ hora: null, lembreteMinutosAntes: null });
+  }
+
+  function mudarLembrete(valor) {
+    const minutos = valor ? Number(valor) : null;
+    setLembreteMinutosAntes(minutos);
+    persistir({ lembreteMinutosAntes: minutos });
+    if (minutos && typeof window.Notification !== 'undefined' && window.Notification.permission === 'default') {
+      window.Notification.requestPermission().catch(() => {});
+    }
   }
 
   function mudarCategoria(c) {
@@ -549,6 +572,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
       prioridade,
       dataIso: dataIso(dataSel),
       hora: hora ? fmtHoraMin(hora.h, hora.m) : null,
+      lembreteMinutosAntes,
     };
     const durMin = dur.h * 60 + dur.m;
     setCronRodando(false); // congela o cronômetro: o que for salvo é o que está na tela
@@ -721,6 +745,22 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
             />
           )}
         </div>
+
+        {/* Lembrete só é habilitado quando a tarefa possui um horário. */}
+        <label className={`reminder-pick ${hora ? '' : 'is-disabled'}`}>
+          <Ic d={ICONS.bell} size={14} />
+          <select
+            aria-label="Lembrete da tarefa"
+            value={lembreteMinutosAntes ?? ''}
+            disabled={!hora}
+            onChange={(event) => mudarLembrete(event.target.value)}
+          >
+            <option value="">Sem lembrete</option>
+            {LEMBRETES.map((item) => (
+              <option key={item.minutos} value={item.minutos}>{item.rotulo}</option>
+            ))}
+          </select>
+        </label>
 
         {/* Duração estimada — persiste no /timer; base do teto biológico */}
         <div className="dur-pick">

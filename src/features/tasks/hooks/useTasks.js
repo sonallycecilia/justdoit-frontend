@@ -30,6 +30,7 @@ export function tarefaDaApi(t, categorias) {
     quando,
     overdue: !concluida && quando === 'past',
     hora: t.dueTime ? String(t.dueTime).slice(0, 5) : undefined,
+    lembreteMinutosAntes: t.reminderMinutesBefore ?? null,
     // Duração estimada (minutos) — vem do timer da tarefa; usada pelo
     // calendário para dimensionar blocos criados por arraste.
     duracaoMin: t.estimatedMinutes || null,
@@ -45,6 +46,7 @@ export function tarefaParaApi(d) {
     categoryId: catId,
     priority: prioridadeParaApi(d.prioridade),
     dueDate: d.dataIso || null,
+    reminderMinutesBefore: d.lembreteMinutosAntes ?? null,
     dueTime: d.hora || null, // "HH:mm" — aceito como LocalTime
   };
 }

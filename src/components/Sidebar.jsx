@@ -12,6 +12,7 @@ import { useCategorias, useRemoverCategoria } from '@/features/categories/hooks/
 import { useConta } from '@/features/auth/hooks/useConta';
 import { useEncerrarSessao } from '@/features/auth/hooks/useSessao';
 import { useAtualizarTarefa, useRemoverTarefa, useTarefas } from '@/features/tasks/hooks/useTasks';
+import NotificationCenter from '@/features/notifications/components/NotificationCenter';
 
 export default function Sidebar({ ativa = 'dashboard' }) {
   const navigate = useNavigate();
@@ -268,6 +269,8 @@ export default function Sidebar({ ativa = 'dashboard' }) {
           <button className="btn-icon" onClick={alternarTema} aria-label="Alternar tema"><Ic d={ICONS.moon} /></button>
         </div>
       </div>
+
+      <NotificationCenter />
 
       <CategoryModal aberto={modalAberto} onFechar={() => setModalAberto(false)} />
 
