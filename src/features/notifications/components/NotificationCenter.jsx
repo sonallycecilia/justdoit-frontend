@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Ic, { ICONS } from '@/components/Ic';
-import { useMarkNotificationRead, useNotifications } from '@/features/notifications/hooks/useNotifications';
+import {
+  useDeleteNotification,
+  useMarkNotificationRead,
+  useNotifications,
+} from '@/features/notifications/hooks/useNotifications';
 
 const SHOWN_KEY = 'jdi-browser-notifications-shown';
 
@@ -29,8 +33,10 @@ export default function NotificationCenter() {
   const navigate = useNavigate();
   const rootRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const { data: notifications = [], isLoading } = useNotifications();
   const markRead = useMarkNotificationRead();
+  const deleteNotification = useDeleteNotification();
   const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications]);
 
   useEffect(() => {
@@ -87,6 +93,13 @@ export default function NotificationCenter() {
     if (item.taskId) navigate(`/tasks/${item.taskId}`);
   }
 
+  function deleteAlert(item) {
+    setDeleteError('');
+    deleteNotification.mutate(item.id, {
+      onError: () => setDeleteError('Não foi possível excluir o alerta. Tente novamente.'),
+    });
+  }
+
   return (
     <div className="notification-center" ref={rootRef}>
       <button
@@ -113,25 +126,42 @@ export default function NotificationCenter() {
             </button>
           </header>
           <div className="notification-panel__list">
+            {deleteError && (
+              <p className="notification-panel__error" role="alert">{deleteError}</p>
+            )}
             {isLoading && <p className="notification-panel__empty">Carregando alertas…</p>}
             {!isLoading && notifications.length === 0 && (
               <p className="notification-panel__empty">Nenhum alerta no momento.</p>
             )}
             {notifications.map((item) => (
-              <button
+              <div
                 key={item.id}
-                type="button"
                 className={`notification-item ${item.read ? '' : 'is-unread'}`}
-                onClick={() => openAlert(item)}
               >
-                <span className="notification-item__icon"><Ic d={ICONS.bell} size={15} /></span>
-                <span className="notification-item__content">
-                  <strong>{item.title}</strong>
-                  <span>{item.message}</span>
-                  <time dateTime={item.createdAt}>{formattedDate(item.createdAt)}</time>
-                </span>
-                {!item.read && <span className="notification-item__dot" aria-label="Não lido" />}
-              </button>
+                <button
+                  type="button"
+                  className="notification-item__open"
+                  onClick={() => openAlert(item)}
+                >
+                  <span className="notification-item__icon"><Ic d={ICONS.bell} size={15} /></span>
+                  <span className="notification-item__content">
+                    <strong>{item.title}</strong>
+                    <span>{item.message}</span>
+                    <time dateTime={item.createdAt}>{formattedDate(item.createdAt)}</time>
+                  </span>
+                  {!item.read && <span className="notification-item__dot" aria-label="Não lido" />}
+                </button>
+                <button
+                  type="button"
+                  className="notification-item__delete"
+                  aria-label={`Excluir alerta: ${item.title}`}
+                  title="Excluir alerta"
+                  disabled={deleteNotification.isPending && deleteNotification.variables === item.id}
+                  onClick={() => deleteAlert(item)}
+                >
+                  <Ic d={ICONS.trash} size={16} />
+                </button>
+              </div>
             ))}
           </div>
         </section>
