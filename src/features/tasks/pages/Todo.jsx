@@ -4,9 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import * as ReactWindow from 'react-window';
 let List = ReactWindow.VariableSizeList || ReactWindow.default?.VariableSizeList;
 
-// Fallback Inteligente: Se o Vitest se perder e a lista não for uma função,
-// criamos uma "Falsa Virtualização" que renderiza apenas 15 itens.
-// No navegador real, o react-window original assume o controle.
 if (typeof List !== 'function') {
   List = function VitestListMock({ children, itemCount, itemData }) {
     const itemsToRender = Math.min(itemCount, 15);
