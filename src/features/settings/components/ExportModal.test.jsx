@@ -66,7 +66,7 @@ describe('ExportModal', () => {
 
   it('trava os controles e mostra o erro devolvido pelo backend', () => {
     abrir({ processando: true, erro: 'Erro 500' });
-    expect(screen.getByRole('button', { name: 'Exportando…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Preparando arquivo…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
     screen.getAllByRole('radio').forEach((r) => expect(r).toBeDisabled());
     expect(screen.getByText('Erro 500')).toBeInTheDocument();

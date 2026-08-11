@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Configuracoes from '@/features/settings/pages/Configuracoes';
-import { baixarArquivo } from '@/api/client';
+import { api, baixarArquivo } from '@/api/client';
 import { salvarArquivo } from '@/features/settings/lib/exportacao';
 
 // A página inteira (sidebar, conta, categorias) fala com o backend por este
@@ -49,7 +49,11 @@ function secaoDados() {
 }
 
 describe('Configurações › seção Dados', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.get.mockResolvedValue([]);
+    api.post.mockResolvedValue(null);
+  });
 
   it('exibe a opção "Exportar meus dados" dentro da seção Dados', () => {
     renderizar();
@@ -73,6 +77,12 @@ describe('Configurações › seção Dados', () => {
   });
 
   it('baixa o arquivo no formato escolhido e confirma o nome ao usuário', async () => {
+    api.post.mockResolvedValue({ jobId: 'job-1', status: 'PENDING' });
+    api.get.mockImplementation((url) => Promise.resolve(
+      url.includes('/me/exports/job-1')
+        ? { status: 'COMPLETED', downloadUrl: 'http://temporary-download' }
+        : [],
+    ));
     baixarArquivo.mockResolvedValue({
       blob: new Blob(['{}']),
       nomeArquivo: 'export_tarefas_2026-07-27.json',
@@ -84,13 +94,18 @@ describe('Configurações › seção Dados', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Exportar' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(baixarArquivo).toHaveBeenCalledWith(expect.stringContaining('/me/export?format=json'));
+    expect(api.post).toHaveBeenCalledWith(expect.stringContaining('/me/exports?format=json'));
+    expect(api.get).toHaveBeenCalledWith(expect.stringContaining('/me/exports/job-1'));
+    expect(baixarArquivo).toHaveBeenCalledWith('http://temporary-download');
     expect(salvarArquivo).toHaveBeenCalledWith(expect.any(Blob), 'export_tarefas_2026-07-27.json');
     expect(within(secaoDados()).getByText('export_tarefas_2026-07-27.json')).toBeInTheDocument();
   });
 
   it('mantém o modal aberto e mostra a mensagem quando a exportação falha', async () => {
-    baixarArquivo.mockRejectedValue(new Error('Erro 500'));
+    api.post.mockResolvedValue({ jobId: 'job-1', status: 'PENDING' });
+    api.get.mockImplementation((url) => Promise.resolve(
+      url.includes('/me/exports/job-1') ? { status: 'FAILED', error: 'Erro 500' } : [],
+    ));
     renderizar();
 
     await userEvent.click(within(secaoDados()).getByRole('button', { name: 'Exportar meus dados' }));

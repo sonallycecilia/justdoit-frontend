@@ -64,7 +64,7 @@ export default function ExportModal({ aberto, processando = false, erro, onExpor
             Cancelar
           </button>
           <button className="btn btn--primary btn--sm" type="submit" disabled={processando}>
-            {processando ? 'Exportando…' : 'Exportar'}
+            {processando ? 'Preparando arquivo…' : 'Exportar'}
           </button>
         </div>
       </form>
