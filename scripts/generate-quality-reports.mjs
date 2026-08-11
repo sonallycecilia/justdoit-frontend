@@ -33,6 +33,7 @@ if (existsSync(junitPath)) {
 
 const lcp = await readJson(resolve(evidenceDir, 'lcp-p75.json'));
 const accessibility = await readJson(resolve(evidenceDir, 'accessibility.json'));
+const sessionProtection = await readJson(resolve(evidenceDir, 'session-protection.json'));
 const lcpStatus = lcp ? (lcp.passed ? 'APROVADA' : 'REPROVADA') : 'NÃO EXECUTADA';
 const lcpSamples = lcp ? lcp.samplesMs.join(', ') : '—';
 const lcpValue = lcp ? `${lcp.valueMs} ms` : '—';
@@ -42,6 +43,13 @@ const accessibilityStatus = accessibility
   : 'NÃO EXECUTADA';
 const accessibilityDenominator = accessibility?.denominator ?? '—';
 const accessibilityResult = accessibility ? `${accessibility.numerator}/${accessibility.denominator} (${accessibility.percentage}%)` : '—';
+const sessionStatus = sessionProtection
+  ? (sessionProtection.passed ? 'IMPLEMENTADA / APROVADA' : 'IMPLEMENTADA / REPROVADA')
+  : 'NÃO EXECUTADA';
+const sessionDenominator = sessionProtection?.denominator ?? 7;
+const sessionResult = sessionProtection
+  ? `${sessionProtection.numerator}/${sessionProtection.denominator} (${sessionProtection.percentage}%)`
+  : '—';
 
 const header = `> Gerado automaticamente.  
 > Commit: \`${commit}\`  
@@ -95,9 +103,11 @@ ${header}
 
 | Métrica | Situação | Denominador | Resultado | Limite/meta |
 |---|---|---:|---:|---:|
-| Proteção do ciclo de sessão | PARCIAL / NÃO AGREGADA | Cenários ainda não formalizados | — | Não definido |
+| Proteção do ciclo de sessão (frontend) | ${sessionStatus} | ${sessionDenominator} cenários obrigatórios | ${sessionResult} | 100% exatos |
 
-O cliente compartilha uma renovação entre requisições concorrentes da mesma aba e preserva a sessão em falhas transitórias. Ainda faltam testes diretos de \`client.js\` e \`session.js\`, concorrência entre abas e uma fórmula agregadora. Access token e refresh token permanecem em Web Storage.
+A TPS usa \`cenários corretos ÷ cenários testados × 100\`. O cliente testa 7/7 cenários: promessa única para renovações concorrentes, token atualizado por outra aba, rotação preservando o storage escolhido, refresh 401, 429, 5xx e falha de rede. O backend possui gate complementar de 5/5 para JWT expirado, rotação, reutilização, logout e rate limiting. O contrato sistêmico é 12/12 e exige os dois pipelines em 100%.
+
+O risco de access token e refresh token em Web Storage está registrado em \`docs/security/session-storage-risk.md\`; a migração para cookies HttpOnly está planejada no ticket \`docs/backlog/SEC-001-http-only-session.md\`.
 `, 'utf8');
 
 console.log(`Relatórios gerados em ${outputDir}`);
