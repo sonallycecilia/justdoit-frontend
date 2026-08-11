@@ -10,6 +10,8 @@ import VisaoGeral from '@/features/dashboard/pages/VisaoGeral';
 import Analise from '@/features/dashboard/pages/Analise';
 import Configuracoes from '@/features/settings/pages/Configuracoes';
 import { estaLogado } from '@/api/session';
+import { HistoryList } from '@/features/weekly-closure/pages/HistoryList';
+import { HistoryDetail } from '@/features/weekly-closure/pages/HistoryDetail';
 
 function RequireAuth({ children }) {
   const location = useLocation();
@@ -36,6 +38,8 @@ export default function App() {
       <Route path="/configuracoes" element={<RequireAuth><Configuracoes /></RequireAuth>} />
       <Route path="/tasks/nova" element={<RequireAuth><TaskDetail /></RequireAuth>} />
       <Route path="/tasks/:id" element={<RequireAuth><TaskDetail /></RequireAuth>} />
+      <Route path="/history" element={<RequireAuth><HistoryList /></RequireAuth>} />
+      <Route path="/history/:cycleId" element={<RequireAuth><HistoryDetail /></RequireAuth>} />
       {/* Logado, a home do app é a Visão geral; deslogado, a landing + login. */}
       <Route path="*" element={<Navigate to={estaLogado() ? '/visao-geral' : '/'} replace />} />
     </Routes>

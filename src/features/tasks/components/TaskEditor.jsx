@@ -38,7 +38,7 @@ const MOD_ICONE = {
   tempo: ICONS.clock, notas: ICONS.notes, subtarefas: ICONS.list,
 };
 
-const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, onCriada, onSalvo }, ref) {
+const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, onCriada, onSalvo, isReadOnly = false }, ref) {
   const qc = useQueryClient();
   const { data: categorias } = useCategorias();
   const { data: tarefa, isLoading: carregandoTarefa } = useTarefa(taskId, categorias);
@@ -206,7 +206,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   // O estado do React só atualiza no próximo render, então quem chama passa a
   // mudança em `mudancas` em vez de confiar no state recém-setado.
   function persistir(mudancas = {}) {
-    if (!taskId) return;
+    if (isReadOnly || !taskId) return;
     const titulo = (tituloRef.current?.textContent || '').trim();
     if (!titulo) return; // backend exige título; espera o usuário digitar
     const dados = {
@@ -229,43 +229,50 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   // Título e descrição são contentEditable não controlados: salvam com debounce.
   const textoTimer = useRef(null);
   function aoDigitarTexto() {
+    if (isReadOnly) return;
     // Sem id não há o que atualizar no backend; o que foi digitado vai para o
     // rascunho local para não se perder se a página for deixada antes do POST.
     if (!taskId) { salvarRascunho(); return; }
     clearTimeout(textoTimer.current);
     textoTimer.current = setTimeout(() => persistir(), 700);
   }
-  useEffect(() => () => clearTimeout(textoTimer.current), []);
+  useEffect(() => () => clearTimeout(textoTimer.current), [isReadOnly]);
 
   function alternarDone() {
+    if (isReadOnly) return;
     const novo = !done;
     setDone(novo);
     if (taskId) toggleDone.mutate({ id: taskId, concluir: novo }, { onSuccess: flashSalvo, onError: aoErro });
   }
 
   function mudarData(d) {
+    if (isReadOnly) return;
     setDataSel(d);
     persistir({ dataIso: dataIso(d) });
   }
 
   function mudarHora(h, m) {
+    if (isReadOnly) return;
     if (h === null || h === undefined) return;
     setHora({ h, m });
     persistir({ hora: fmtHoraMin(h, m) });
   }
 
   function limparHora() {
+    if (isReadOnly) return;
     setHora(null);
     persistir({ hora: null });
   }
 
   function mudarCategoria(c) {
+    if (isReadOnly) return;
     if (!c) return;
     setCatId(c.id);
     persistir({ categoriaId: c.id });
   }
 
   function mudarPrioridade(n) {
+    if (isReadOnly) return;
     setPrioridade(n);
     setPrioridadeAberta(false);
     persistir({ prioridade: n });
@@ -273,10 +280,12 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
 
   // Duração estimada vive no /timer (o TaskRequest descarta o campo).
   function salvarDuracao(novo) {
+    if (isReadOnly) return;
     salvarTempoEstimado.mutate(novo.h * 60 + novo.m, { onSuccess: flashSalvo, onError: aoErro });
   }
 
   function mudarDur(novo) {
+    if (isReadOnly) return;
     setDur(novo);
     if (!taskId) return;
     salvarDuracao(novo);
@@ -284,6 +293,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
 
   const notaTimer = useRef(null);
   function aoDigitarNota(valor) {
+    if (isReadOnly) return;
     setNota(valor);
     if (!taskId) return;
     clearTimeout(notaTimer.current);
@@ -295,9 +305,10 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
       : apagarNota.mutate(undefined, { onSuccess: flashSalvo, onError: aoErro })
     ), 800);
   }
-  useEffect(() => () => clearTimeout(notaTimer.current), []);
+  useEffect(() => () => clearTimeout(notaTimer.current), [isReadOnly]);
 
   function toggleModulo(mod) {
+    if (isReadOnly) return;
     if (mod === 'subtarefas') { setSubToggleLocal((v) => !v); return; }
     const novos = { ...modsLocal, [mod]: !modsLocal[mod] };
     setModsLocal(novos);
@@ -311,6 +322,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   }
 
   function escolherCiclo(tipo) {
+    if (isReadOnly) return;
     setCicloLocal(tipo);
     if (!taskId) return;
     if (tipo === 'custom') {
@@ -322,13 +334,14 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
 
   const customTimer = useRef(null);
   function mudarCustom(mudancas) {
+    if (isReadOnly) return;
     const novo = { ...cicloCustom, ...mudancas };
     setCicloCustom(novo);
     if (!taskId || cicloLocal !== 'custom' || !customValido(novo)) return;
     clearTimeout(customTimer.current);
     customTimer.current = setTimeout(() => salvarCiclo.mutate(valorCiclo('custom', novo), { onSuccess: flashSalvo }), 600);
   }
-  useEffect(() => () => clearTimeout(customTimer.current), []);
+  useEffect(() => () => clearTimeout(customTimer.current), [isReadOnly]);
 
   // ── Cronômetro de execução ────────────────────────────────────────────────
   const [cronSegundos, setCronSegundos] = useState(0);
@@ -378,6 +391,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   }, [cronRodando, inicioPersistido, segundosServidor, taskId]);
 
   async function toggleCron() {
+    if (isReadOnly) return;
     setCronErro('');
     if (!taskId) {
       setCronRodando((rodando) => !rodando);
@@ -402,6 +416,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   }
 
   async function resetCron() {
+    if (isReadOnly) return;
     setCronErro('');
     if (!taskId) {
       setCronRodando(false);
@@ -464,6 +479,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   }, [pomo.focos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function togglePomo() {
+    if (isReadOnly) return;
     // Fora do updater: marcar o início é efeito colateral (ver comentário acima).
     if (!pomo.rodando && pomo.fase === 'foco' && inicioFocoRef.current === null) {
       inicioFocoRef.current = new Date();
@@ -471,12 +487,14 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     setPomo((p) => ({ ...p, rodando: !p.rodando }));
   }
   function pularFase() {
+    if (isReadOnly) return;
     // Pular NÃO registra sessão: o ciclo não foi cumprido.
     setPomo((p) => (p.fase === 'foco'
       ? { ...p, fase: 'pausa', restante: PAUSA_MIN * 60 }
       : { ...p, fase: 'foco', ciclo: Math.min(p.ciclo + 1, 4), restante: FOCO_MIN * 60 }));
   }
   function resetPomo() {
+    if (isReadOnly) return;
     inicioFocoRef.current = null;
     setPomo((p) => ({ fase: 'foco', ciclo: 1, restante: FOCO_MIN * 60, rodando: false, focos: p.focos }));
   }
@@ -489,6 +507,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   const pctSubs = pct(feitas, subs.length);
 
   function adicionarSub() {
+    if (isReadOnly) return;
     const titulo = subInput.trim();
     if (!titulo) return;
     setSubInput('');
@@ -498,11 +517,13 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   }
 
   function alternarSub(s) {
+    if (isReadOnly) return;
     if (taskId) toggleSub.mutate(s.id);
     else setSubsLocal((l) => l.map((x) => (x.id === s.id ? { ...x, done: !x.done } : x)));
   }
 
   function excluirSub(s) {
+    if (isReadOnly) return;
     if (taskId) removerSub.mutate(s.id);
     else setSubsLocal((l) => l.filter((x) => x.id !== s.id));
   }
@@ -510,6 +531,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
   // ── Criação (só no modo /tasks/nova) ──────────────────────────────────────
   // Exposta ao caller via ref: não há id para autosalvar antes do POST.
   async function criar() {
+    if (isReadOnly) return null;
     const titulo = (tituloRef.current?.textContent || '').trim();
     // Sem título não há POST — o backend exige o campo. Só mover o cursor para
     // o campo passava despercebido: o clique em "Registrar tarefa" não gerava
@@ -633,96 +655,102 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     // O `is-done` fica aqui (e não no .detail da página) porque o drawer do
     // calendário não tem esse wrapper — sem isso o check não pintava em lugar
     // nenhum, mesmo com o PATCH indo pro backend.
-    <div className={`task-editor ${done ? 'is-done' : ''}`}>
+    <div className={`task-editor ${done ? 'is-done' : ''} ${isReadOnly ? 'task-editor--readonly' : ''}`}>
       <div className="detail__head">
-        <button className="detail__check" aria-label="Concluir tarefa" onClick={alternarDone}>
+        <button className="detail__check" aria-label="Concluir tarefa" disabled={isReadOnly} onClick={alternarDone}>
           <Ic d={ICONS.check} strokeWidth={3} />
         </button>
         <h1
           ref={tituloRef}
           className="edit-title"
-          contentEditable
+          contentEditable={!isReadOnly}
           suppressContentEditableWarning
           spellCheck={false}
           data-placeholder="Nome da tarefa…"
           onInput={aoDigitarTexto}
-          onBlur={() => taskId && persistir()}
+          onBlur={() => !isReadOnly && taskId && persistir()}
         />
       </div>
       <div
         ref={descRef}
         className="edit-desc"
-        contentEditable
+        contentEditable={!isReadOnly}
         suppressContentEditableWarning
         data-placeholder="Adicione uma descrição…"
         onInput={aoDigitarTexto}
-        onBlur={() => taskId && persistir()}
+        onBlur={() => !isReadOnly && taskId && persistir()}
       />
 
       <div className="detail__chips">
         <div className="date-pick">
-          <button className={`badge badge--info date-pick__btn ${dataAberta ? 'is-open' : ''}`} type="button" onClick={() => setDataAberta((v) => !v)}>
+          <button className={`badge badge--info date-pick__btn ${dataAberta ? 'is-open' : ''}`} type="button" disabled={isReadOnly} onClick={() => !isReadOnly && setDataAberta((v) => !v)}>
             <Ic d={ICONS.calendar} />
             <span>{dataRelativa(dataSel)}</span>
             <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} className="date-pick__chevron" />
           </button>
-          <DatePicker
-            aberto={dataAberta}
-            onFechar={() => setDataAberta(false)}
-            onSelect={mudarData}
-            selecionada={dataSel}
-          />
+          {!isReadOnly && (
+            <DatePicker
+              aberto={dataAberta}
+              onFechar={() => setDataAberta(false)}
+              onSelect={mudarData}
+              selecionada={dataSel}
+            />
+          )}
         </div>
 
         <div className="time-pick">
           <button
             className={`badge badge--info time-pick__btn ${horaAberta ? 'is-open' : ''}`}
             type="button"
+            disabled={isReadOnly}
             data-empty={hora ? undefined : ''}
-            onClick={() => setHoraAberta((v) => !v)}
+            onClick={() => !isReadOnly && setHoraAberta((v) => !v)}
           >
             <Ic d={ICONS.clock} />
             <span>{hora ? fmtHoraMin(hora.h, hora.m) : 'Hora'}</span>
             <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} className="time-pick__chevron" />
           </button>
-          <TimePicker
-            aberto={horaAberta}
-            onFechar={() => setHoraAberta(false)}
-            hora={hora?.h ?? null}
-            min={hora?.m ?? 0}
-            onChange={mudarHora}
-            onClear={limparHora}
-          />
+          {!isReadOnly && (
+            <TimePicker
+              aberto={horaAberta}
+              onFechar={() => setHoraAberta(false)}
+              hora={hora?.h ?? null}
+              min={hora?.m ?? 0}
+              onChange={mudarHora}
+              onClear={limparHora}
+            />
+          )}
         </div>
 
         {/* Duração estimada — persiste no /timer; base do teto biológico */}
         <div className="dur-pick">
           <Ic d={ICONS.clock} size={14} />
           <input
-            type="number" min={0} value={dur.h} aria-label="Horas estimadas"
+            type="number" min={0} value={dur.h} aria-label="Horas estimadas" disabled={isReadOnly}
             onChange={(e) => mudarDur({ ...dur, h: Math.max(0, parseInt(e.target.value, 10) || 0) })}
           />h
           <input
-            type="number" min={0} max={55} step={5} value={dur.m} aria-label="Minutos estimados"
+            type="number" min={0} max={55} step={5} value={dur.m} aria-label="Minutos estimados" disabled={isReadOnly}
             onChange={(e) => mudarDur({ ...dur, m: Math.max(0, Math.min(55, parseInt(e.target.value, 10) || 0)) })}
           />min
         </div>
 
-        <CategorySelect categorias={cats} valor={cat?.nome} onChange={mudarCategoria} />
+        <CategorySelect categorias={cats} valor={cat?.nome} onChange={mudarCategoria} disabled={isReadOnly} />
 
         <div className="priority-pick">
           <button
             className={`badge badge--${prioridade} priority-pick__btn ${prioridadeAberta ? 'is-open' : ''}`}
             type="button"
+            disabled={isReadOnly}
             aria-haspopup="listbox"
             aria-expanded={prioridadeAberta}
-            onClick={() => setPrioridadeAberta((v) => !v)}
+            onClick={() => !isReadOnly && setPrioridadeAberta((v) => !v)}
           >
             <Ic d={ICONS.flag} size={12} />
             <span>{Priority.ROTULO[prioridade]}</span>
             <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} />
           </button>
-          {prioridadeAberta && (
+          {!isReadOnly && prioridadeAberta && (
             <div className="priority-pick__menu" role="listbox" aria-label="Prioridade da tarefa">
               {Priority.NIVEIS.map((n) => (
                 <button
@@ -765,7 +793,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
         {/* No drawer as colunas fluem conforme a largura; na página ficam as 6 do CSS. */}
         <div className="modules__grid" style={compacto ? { gridTemplateColumns: 'repeat(auto-fit, minmax(84px, 1fr))' } : undefined}>
           {Object.keys(LABEL_MOD).map((mod) => (
-            <button key={mod} className={`module-toggle ${modAtivo(mod) ? 'is-on' : ''}`} onClick={() => toggleModulo(mod)}>
+            <button key={mod} className={`module-toggle ${modAtivo(mod) ? 'is-on' : ''}`} disabled={isReadOnly} onClick={() => toggleModulo(mod)}>
               <span className="module-toggle__ic"><Ic d={MOD_ICONE[mod]} /></span>
               <span className="module-toggle__name">{LABEL_MOD[mod]}</span>
             </button>
@@ -798,11 +826,11 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
                   Trabalhe em blocos de 25 minutos com pausas curtas. Os ciclos concluídos contam para o seu tempo de foco do dia.
                 </p>
                 <div className="pomo__actions">
-                  <button className="btn btn--primary btn--md" onClick={togglePomo}>
+                  <button className="btn btn--primary btn--md" disabled={isReadOnly} onClick={togglePomo}>
                     {pomo.rodando ? 'Pausar' : pomo.restante === FOCO_MIN * 60 && pomo.fase === 'foco' && pomo.ciclo === 1 ? 'Iniciar' : 'Continuar'}
                   </button>
-                  <button className="btn btn--ghost btn--md" onClick={pularFase}>Pular fase</button>
-                  <button className="btn btn--ghost btn--md" onClick={resetPomo}>Reiniciar</button>
+                  <button className="btn btn--ghost btn--md" disabled={isReadOnly} onClick={pularFase}>Pular fase</button>
+                  <button className="btn btn--ghost btn--md" disabled={isReadOnly} onClick={resetPomo}>Reiniciar</button>
                 </div>
               </div>
             </div>
@@ -821,6 +849,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
                   key={n}
                   className={`prio-opt ${n === prioridade ? 'is-on' : ''}`}
                   style={{ color: Priority.COR[n] }}
+                  disabled={isReadOnly}
                   onClick={() => mudarPrioridade(n)}
                 >
                   <span className="prio-opt__dot" style={{ background: Priority.COR[n] }} />
@@ -839,12 +868,12 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
             </div>
             <div className="cycle-opts">
               {TIPOS.map((t) => (
-                <button key={t} className={`cycle-opt ${t === cicloLocal ? 'is-on' : ''}`} onClick={() => escolherCiclo(t)}>
+                <button key={t} className={`cycle-opt ${t === cicloLocal ? 'is-on' : ''}`} disabled={isReadOnly} onClick={() => escolherCiclo(t)}>
                   {rotuloCiclo(t)}
                 </button>
               ))}
             </div>
-            {cicloLocal === 'custom' && <CicloCustom custom={cicloCustom} onChange={mudarCustom} />}
+            {cicloLocal === 'custom' && <CicloCustom custom={cicloCustom} onChange={mudarCustom} isReadOnly={isReadOnly} />}
           </div>
         )}
 
@@ -861,14 +890,14 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
                 <button
                   className="btn btn--primary btn--md"
                   onClick={toggleCron}
-                  disabled={iniciarCronometro.isPending || pararCronometro.isPending}
+                  disabled={isReadOnly || iniciarCronometro.isPending || pararCronometro.isPending}
                 >
                   {cronRodando ? 'Pausar' : cronSegundos > 0 ? 'Continuar' : 'Iniciar'}
                 </button>
                 <button
                   className="btn btn--secondary btn--md"
                   onClick={resetCron}
-                  disabled={zerarTempo.isPending || pararCronometro.isPending}
+                  disabled={isReadOnly || zerarTempo.isPending || pararCronometro.isPending}
                 >
                   Zerar
                 </button>
@@ -887,6 +916,7 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
               className="notes-area"
               placeholder="Anote lembretes, links ou ideias para esta tarefa…"
               value={nota}
+              disabled={isReadOnly}
               onChange={(e) => aoDigitarNota(e.target.value)}
             />
           </div>
@@ -912,25 +942,27 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
             <div>
               {subs.map((s) => (
                 <div className={`subtask ${s.done ? 'is-done' : ''}`} key={s.id}>
-                  <button className="subtask__check" aria-label="Concluir subtarefa" onClick={() => alternarSub(s)}>
+                  <button className="subtask__check" aria-label="Concluir subtarefa" disabled={isReadOnly} onClick={() => alternarSub(s)}>
                     <Ic d={ICONS.check} strokeWidth={3} />
                   </button>
                   <span className="subtask__label">{s.titulo}</span>
-                  <button className="subtask__del" aria-label="Remover subtarefa" onClick={() => excluirSub(s)}>
+                  <button className="subtask__del" aria-label="Remover subtarefa" disabled={isReadOnly} onClick={() => excluirSub(s)}>
                     <Ic d={ICONS.close} />
                   </button>
                 </div>
               ))}
             </div>
-            <div className="subtask__add">
-              <Ic d={ICONS.plus} size={18} style={{ color: 'var(--color-text-muted)' }} />
-              <input
-                placeholder="Adicionar subtarefa… pressione Enter"
-                value={subInput}
-                onChange={(e) => setSubInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') adicionarSub(); }}
-              />
-            </div>
+            {!isReadOnly && (
+              <div className="subtask__add">
+                <Ic d={ICONS.plus} size={18} style={{ color: 'var(--color-text-muted)' }} />
+                <input
+                  placeholder="Adicionar subtarefa… pressione Enter"
+                  value={subInput}
+                  onChange={(e) => setSubInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') adicionarSub(); }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -943,7 +975,7 @@ export default TaskEditor;
 // Controles do ciclo personalizado: data de início, "a cada N horas|dias" e
 // número de repetições, com resumo do fim previsto. `onChange` recebe patches
 // parciais do objeto custom ({count, unit, occurrences, startIso}).
-function CicloCustom({ custom, onChange }) {
+function CicloCustom({ custom, onChange, isReadOnly }) {
   const [dataAberta, setDataAberta] = useState(false);
   const [unitAberta, setUnitAberta] = useState(false);
 
@@ -956,32 +988,34 @@ function CicloCustom({ custom, onChange }) {
       <div className="cycle-custom__row">
         <span className="cycle-custom__label">Início</span>
         <div className="date-pick">
-          <button className={`badge badge--info date-pick__btn ${dataAberta ? 'is-open' : ''}`} type="button" onClick={() => setDataAberta((v) => !v)}>
+          <button className={`badge badge--info date-pick__btn ${dataAberta ? 'is-open' : ''}`} type="button" disabled={isReadOnly} onClick={() => !isReadOnly && setDataAberta((v) => !v)}>
             <Ic d={ICONS.calendar} />
             <span>{dataRelativa(inicio)}</span>
             <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} className="date-pick__chevron" />
           </button>
-          <DatePicker
-            aberto={dataAberta}
-            onFechar={() => setDataAberta(false)}
-            onSelect={(d) => onChange({ startIso: dataIso(d) })}
-            selecionada={inicio}
-          />
+          {!isReadOnly && (
+            <DatePicker
+              aberto={dataAberta}
+              onFechar={() => setDataAberta(false)}
+              onSelect={(d) => onChange({ startIso: dataIso(d) })}
+              selecionada={inicio}
+            />
+          )}
         </div>
       </div>
       <div className="cycle-custom__row">
         <span className="cycle-custom__label">A cada</span>
         <div className="dur-pick cycle-custom__interval">
           <input
-            type="number" min={1} max={999} value={custom.count} aria-label="Valor do intervalo"
+            type="number" min={1} max={999} value={custom.count} aria-label="Valor do intervalo" disabled={isReadOnly}
             onChange={(e) => onChange({ count: Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1)) })}
           />
           <div className="cycle-unit-pick">
-            <button type="button" className={`cycle-unit ${unitAberta ? 'is-open' : ''}`} aria-haspopup="listbox" aria-expanded={unitAberta} onClick={() => setUnitAberta((v) => !v)}>
+            <button type="button" className={`cycle-unit ${unitAberta ? 'is-open' : ''}`} disabled={isReadOnly} aria-haspopup="listbox" aria-expanded={unitAberta} onClick={() => !isReadOnly && setUnitAberta((v) => !v)}>
               <span>{custom.unit}</span>
               <Ic d={ICONS.chevron} size={10} strokeWidth={2.5} className="cycle-unit__chevron" />
             </button>
-            {unitAberta && (
+            {!isReadOnly && unitAberta && (
               <>
                 <div className="cycle-unit__overlay" onClick={() => setUnitAberta(false)} />
                 <div className="cycle-unit__menu" role="listbox">
@@ -999,7 +1033,7 @@ function CicloCustom({ custom, onChange }) {
         <span className="cycle-custom__label">Repetir</span>
         <div className="dur-pick cycle-custom__reps">
           <input
-            type="number" min={2} max={365} value={custom.occurrences} aria-label="Número de repetições"
+            type="number" min={2} max={365} value={custom.occurrences} aria-label="Número de repetições" disabled={isReadOnly}
             onChange={(e) => onChange({ occurrences: Math.max(2, Math.min(365, parseInt(e.target.value, 10) || 2)) })}
           />
           <span className="cycle-custom__times">×</span>

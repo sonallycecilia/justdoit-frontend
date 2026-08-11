@@ -155,7 +155,13 @@ export default function Sidebar({ ativa = 'dashboard' }) {
             <span className="nav-item__ic"><Ic d={ICONS.analytics} /></span>
             <span className="nav-item__label">Análise</span>
           </Link>
-        </nav>
+          {/* 
+          <Link className={`nav-item ${ativa === 'history' ? 'is-active' : ''}`} to="/history">
+            <span className="nav-item__ic"><Ic d={ICONS.clock} /></span> 
+            <span className="nav-item__label">Histórico</span>
+          </Link>
+        */}
+        </nav> 
 
         <Link className="sidebar__new-task" to="/tasks/nova" aria-label="Nova tarefa" title="Nova tarefa">
           <span className="sidebar__new-task-ic"><Ic d={ICONS.plus} /></span>
@@ -211,23 +217,31 @@ export default function Sidebar({ ativa = 'dashboard' }) {
                         {doGrupo.length === 0 && (
                           <div className="sidebar-cat__empty">{busca ? 'Nenhum resultado' : 'Nenhuma tarefa pendente'}</div>
                         )}
-                        {doGrupo.map((t) => (
-                          <Link
-                            className="sidebar-task"
-                            key={t.id}
-                            to={`/tasks/${t.id}`}
-                            title={t.titulo}
-                            // Arrastável para o calendário: o payload leva só o id;
-                            // o calendário resolve a tarefa pelo cache ['tarefas'].
-                            draggable
-                            onDragStart={(e) => e.dataTransfer.setData('application/jdi-task', JSON.stringify({ id: t.id }))}
-                            onContextMenu={(e) => abrirMenu(e, 'tarefa', t)}
-                          >
-                            <span className={`sidebar-task__prio sidebar-task__prio--${t.prioridade}`} />
-                            <span className="sidebar-task__titulo">{t.titulo}</span>
-                            <span className="sidebar-task__data">{t.data || ''}</span>
-                          </Link>
-                        ))}
+                        {doGrupo.map((t) => {
+                          const isReadOnly = t.cycleStatus === 'CLOSED';
+                          return (
+                            <Link
+                              className={`sidebar-task ${isReadOnly ? 'sidebar-task--readonly opacity-60 pointer-events-none' : ''}`}
+                              key={t.id}
+                              to={`/tasks/${t.id}`}
+                              title={isReadOnly ? 'Esta tarefa pertence a um ciclo encerrado (Somente leitura)' : t.titulo}
+                              draggable={!isReadOnly}
+                              onDragStart={(e) => {
+                                if (isReadOnly) {
+                                  e.preventDefault();
+                                  return;
+                                }
+                                e.dataTransfer.setData('application/jdi-task', JSON.stringify({ id: t.id }));
+                              }}
+                              onContextMenu={(e) => abrirMenu(e, 'tarefa', t)}
+                            >
+                              <span className={`sidebar-task__prio sidebar-task__prio--${t.prioridade}`} />
+                              <span className="sidebar-task__titulo">{t.titulo}</span>
+                              {isReadOnly && <span className="text-[10px] text-amber-400 ml-1">🔒</span>}
+                              <span className="sidebar-task__data">{t.data || ''}</span>
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
