@@ -441,19 +441,27 @@ a.sidebar-task { text-decoration: none; }
 .notification-panel__header button { color: var(--color-text-muted); cursor: pointer; }
 .notification-panel__list { overflow-y: auto; }
 .notification-panel__empty { margin: 0; padding: 28px 18px; color: var(--color-text-muted); text-align: center; }
+.notification-panel__error { margin: 0; padding: 10px 16px; background: var(--color-priority-urgent-soft); color: var(--color-danger); font-size: var(--font-size-xs); }
 .notification-item {
   width: 100%;
   display: flex;
   align-items: flex-start;
-  gap: 11px;
-  padding: 14px 16px;
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text-soft);
+}
+.notification-item__open {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 8px 14px 16px;
+  color: inherit;
   text-align: left;
   cursor: pointer;
 }
-.notification-item:hover,
-.notification-item:focus-visible { background: var(--color-surface-sunken); outline: none; }
+.notification-item__open:hover,
+.notification-item__open:focus-visible { background: var(--color-surface-sunken); outline: none; }
 .notification-item.is-unread { background: var(--color-accent-soft); }
 .notification-item__icon { display: flex; flex: none; margin-top: 2px; color: var(--color-accent); }
 .notification-item__content { min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 4px; }
@@ -461,6 +469,19 @@ a.sidebar-task { text-decoration: none; }
 .notification-item__content > span { font-size: var(--font-size-sm); line-height: 1.4; }
 .notification-item__content time { color: var(--color-text-faint); font-size: var(--font-size-xs); }
 .notification-item__dot { width: 7px; height: 7px; margin-top: 6px; flex: none; border-radius: 50%; background: var(--color-accent); }
+.notification-item__delete {
+  display: grid;
+  flex: none;
+  place-items: center;
+  margin: 10px 10px 0 0;
+  padding: 7px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-faint);
+  cursor: pointer;
+}
+.notification-item__delete:hover,
+.notification-item__delete:focus-visible { background: var(--color-priority-urgent-soft); color: var(--color-danger); outline: none; }
+.notification-item__delete:disabled { cursor: wait; opacity: .45; }
 
 @media (max-width: 600px) {
   .notification-center__trigger { right: 16px; bottom: 16px; }
