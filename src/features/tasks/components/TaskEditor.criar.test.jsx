@@ -53,6 +53,23 @@ afterEach(() => {
 });
 
 describe('registrar tarefa em /tasks/nova', () => {
+  it('envia a antecedência escolhida junto do horário da tarefa', async () => {
+    const { container } = renderizarNova();
+    digitarTitulo(container, 'Reunião importante');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hora' }));
+    await userEvent.click(screen.getByRole('button', { name: '10' }));
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Lembrete da tarefa' }), '60');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar tarefa' }));
+
+    await screen.findByText('Cheguei na To Do');
+    expect(postsEmTasks()).toHaveLength(1);
+    expect(postsEmTasks()[0][1]).toEqual(expect.objectContaining({
+      dueTime: '10:00',
+      reminderMinutesBefore: 60,
+    }));
+  });
+
   it('conclui a criação mesmo se uma gravação secundária falhar', async () => {
     // O módulo ligado abaixo dispara o PUT /module-config, que aqui falha.
     api.put.mockRejectedValue(new Error('500'));

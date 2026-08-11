@@ -306,6 +306,7 @@
 /* Mesmo "molde" dos badges vizinhos (.chip / .badge--info): pílula de
    24px de altura, mesma borda e mesma tipografia — só que com <input>
    editável no lugar de texto fixo. */
+.reminder-pick,
 .dur-pick {
   display: inline-flex;
   align-items: center;
@@ -321,6 +322,18 @@
   white-space: nowrap;
   line-height: 1;
 }
+
+.reminder-pick select {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.reminder-pick select:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.reminder-pick.is-disabled { opacity: .55; cursor: not-allowed; }
+.reminder-pick.is-disabled select { cursor: not-allowed; }
 .dur-pick svg { width: 13px; height: 13px; flex: none; color: var(--color-text-muted); margin-right: 2px; }
 .dur-pick input {
   width: 18px;
