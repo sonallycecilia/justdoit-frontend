@@ -171,7 +171,7 @@
 }
 .time-pick__btn:hover { opacity: .8; }
 .time-pick__btn.is-open { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-pill); }
-.time-pick__btn[data-empty] { opacity: .55; }
+.time-pick__btn[data-empty] { color: var(--color-text-soft); }
 
 .time-pick__chevron { transition: transform var(--duration-fast); }
 .time-pick__btn.is-open .time-pick__chevron { transform: rotate(180deg); }

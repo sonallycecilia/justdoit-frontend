@@ -1,20 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FORMATOS } from '@/features/settings/lib/exportacao';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 // Janela de confirmação da exportação: escolha do formato + o que vai no arquivo.
 // Reusa as classes .cat-modal (mesmo diálogo da sidebar e do ConfirmModal); não
 // dá para usar o ConfirmModal direto porque ali o botão principal é destrutivo.
 export default function ExportModal({ aberto, processando = false, erro, onExportar, onFechar }) {
   const [formato, setFormato] = useState(FORMATOS[0].valor);
+  const dialogRef = useRef(null);
+  const cancelRef = useRef(null);
 
   useEffect(() => { if (aberto) setFormato(FORMATOS[0].valor); }, [aberto]);
 
-  useEffect(() => {
-    if (!aberto) return;
-    const onKey = (e) => { if (e.key === 'Escape' && !processando) onFechar(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [aberto, processando, onFechar]);
+  useModalA11y({ aberto, containerRef: dialogRef, initialFocusRef: cancelRef, onFechar, closeOnEscape: !processando });
 
   if (!aberto) return null;
 
@@ -22,14 +20,16 @@ export default function ExportModal({ aberto, processando = false, erro, onExpor
     <div className="cat-modal">
       <div className="cat-modal__backdrop" onClick={() => !processando && onFechar()} />
       <form
+        ref={dialogRef}
         className="cat-modal__card"
         role="dialog"
         aria-modal="true"
-        aria-label="Exportar meus dados"
+        aria-labelledby="export-modal-title"
+        tabIndex={-1}
         onSubmit={(e) => { e.preventDefault(); onExportar(formato); }}
       >
         <div className="cat-modal__head">
-          <h3 className="cat-modal__title">Exportar meus dados</h3>
+          <h3 id="export-modal-title" className="cat-modal__title">Exportar meus dados</h3>
         </div>
 
         <p className="exp-modal__text">
@@ -57,10 +57,10 @@ export default function ExportModal({ aberto, processando = false, erro, onExpor
           ))}
         </div>
 
-        {erro && <div className="cat-modal__error">{erro}</div>}
+        {erro && <div className="cat-modal__error" role="alert">{erro}</div>}
 
         <div className="cat-modal__actions">
-          <button className="btn btn--secondary btn--sm" type="button" onClick={onFechar} disabled={processando}>
+          <button ref={cancelRef} className="btn btn--secondary btn--sm" type="button" onClick={onFechar} disabled={processando}>
             Cancelar
           </button>
           <button className="btn btn--primary btn--sm" type="submit" disabled={processando}>

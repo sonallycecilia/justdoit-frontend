@@ -35,14 +35,14 @@
   /* ---------- Texto ---------- */
   --color-text:        var(--brand-pine); /* corpo / títulos        */
   --color-text-soft:   #41514f;           /* apoio / secundário     */
-  --color-text-muted:  #778c8a;           /* metadados              */
-  --color-text-faint:  #98a8a6;           /* placeholder / disabled */
+  --color-text-muted:  #526866;           /* metadados com contraste AA */
+  --color-text-faint:  #526866;           /* texto discreto com contraste AA */
   --color-text-on-dark: var(--brand-paper);/* texto sobre escuro    */
 
   /* ---------- Prioridades (RF11) — harmonizadas à paleta ---------- */
   --color-priority-urgent:    #b5543f;   /* urgente   (ferrugem) */
   --color-priority-important:  #c08a2e;  /* importante (âmbar)   */
-  --color-priority-normal:     #3a9469;  /* normal    (verde)    */
+  --color-priority-normal:     #226340;  /* normal    (verde AA) */
   --color-priority-low:        #778c8a;  /* baixa     (sage)     */
   --color-priority-urgent-soft:    #f3ddd6;
   --color-priority-important-soft: #f4e8d2;

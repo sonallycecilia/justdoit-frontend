@@ -515,7 +515,7 @@ export default function Configuracoes() {
                     <div className="set-row__desc">{desc}</div>
                   </div>
                   <label className="switch is-disabled">
-                    <input type="checkbox" defaultChecked={ligado} disabled />
+                    <input type="checkbox" defaultChecked={ligado} disabled aria-label={label} />
                     <span className="switch__track"><span className="switch__thumb" /></span>
                   </label>
                 </div>
