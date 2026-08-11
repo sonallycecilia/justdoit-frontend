@@ -99,4 +99,11 @@ export const endpoints = {
   analytics: {
     overall: (from, to) => `${SVC.sched}/analytics/overall?from=${from}&to=${to}`,
   },
+
+  weeklyClosure: {
+    preview: `${SVC.tasks}/weekly-cycles/current/closure-preview`,
+    close: `${SVC.tasks}/weekly-cycles/current/closure`,
+    history: `${SVC.tasks}/weekly-cycles?status=CLOSED`,
+    snapshots: (cycleId) => `${SVC.tasks}/weekly-cycles/${cycleId}/snapshots`,
+  },
 };
