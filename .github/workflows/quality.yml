@@ -39,6 +39,11 @@ jobs:
         continue-on-error: true
         run: npm run quality:a11y
 
+      - name: Executar métrica de proteção do ciclo de sessão
+        id: session
+        continue-on-error: true
+        run: npm run quality:session
+
       - name: Gerar relatórios por atributo
         if: always()
         env:
@@ -60,7 +65,7 @@ jobs:
             test-results/**
 
       - name: Aplicar gates
-        if: always() && (steps.tests.outcome != 'success' || steps.lcp.outcome != 'success' || steps.accessibility.outcome != 'success')
+        if: always() && (steps.tests.outcome != 'success' || steps.lcp.outcome != 'success' || steps.accessibility.outcome != 'success' || steps.session.outcome != 'success')
         run: |
-          echo 'Testes, LCP P75 ou acessibilidade falharam.' >&2
+          echo 'Testes, LCP P75, acessibilidade ou TPS de sessão falharam.' >&2
           exit 1

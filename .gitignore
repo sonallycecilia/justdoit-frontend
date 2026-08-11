@@ -18,6 +18,10 @@ docs/
 docs/*
 !docs/quality/
 !docs/quality/*.md
+!docs/security/
+!docs/security/session-storage-risk.md
+!docs/backlog/
+!docs/backlog/SEC-001-http-only-session.md
 .lighthouseci/
 quality-reports/
 playwright-report/

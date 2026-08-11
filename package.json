@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "quality:lcp": "npm run build && lhci collect && node scripts/assert-lcp-p75.mjs",
     "quality:a11y": "npm run build && playwright test tests/accessibility.spec.js",
+    "quality:session": "vitest run src/api/sessionLifecycle.metric.test.js --reporter=junit --outputFile=quality-reports/session-lifecycle-junit.xml && node scripts/assert-session-protection.mjs",
     "quality:report": "node scripts/generate-quality-reports.mjs"
   },
   "dependencies": {

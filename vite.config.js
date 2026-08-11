@@ -52,5 +52,9 @@ export default defineConfig({
     testTimeout: 15_000,
     setupFiles: './src/test/setup.js',
     include: ['src/**/*.test.{js,jsx}'],
+    // Todo.perf.test mede tempo de parede. Em paralelo ele disputa CPU com
+    // páginas/editor ricos e reprova por carga do runner, não por regressão do
+    // filtro. Arquivos serializados mantêm o SLA de 500 ms sem relaxar o gate.
+    fileParallelism: false,
   },
 });
