@@ -34,9 +34,9 @@ import webbrowser
 FRONT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Backend: projeto irmão. Ajuste aqui se estiver em outro lugar.
-BACKEND_DIR = os.path.abspath(os.path.join(FRONT_DIR, "..", "JustDoIt"))
-ENV_FILE = os.path.join(BACKEND_DIR, "infra", ".env")
-COMPOSE_FILE = os.path.join(BACKEND_DIR, "infra", "docker-compose.yml")
+BACKEND_DIR = "C:\\Users\\jasmine\\Desktop\\JustDoIt\\JustDoIt"
+ENV_FILE = "C:\\Users\\jasmine\\Desktop\\JustDoIt\\JustDoIt\\infra\\.env"
+COMPOSE_FILE = "C:\\Users\\jasmine\\Desktop\\JustDoIt\\JustDoIt\\infra\\docker-compose.yml"
 
 # Serviços Spring (módulos do settings.gradle.kts). Cada um sobe em janela própria.
 SERVICES = ["auth-service", "task-service", "schedule-service", "notification-service"]

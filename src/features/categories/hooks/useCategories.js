@@ -41,6 +41,7 @@ export function useAtualizarCategoria() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['categorias'] });
       qc.invalidateQueries({ queryKey: ['tarefas'] });
+      qc.invalidateQueries({ queryKey: ['notas'] });
     },
   });
 }
@@ -54,6 +55,7 @@ export function useRemoverCategoria() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['categorias'] });
       qc.invalidateQueries({ queryKey: ['tarefas'] });
+      qc.invalidateQueries({ queryKey: ['notas'] });
     },
   });
 }

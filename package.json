@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "quality:lcp": "npm run build && lhci collect && node scripts/assert-lcp-p75.mjs"
+    "quality:lcp": "npm run build && lhci collect && node scripts/assert-lcp-p75.mjs",
+    "quality:a11y": "npm run build && playwright test tests/accessibility.spec.js",
+    "quality:report": "node scripts/generate-quality-reports.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
@@ -25,12 +27,14 @@
     "react-window": "^2.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@lhci/cli": "^0.15.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^30.0.0",
+    "playwright": "^1.62.1",
     "vite": "^6.0.3",
     "vitest": "^2.1.9"
   }

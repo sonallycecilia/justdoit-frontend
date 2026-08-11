@@ -47,6 +47,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // A suíte monta editores ricos e páginas completas; em máquinas/CI mais
+    // lentos, interações reais do userEvent podem ultrapassar o padrão de 5 s.
+    testTimeout: 15_000,
     setupFiles: './src/test/setup.js',
     include: ['src/**/*.test.{js,jsx}'],
   },

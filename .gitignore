@@ -14,5 +14,11 @@ __pycache__/
 node_modules/
 dist/
 docs/
+!docs/
+docs/*
+!docs/quality/
+!docs/quality/*.md
 .lighthouseci/
 quality-reports/
+playwright-report/
+test-results/
