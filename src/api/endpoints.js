@@ -75,6 +75,8 @@ export const endpoints = {
 
   dados: {
     exportar: (formato) => `${SVC.tasks}/me/export?format=${encodeURIComponent(formato)}`,
+    solicitarExportacao: (formato) => `${SVC.tasks}/me/exports?format=${encodeURIComponent(formato)}`,
+    statusExportacao: (jobId) => `${SVC.tasks}/me/exports/${jobId}`,
   },
 
   categories: {

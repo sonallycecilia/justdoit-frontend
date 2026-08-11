@@ -29,6 +29,11 @@ function formattedDate(value) {
   }).format(new Date(value));
 }
 
+function temporaryDownloadUrl(item) {
+  if (item.type !== 'EXPORT_READY') return null;
+  return item.message?.match(/https?:\/\/\S+/)?.[0] || null;
+}
+
 export default function NotificationCenter() {
   const navigate = useNavigate();
   const rootRef = useRef(null);
@@ -61,7 +66,7 @@ export default function NotificationCenter() {
 
     const ids = shownIds();
     const newReminders = notifications.filter((item) => (
-      item.type === 'TASK_REMINDER' && !item.read && !ids.has(item.id)
+      ['TASK_REMINDER', 'EXPORT_READY'].includes(item.type) && !item.read && !ids.has(item.id)
     ));
 
     for (const item of newReminders) {
@@ -72,7 +77,9 @@ export default function NotificationCenter() {
       });
       browserNotification.onclick = () => {
         window.focus();
-        if (item.taskId) navigate(`/tasks/${item.taskId}`);
+        const downloadUrl = temporaryDownloadUrl(item);
+        if (downloadUrl) window.location.assign(downloadUrl);
+        else if (item.taskId) navigate(`/tasks/${item.taskId}`);
         browserNotification.close();
       };
       ids.add(item.id);
@@ -90,7 +97,9 @@ export default function NotificationCenter() {
   function openAlert(item) {
     if (!item.read) markRead.mutate(item.id);
     setOpen(false);
-    if (item.taskId) navigate(`/tasks/${item.taskId}`);
+    const downloadUrl = temporaryDownloadUrl(item);
+    if (downloadUrl) window.location.assign(downloadUrl);
+    else if (item.taskId) navigate(`/tasks/${item.taskId}`);
   }
 
   function deleteAlert(item) {
