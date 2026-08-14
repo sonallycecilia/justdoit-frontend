@@ -659,6 +659,11 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
     // um minuto depois. É este o "criei a tarefa e não computou nada".
     invalidarMetricas(qc);
 
+    // O POST inicial invalida a lista antes de os detalhes terminarem. Quando um
+    // ciclo é salvo, o backend cria as ocorrências futuras nesse segundo passo;
+    // invalide novamente para a To Do e o calendário receberem essas ocorrências.
+    if (cicloLocal !== 'none') qc.invalidateQueries({ queryKey: ['tarefas'] });
+
     onCriada?.(novoId);
     return novoId;
   }

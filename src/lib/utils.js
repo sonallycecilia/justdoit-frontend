@@ -55,20 +55,23 @@ export function saudacao(data = new Date()) {
   return 'Boa noite';
 }
 
-// Semana (domingo a sábado) que contém dataBase.
+// Semana (segunda a domingo) que contém dataBase. Este intervalo precisa usar
+// a mesma convenção do schedule-service: weekly_plan.week_start_date identifica
+// cada plano pela segunda-feira.
 export function intervaloSemana(dataBase) {
   const d = dataBase ? new Date(dataBase) : new Date();
-  const dom = new Date(d);
-  dom.setDate(d.getDate() - d.getDay());
-  dom.setHours(0, 0, 0, 0);
-  const sab = new Date(dom);
-  sab.setDate(dom.getDate() + 6);
+  const recuo = d.getDay() === 0 ? 6 : d.getDay() - 1;
+  const seg = new Date(d);
+  seg.setDate(d.getDate() - recuo);
+  seg.setHours(0, 0, 0, 0);
+  const dom = new Date(seg);
+  dom.setDate(seg.getDate() + 6);
   return {
-    inicio: dom,
-    fim: sab,
-    inicioIso: dataIso(dom),
-    fimIso: dataIso(sab),
-    rotulo: `${dom.getDate()} ${MESES[dom.getMonth()]} – ${sab.getDate()} ${MESES[sab.getMonth()]}`,
+    inicio: seg,
+    fim: dom,
+    inicioIso: dataIso(seg),
+    fimIso: dataIso(dom),
+    rotulo: `${seg.getDate()} ${MESES[seg.getMonth()]} – ${dom.getDate()} ${MESES[dom.getMonth()]}`,
   };
 }
 

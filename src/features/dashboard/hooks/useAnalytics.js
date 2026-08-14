@@ -28,11 +28,11 @@ import { endpoints } from '@/api/endpoints';
 import { blocoDaApi, useBlocos } from '@/features/calendar/hooks/useTimeBlocks';
 import { dataIso, deIso, intervaloSemana } from '@/lib/utils';
 
-export const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+export const DIAS_SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
-// Índice 0–6 com a semana começando no domingo.
+// Índice 0–6 com a semana começando na segunda, como o weekly-plan.
 function indiceDia(data) {
-  return data.getDay();
+  return data.getDay() === 0 ? 6 : data.getDay() - 1;
 }
 
 function somarCategorias(relatorios) {

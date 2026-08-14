@@ -36,6 +36,16 @@ async function montar() {
 describe('usePlanoSemanal', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('não consulta plano quando a tela está na visão geral', async () => {
+    const { result } = renderHook(
+      () => usePlanoSemanal(semana, { enabled: false }),
+      { wrapper: criarWrapper() },
+    );
+
+    expect(result.current.carregando).toBe(false);
+    expect(api.get).not.toHaveBeenCalled();
+  });
+
   it('trata 404 do plano como semana ainda não aberta, sem erro', async () => {
     api.get.mockImplementation(naoEncontrado);
 

@@ -202,7 +202,12 @@ export function useSalvarCiclo(taskId) {
     onError: (_e, _v, ctx) => {
       if (ctx?.anterior !== undefined) qc.setQueryData(['ciclo', taskId], ctx.anterior);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['ciclo', taskId] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['ciclo', taskId] });
+      // O PUT materializa as próximas ocorrências no backend. Sem atualizar a
+      // lista, elas só apareciam depois de recarregar a página.
+      qc.invalidateQueries({ queryKey: ['tarefas'] });
+    },
   });
 }
 
