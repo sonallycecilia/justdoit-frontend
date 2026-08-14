@@ -186,7 +186,8 @@ describe('useAnaliseSemanal', () => {
   });
 
   it('soma Pomodoro e cronômetro no tempo de hoje, mantendo a origem separável', async () => {
-    const hoje = new Date().getDay();
+    const diaNativo = new Date().getDay();
+    const hoje = diaNativo === 0 ? 6 : diaNativo - 1;
 
     const result = await analisar([], {
       report: relatorio({ [hoje]: { focusSeconds: 3000, focusSessions: 2, timerSeconds: 1800 } }),
