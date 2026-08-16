@@ -376,6 +376,29 @@ a.sidebar-task { text-decoration: none; }
 .sidebar__actions { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
 .sidebar__actions .btn-icon { width: 32px; height: 32px; }
 
+/* Ações flutuantes do canto inferior direito. Chat e notificações compartilham
+   a mesma base circular. */
+.floating-action {
+  position: fixed;
+  z-index: 90;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-card);
+  color: var(--color-accent);
+  box-shadow: var(--shadow-raised);
+  cursor: pointer;
+  transition: transform var(--duration-fast), background var(--duration-fast), color var(--duration-fast);
+}
+.floating-action:hover { transform: translateY(-2px); background: var(--color-accent); color: var(--color-text-on-dark); }
+.floating-action:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.floating-action svg { width: 23px; height: 23px; }
+.floating-action--chat { right: 24px; bottom: 88px; }
+.floating-action--notifications { right: 24px; bottom: 24px; }
+
 /* Conteúdo principal ao lado da sidebar */
 .app__main { flex: 1; min-width: 0; overflow-y: auto; max-height: 100vh; }
 
@@ -434,4 +457,6 @@ a.sidebar-task { text-decoration: none; }
   .sidebar__avatar { display: none; }
   .sidebar__foot { flex-direction: column; align-items: center; gap: 6px; }
   .sidebar__actions { flex-direction: column; }
+  .floating-action--chat { right: 16px; bottom: 76px; }
+  .floating-action--notifications { right: 16px; bottom: 16px; }
 }

@@ -99,4 +99,14 @@ export const endpoints = {
   analytics: {
     overall: (from, to) => `${SVC.sched}/analytics/overall?from=${from}&to=${to}`,
   },
+
+  support: {
+    messages: `${SVC.notif}/support/messages`,
+  },
+
+  notifications: {
+    list: `${SVC.notif}/notifications`,
+    unread: `${SVC.notif}/notifications/unread`,
+    markAsRead: (id) => `${SVC.notif}/notifications/${id}/read`,
+  },
 };
