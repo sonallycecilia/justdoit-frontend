@@ -115,4 +115,8 @@ export const endpoints = {
     history: `${SVC.tasks}/weekly-cycles?status=CLOSED`,
     snapshots: (cycleId) => `${SVC.tasks}/weekly-cycles/${cycleId}/snapshots`,
   },
+
+  support: {
+    messages: `${SVC.notif}/support/messages`,
+  },
 };

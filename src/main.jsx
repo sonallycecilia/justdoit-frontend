@@ -17,6 +17,7 @@ import './styles/components/card.css';
 import './styles/components/badge.css';
 import './styles/components/date-picker.css';
 import './styles/components/legal-modal.css';
+import './styles/components/development-chat.css';
 import './styles/pages/landing.css';
 import './styles/pages/landing-showcase.css';
 import './styles/pages/home.css';

@@ -33,10 +33,14 @@ import webbrowser
 # desde que o app foi promovido de react/ para a raiz do repo.
 FRONT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Backend: projeto irmão. Ajuste aqui se estiver em outro lugar.
-BACKEND_DIR = "C:\\Users\\jasmine\\Desktop\\JustDoIt\\JustDoIt"
-ENV_FILE = "C:\\Users\\jasmine\\Desktop\\JustDoIt\\JustDoIt\\infra\\.env"
-COMPOSE_FILE = "C:\\Users\\jasmine\\Desktop\\JustDoIt\\JustDoIt\\infra\\docker-compose.yml"
+# Backend: usa o projeto irmão `JustDoIt`; uma organização diferente pode ser
+# informada pela variável de ambiente JUSTDOIT_BACKEND_DIR.
+BACKEND_DIR = os.path.abspath(os.environ.get(
+    "JUSTDOIT_BACKEND_DIR",
+    os.path.join(FRONT_DIR, "..", "JustDoIt"),
+))
+ENV_FILE = os.path.join(BACKEND_DIR, "infra", ".env")
+COMPOSE_FILE = os.path.join(BACKEND_DIR, "infra", "docker-compose.yml")
 
 # Serviços Spring (módulos do settings.gradle.kts). Cada um sobe em janela própria.
 SERVICES = ["auth-service", "task-service", "schedule-service", "notification-service"]
@@ -60,6 +64,17 @@ def load_env():
             key, value = line.split("=", 1)
             os.environ[key.strip()] = value.strip()
     print(f"[ENV] Carregado {ENV_FILE}")
+
+
+def validate_backend():
+    """Falha cedo quando o backend não está no local configurado."""
+    settings_file = os.path.join(BACKEND_DIR, "settings.gradle.kts")
+    if os.path.isfile(settings_file):
+        return
+    print(f"[ERRO] Não encontrei o repositório backend em:\n  {BACKEND_DIR}")
+    print("Mantenha JustDoIt e justdoit-frontend na mesma pasta ou defina "
+          "JUSTDOIT_BACKEND_DIR com o caminho absoluto do backend.")
+    sys.exit(1)
 
 
 def compose(*args):
@@ -110,6 +125,7 @@ def serve_front():
 
 def backend_up():
     """Infra (containers) + os 4 serviços Spring."""
+    validate_backend()
     load_env()
     compose("up", "-d")
     start_services()
@@ -135,10 +151,12 @@ def main():
     elif cmd == "restart":
         print("[BACK] Relançando serviços. Feche as janelas antigas (jdi-*) se ainda "
               "estiverem abertas, para não conflitar nas portas 8080-8083.")
+        validate_backend()
         load_env()
         compose("up", "-d")
         start_services()
     elif cmd == "stop":
+        validate_backend()
         load_env()
         compose("stop")
         print("Infra parada. Feche as janelas dos serviços (jdi-*) e do frontend "
