@@ -284,6 +284,22 @@ describe('useAnaliseSemanal', () => {
     expect(result.current.temDados).toBe(false);
   });
 
+  it('propaga falha das consultas-base e recarrega todas as fontes', async () => {
+    responder({ report: relatorio({}) });
+    const erroCategorias = new ApiError('Categorias indisponíveis', 503);
+    const recarregarBase = vi.fn();
+    const { result } = renderHook(
+      () => useAnaliseSemanal([], undefined, { erroBase: erroCategorias, recarregarBase }),
+      { wrapper: criarWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.carregando).toBe(false));
+    expect(result.current.erro).toBe(erroCategorias);
+
+    result.current.recarregar();
+    expect(recarregarBase).toHaveBeenCalledTimes(1);
+  });
+
   it('reconhece que há dados quando só existe agenda, sem tarefa com data', async () => {
     const result = await analisar([], { report: relatorio({}), blocks: [bloco(1, 8, 10)] });
 

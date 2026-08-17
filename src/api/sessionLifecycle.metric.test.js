@@ -5,7 +5,7 @@ import { gravarSessao, lerSessao, limparSessao } from '@/api/session';
 
 const ACTIVE_SESSION_KEY = 'jdi.sessao.ativa';
 const REMEMBERED_SESSION_PREFIX = 'jdi.sessao.lembrada.';
-const TOTAL_SCENARIOS = 7;
+const TOTAL_SCENARIOS = 11;
 let passedScenarios = 0;
 
 function response(status, body = null) {
@@ -58,7 +58,7 @@ afterAll(() => {
 });
 
 describe('Taxa de Proteção do Ciclo de Sessão (TPS) - cliente frontend', () => {
-  it('1/7: compartilha uma única renovação entre requisições concorrentes', async () => {
+  it('1/11: compartilha uma única renovação entre requisições concorrentes', async () => {
     const protectedUrl = endpoints.auth.me;
     const refreshResponse = deferred();
     let attempts = 0;
@@ -88,7 +88,7 @@ describe('Taxa de Proteção do Ciclo de Sessão (TPS) - cliente frontend', () =
     passScenario();
   });
 
-  it('2/7: reutiliza o access token que outra aba já renovou sem novo refresh', async () => {
+  it('2/11: reutiliza o access token que outra aba já renovou sem novo refresh', async () => {
     const protectedUrl = endpoints.auth.me;
     const firstResponse = deferred();
     fetch
@@ -113,7 +113,7 @@ describe('Taxa de Proteção do Ciclo de Sessão (TPS) - cliente frontend', () =
     passScenario();
   });
 
-  it('3/7: persiste o par rotacionado sem mudar a escolha de manter conectado', async () => {
+  it('3/11: persiste o par rotacionado sem mudar a escolha de manter conectado', async () => {
     fetch
       .mockResolvedValueOnce(response(401))
       .mockResolvedValueOnce(response(200, {
@@ -133,7 +133,7 @@ describe('Taxa de Proteção do Ciclo de Sessão (TPS) - cliente frontend', () =
     passScenario();
   });
 
-  it('4/7: refresh 401 encerra a sessão local', async () => {
+  it('4/11: refresh 401 encerra a sessão local', async () => {
     fetch
       .mockResolvedValueOnce(response(401))
       .mockResolvedValueOnce(response(401));
@@ -145,17 +145,17 @@ describe('Taxa de Proteção do Ciclo de Sessão (TPS) - cliente frontend', () =
     passScenario();
   });
 
-  it('5/7: refresh 429 preserva a sessão para nova tentativa', async () => {
+  it('5/11: refresh 429 preserva a sessão para nova tentativa', async () => {
     await expectTransientRefreshFailure(() => Promise.resolve(response(429)), 429);
     passScenario();
   });
 
-  it('6/7: refresh 5xx preserva a sessão para nova tentativa', async () => {
+  it('6/11: refresh 5xx preserva a sessão para nova tentativa', async () => {
     await expectTransientRefreshFailure(() => Promise.resolve(response(503)), 503);
     passScenario();
   });
 
-  it('7/7: falha de rede no refresh preserva a sessão', async () => {
+  it('7/11: falha de rede no refresh preserva a sessão', async () => {
     const networkError = new TypeError('network unavailable');
     fetch
       .mockResolvedValueOnce(response(401))
@@ -168,6 +168,61 @@ describe('Taxa de Proteção do Ciclo de Sessão (TPS) - cliente frontend', () =
       accessToken: 'expired.access',
       refreshToken: 'retryable.refresh',
     });
+    passScenario();
+  });
+
+  it('8/11: token renovado que continua em 401 encerra a sessão', async () => {
+    fetch
+      .mockResolvedValueOnce(response(401))
+      .mockResolvedValueOnce(response(200, {
+        accessToken: 'rejected.access',
+        refreshToken: 'rotated.refresh',
+      }))
+      .mockResolvedValueOnce(response(401));
+    gravarSessao({ accessToken: 'expired.access', refreshToken: 'valid.refresh' }, { lembrar: true });
+
+    await expect(api.get(endpoints.auth.me)).rejects.toMatchObject({ status: 401 });
+    expect(lerSessao()).toBeNull();
+    passScenario();
+  });
+
+  it('9/11: /auth/me em 403 depois do refresh encerra sessões de backend legado', async () => {
+    fetch
+      .mockResolvedValueOnce(response(403))
+      .mockResolvedValueOnce(response(200, {
+        accessToken: 'rejected.access',
+        refreshToken: 'rotated.refresh',
+      }))
+      .mockResolvedValueOnce(response(403));
+    gravarSessao({ accessToken: 'expired.access', refreshToken: 'valid.refresh' }, { lembrar: false });
+
+    await expect(api.get(endpoints.auth.me)).rejects.toMatchObject({ status: 403 });
+    expect(lerSessao()).toBeNull();
+    passScenario();
+  });
+
+  it('10/11: 403 de regra de negócio não encerra uma sessão válida', async () => {
+    const businessUrl = endpoints.tasks.complete('closed-task');
+    fetch
+      .mockResolvedValueOnce(response(403))
+      .mockResolvedValueOnce(response(200, {
+        accessToken: 'valid.access',
+        refreshToken: 'rotated.refresh',
+      }))
+      .mockResolvedValueOnce(response(403, { error: 'Ciclo fechado' }));
+    gravarSessao({ accessToken: 'old.access', refreshToken: 'valid.refresh' }, { lembrar: false });
+
+    await expect(api.patch(businessUrl)).rejects.toMatchObject({ status: 403 });
+    expect(lerSessao()).toMatchObject({ accessToken: 'valid.access' });
+    passScenario();
+  });
+
+  it('11/11: 401 sem refresh token limpa uma sessão legada incompleta', async () => {
+    fetch.mockResolvedValueOnce(response(401));
+    gravarSessao({ accessToken: 'expired.access' }, { lembrar: false });
+
+    await expect(api.get(endpoints.auth.me)).rejects.toMatchObject({ status: 401 });
+    expect(lerSessao()).toBeNull();
     passScenario();
   });
 });

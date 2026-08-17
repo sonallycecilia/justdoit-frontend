@@ -130,9 +130,13 @@ function montarInsights({ conclusao, categorias, totalAgendado, totalEstimado, t
 }
 
 export default function Analise() {
-  const { data: usuario } = useConta();
-  const { data: categorias } = useCategorias();
-  const { data: tarefas, isLoading } = useTarefas(categorias);
+  const contaQuery = useConta();
+  const categoriasQuery = useCategorias();
+  const tarefasQuery = useTarefas(categoriasQuery.data);
+  const usuario = contaQuery.data;
+  const categorias = categoriasQuery.data;
+  const tarefas = tarefasQuery.data;
+  const erroBase = contaQuery.error || categoriasQuery.error || tarefasQuery.error || null;
   const [semanaSelecionada, setSemanaSelecionada] = useState(() => intervaloSemana().inicioIso);
   const [menuSemanasAberto, setMenuSemanasAberto] = useState(false);
   const [categoriaModo, setCategoriaModo] = useState('estimado');
@@ -147,7 +151,16 @@ export default function Analise() {
   const analise = useAnaliseSemanal(
     tarefas,
     geral ? undefined : deIso(semanaSelecionada),
-    { geral, inicio: inicioConta },
+    {
+      geral,
+      inicio: inicioConta,
+      erroBase,
+      recarregarBase: () => {
+        contaQuery.refetch();
+        categoriasQuery.refetch();
+        tarefasQuery.refetch();
+      },
+    },
   );
   const semanaPlano = usePlanoSemanal(analise.semana, { enabled: !geral });
 
@@ -167,7 +180,11 @@ export default function Analise() {
     };
   }, [menuSemanasAberto]);
 
-  const carregando = isLoading || analise.carregando || semanaPlano.carregando;
+  const carregando = contaQuery.isLoading
+    || categoriasQuery.isLoading
+    || tarefasQuery.isLoading
+    || analise.carregando
+    || semanaPlano.carregando;
   // "Pronto" é o único estado em que um card pode afirmar algo sobre a semana:
   // carregando ainda não sabe, e com erro os zeros não significam "vazio".
   const pronto = !carregando && !analise.erro;
