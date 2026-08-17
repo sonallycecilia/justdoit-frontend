@@ -759,7 +759,7 @@ export function TimePickerInline({ ini, fim, onChange }) {
 }
 
 /* ── TaskModal (popup centralizado) ──────────────────────── */
-function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
+export function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete, onToggle, processando = false }) {
   const dialogRef = useRef(null);
   const closeRef = useRef(null);
   useModalA11y({ aberto: true, containerRef: dialogRef, initialFocusRef: closeRef, onFechar: onClose });
@@ -885,8 +885,8 @@ function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
           )}
         </div>
 
-        {/* Controles interativos. Concluir/reabrir fica de fora de propósito:
-            o toggle mora na bolinha do próprio bloco no calendário. */}
+        {/* O modal também oferece a conclusão porque a visão mensal não exibe
+            a bolinha nos primeiros eventos de cada dia. */}
         <div className="task-modal__controls">
           <div className="task-modal__ctrl-group">
             <div className="task-modal__ctrl-label">Prioridade</div>
@@ -899,6 +899,19 @@ function TaskModal({ ev, dia, categorias, onClose, onUpdate, onDelete }) {
               ))}
             </div>
           </div>
+
+          {onToggle && ev.taskId && (
+            <button
+              type="button"
+              className={`btn btn--sm ${ev.done ? 'btn--secondary' : 'btn--primary'}`}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              onClick={() => onToggle(ev)}
+              disabled={processando}
+            >
+              <Icon d="M20 6 9 17l-5-5" size={14} />
+              {processando ? 'Salvando…' : ev.done ? 'Reabrir tarefa' : 'Marcar como concluída'}
+            </button>
+          )}
 
           {ev.taskId && (
             <Link to={`/tasks/${ev.taskId}`} className="btn btn--secondary btn--sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none' }}>
@@ -1197,14 +1210,24 @@ export default function WeeklyCalendar({ onDrawer }) {
     setConfirmarEv(null);
   }
 
-  // Alterna o estado concluído de uma tarefa a partir do calendário.
+  // Alterna o estado concluído de uma tarefa a partir do calendário. Um mesmo
+  // taskId pode aparecer em mais de uma representação local (semana, mês e
+  // modal), então todas precisam mudar e reverter juntas.
   function toggleEvento(ev) {
+    if (!ev.taskId || toggleDone.isPending) return;
     const novo = !ev.done;
-    setEventos(prev => (prev || []).map(e => (e.id === ev.id ? { ...e, done: novo } : e)));
-    setEventosMes(prev => (prev || []).map(e => (e.id === ev.id ? { ...e, done: novo } : e)));
-    if (ev.taskId) {
-      toggleDone.mutateAsync({ id: ev.taskId, concluir: novo }).catch(() => {});
-    }
+    const atualizar = lista => (lista || []).map(e => (e.taskId === ev.taskId ? { ...e, done: novo } : e));
+    const reverter = lista => (lista || []).map(e => (e.taskId === ev.taskId ? { ...e, done: !novo } : e));
+    setEventos(atualizar);
+    setEventosMes(atualizar);
+    setModalEv(atual => atual?.taskId === ev.taskId ? { ...atual, done: novo } : atual);
+
+    toggleDone.mutateAsync({ id: ev.taskId, concluir: novo }).catch((erro) => {
+      setEventos(reverter);
+      setEventosMes(reverter);
+      setModalEv(atual => atual?.taskId === ev.taskId ? { ...atual, done: !novo } : atual);
+      toast(erro?.message || 'Não foi possível atualizar a tarefa.', 'error');
+    });
   }
 
   function openModal(ev) { setModalEv(ev); }
@@ -1309,7 +1332,7 @@ export default function WeeklyCalendar({ onDrawer }) {
         </div>
       </div>
 
-      <TaskModal ev={modalEv} dia={modalEv ? (modalEv.iso != null ? diaDeIso(modalEv.iso) : dias[modalEv.d]) : null} categorias={categorias} onClose={() => setModalEv(null)} onUpdate={handleUpdate} onDelete={pedirRemover} />
+      <TaskModal ev={modalEv} dia={modalEv ? (modalEv.iso != null ? diaDeIso(modalEv.iso) : dias[modalEv.d]) : null} categorias={categorias} onClose={() => setModalEv(null)} onUpdate={handleUpdate} onDelete={pedirRemover} onToggle={toggleEvento} processando={toggleDone.isPending} />
       {confirmarEv && (confirmarEv.seriesId || confirmarEv.cycleType) && (
         <RecurringDeleteModal
           tarefa={confirmarEv}
