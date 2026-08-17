@@ -19,7 +19,10 @@ export default function CategorySelect({
   const [aberto, setAberto] = useState(false);
 
   const selecionada = (categorias || []).find((c) => c.nome === valor);
-  const rotulo = selecionada ? selecionada.nome : rotuloTodas;
+  const semOpcoes = (categorias || []).length === 0 && !incluirTodas;
+  const rotulo = selecionada
+    ? selecionada.nome
+    : (incluirTodas ? rotuloTodas : 'Sem categorias');
 
   function escolher(c) {
     setAberto(false);
@@ -33,8 +36,8 @@ export default function CategorySelect({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={aberto}
-        disabled={desabilitado}
-        onClick={() => setAberto((v) => !v)}
+        disabled={desabilitado || semOpcoes}
+        onClick={() => !semOpcoes && setAberto((v) => !v)}
       >
         {selecionada && <span className="cat-filter__dot" style={{ background: selecionada.cor }} />}
         <span className="cat-filter__name">{rotulo}</span>
@@ -48,6 +51,7 @@ export default function CategorySelect({
             {incluirTodas && (
               <button
                 className={`cat-filter__item ${!selecionada ? 'is-on' : ''}`}
+                type="button"
                 role="option"
                 aria-selected={!selecionada}
                 onClick={() => escolher(null)}
@@ -62,6 +66,7 @@ export default function CategorySelect({
                 <button
                   key={c.id}
                   className={`cat-filter__item ${ativa ? 'is-on' : ''}`}
+                  type="button"
                   role="option"
                   aria-selected={ativa}
                   onClick={() => escolher(c)}

@@ -14,6 +14,12 @@ function mapear(c) {
 export function useCategorias() {
   return useQuery({
     queryKey: ['categorias'],
+    // A categoria Genérico é local (categoryId null) e sempre existe, mesmo
+    // quando o backend ainda está carregando ou está temporariamente fora.
+    // Sem este estado inicial, o editor caía em "Todas as categorias" e abria
+    // um dropdown vazio, embora esse modo nem permita selecionar "Todas".
+    initialData: [CAT_GENERICO],
+    initialDataUpdatedAt: 0,
     queryFn: async () => {
       const cats = await api.get(endpoints.categories.list);
       const resto = (Array.isArray(cats) ? cats : [])

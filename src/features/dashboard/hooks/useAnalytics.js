@@ -1,5 +1,9 @@
 // Análise semanal derivada de dados REAIS do backend.
 //
+// A tela semanal usa um único contrato do schedule-service. Para uma semana
+// aberta ele reúne dados atuais; no fechamento ele devolve o mesmo payload
+// congelado, impedindo edições futuras de reescrever o histórico.
+//
 // São TRÊS grandezas distintas por dia, e nenhuma substitui a outra:
 //   • AGENDADO  → blocos que o usuário pôs no calendário (schedule-service,
 //     GET /time-blocks?from=&to=). É o compromisso com horário marcado.
@@ -10,22 +14,12 @@
 //     formas de registrar trabalho: ciclos de Pomodoro e intervalos do
 //     cronômetro. Cada um cai no dia em que COMEÇOU.
 //
-// Duas requisições no total. Antes eram 2 POR TAREFA (/timer + /focus-sessions),
-// limitadas a um teto de 60 tarefas, e o "planejado" saía de Task.estimatedMinutes,
-// coluna legada que o backend não escreve — ou seja, nascia zerado.
-//
-// O que NÃO vem do backend agregado, e por quê:
-//   • categorias → nenhum endpoint quebra tempo por categoria;
-//   • conclusão da semana → no relatório, completedTasks conta o que foi
-//     concluído no período (por completedAt) enquanto totalTasks conta o que
-//     vence no período (por dueDate). Bases diferentes, então feitas > total é
-//     possível e o anel passaria de 100%. A tela promete "tarefas desta semana",
-//     que é a conta local abaixo.
-// As duas saem de `tarefas`, que a página já carregou: custo zero de rede.
+// É uma requisição semanal. O modo geral continua paginando relatórios de até
+// 92 dias pelo endpoint agregado já existente.
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
-import { blocoDaApi, useBlocos } from '@/features/calendar/hooks/useTimeBlocks';
+import { blocoDaApi } from '@/features/calendar/hooks/useTimeBlocks';
 import { dataIso, deIso, intervaloSemana } from '@/lib/utils';
 
 export const DIAS_SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
@@ -74,9 +68,9 @@ export function useAnaliseSemanal(tarefas, dataBase, opcoes = {}) {
   const inicioGeralIso = dataIso(inicioGeral);
   const fimGeralIso = dataIso(fimGeral);
 
-  const relatorio = useQuery({
-    queryKey: ['relatorio', semana.inicioIso, semana.fimIso],
-    queryFn: () => api.get(endpoints.tasks.report(semana.inicioIso, semana.fimIso)),
+  const analyticsSemana = useQuery({
+    queryKey: ['analytics-week', semana.inicioIso],
+    queryFn: () => api.get(endpoints.analytics.week(semana.inicioIso)),
     staleTime: 60_000,
     enabled: !geral,
   });
@@ -88,18 +82,15 @@ export function useAnaliseSemanal(tarefas, dataBase, opcoes = {}) {
     enabled: geral,
   });
 
-  // Mesma queryKey do calendário (['blocos', from, to]): quem vem de lá já tem
-  // a semana em cache.
-  const blocos = useBlocos(
-    geral ? null : semana.inicioIso,
-    geral ? null : semana.fimIso,
-  );
   const relatorioAtual = geral
     ? combinarRelatorios(analyticsGeral.data?.reports || [])
-    : relatorio.data;
+    : analyticsSemana.data?.report;
   const blocosAtuais = geral
     ? (analyticsGeral.data?.timeBlocks || []).map(blocoDaApi)
-    : (blocos.data || []);
+    : (analyticsSemana.data?.timeBlocks || []).map(blocoDaApi);
+  const fonte = geral ? 'LIVE' : (analyticsSemana.data?.source || 'LIVE');
+  const dataStatus = geral ? 'COMPLETE' : (analyticsSemana.data?.dataStatus || 'COMPLETE');
+  const fechada = !geral && analyticsSemana.data?.status === 'CLOSED';
   const inicioPeriodo = geral ? inicioGeral : semana.inicio;
   const fimPeriodo = geral ? fimGeral : semana.fim;
 
@@ -139,7 +130,9 @@ export function useAnaliseSemanal(tarefas, dataBase, opcoes = {}) {
     if (desvio[i]) desvio[i].agendado += Math.max(0, b.fim - b.ini);
   });
 
-  // ── Tempo estimado por categoria (nenhum endpoint agrega por categoria) ──
+  // ── Tempo estimado por categoria ──
+  // Semanas abertas mantêm os itens locais clicáveis; semanas fechadas usam o
+  // agregado congelado para não depender das tarefas que já foram alteradas.
   const porCat = new Map();
   [...daSemana, ...semDataComEstimativa].forEach((t) => {
     if (!t.duracaoMin) return;
@@ -147,10 +140,19 @@ export function useAnaliseSemanal(tarefas, dataBase, opcoes = {}) {
     atual.horas += t.duracaoMin / 60;
     porCat.set(t.cat, atual);
   });
-  const categorias = [...porCat.values()]
+  const categoriasLocais = [...porCat.values()]
     .map((c) => ({ ...c, horas: Math.round(c.horas * 10) / 10 }))
     .filter((c) => c.horas > 0)
     .sort((a, b) => b.horas - a.horas);
+  const categoriasCongeladas = (relatorioAtual?.byCategory || [])
+    .map((c) => ({
+      nome: c.categoryName,
+      cor: c.categoryColor || '#94a3b8',
+      horas: Math.round(((c.estimatedMinutes || 0) / 60) * 10) / 10,
+    }))
+    .filter((c) => c.horas > 0)
+    .sort((a, b) => b.horas - a.horas);
+  const categorias = fechada ? categoriasCongeladas : categoriasLocais;
 
   // Execução por categoria usa a coorte correta da semana: tarefas cujo
   // vencimento cai no período. Mantemos os itens, não apenas as contagens, para
@@ -167,7 +169,7 @@ export function useAnaliseSemanal(tarefas, dataBase, opcoes = {}) {
     atual.tarefas.push({ id: t.id, titulo: t.titulo, concluida: t.done });
     execucaoPorCategoriaMap.set(chave, atual);
   });
-  const execucaoPorCategoria = [...execucaoPorCategoriaMap.values()]
+  const execucaoPorCategoriaLocal = [...execucaoPorCategoriaMap.values()]
     .map((categoria) => ({
       ...categoria,
       total: categoria.tarefas.length,
@@ -176,6 +178,22 @@ export function useAnaliseSemanal(tarefas, dataBase, opcoes = {}) {
       tarefas: categoria.tarefas.sort((a, b) => Number(a.concluida) - Number(b.concluida)),
     }))
     .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome));
+  const execucaoPorCategoriaCongelada = (relatorioAtual?.byCategory || [])
+    .filter((c) => (c.dueTasks || 0) > 0)
+    .map((c) => ({
+      id: c.categoryId || c.categoryName || 'generico',
+      nome: c.categoryName || 'Sem categoria',
+      cor: c.categoryColor || '#94a3b8',
+      total: c.dueTasks || 0,
+      concluidas: c.dueTasksCompleted || 0,
+      pendentes: Math.max(0, (c.dueTasks || 0) - (c.dueTasksCompleted || 0)),
+      tarefas: [],
+      somenteResumo: true,
+    }))
+    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome));
+  const execucaoPorCategoria = fechada
+    ? execucaoPorCategoriaCongelada
+    : execucaoPorCategoriaLocal;
 
   const categoriasExecutadas = (relatorioAtual?.byCategory || [])
     .map((c) => ({
@@ -219,11 +237,14 @@ export function useAnaliseSemanal(tarefas, dataBase, opcoes = {}) {
   const totalExecutado = (relatorioAtual?.totalActualSeconds || 0) / 3600;
   const totalMedido = (relatorioAtual?.totalMeasuredSeconds ?? relatorioAtual?.totalActualSeconds ?? 0) / 3600;
   const totalInferido = (relatorioAtual?.totalInferredSeconds || 0) / 3600;
-  const consultas = geral ? [analyticsGeral] : [relatorio, blocos];
+  const consultas = geral ? [analyticsGeral] : [analyticsSemana];
 
   return {
     semana,
     geral,
+    fechada,
+    fonte,
+    dataStatus,
     conclusao,
     desvio,
     categorias,

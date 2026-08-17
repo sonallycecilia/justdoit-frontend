@@ -107,6 +107,7 @@ export const endpoints = {
 
   analytics: {
     overall: (from, to) => `${SVC.sched}/analytics/overall?from=${from}&to=${to}`,
+    week: (weekStart) => `${SVC.sched}/analytics/weeks/${weekStart}`,
   },
 
   weeklyClosure: {

@@ -130,4 +130,24 @@ describe('registrar tarefa em /tasks/nova', () => {
     await waitFor(() => expect(document.body.textContent).toContain('Category not found'));
     expect(screen.queryByText('Cheguei na To Do')).not.toBeInTheDocument();
   });
+
+  it('permite criar com Genérico quando a API de categorias falha', async () => {
+    api.get.mockRejectedValue(new Error('categorias indisponíveis'));
+
+    const { container } = renderizarNova();
+
+    const seletor = await screen.findByRole('button', { name: 'Genérico' });
+    expect(seletor).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Todas as categorias' })).not.toBeInTheDocument();
+
+    await userEvent.click(seletor);
+    expect(screen.getByRole('option', { name: 'Genérico' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('option', { name: 'Genérico' }));
+    digitarTitulo(container, 'Tarefa sem categoria remota');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar tarefa' }));
+
+    await screen.findByText('Cheguei na To Do');
+    expect(postsEmTasks()[0][1]).toEqual(expect.objectContaining({ categoryId: null }));
+  });
 });

@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { closureService } from '../api/closureService';
 
 export function useWeeklyClosure(onSuccessCallback) {
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
@@ -33,7 +35,14 @@ export function useWeeklyClosure(onSuccessCallback) {
         cycleId,
         tasksToMigrate,
         tasksToArchive,
+        weekStartDate: previewData.weekStartDate,
+        weekEndDate: previewData.weekEndDate,
       });
+
+      queryClient.invalidateQueries({ queryKey: ['analytics-week'] });
+      queryClient.invalidateQueries({ queryKey: ['plano-semanal'] });
+      queryClient.invalidateQueries({ queryKey: ['resumo-semanal'] });
+      queryClient.invalidateQueries({ queryKey: ['closed-cycles'] });
 
       setIsModalOpen(false);
 

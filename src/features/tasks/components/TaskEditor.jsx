@@ -780,7 +780,12 @@ const TaskEditor = forwardRef(function TaskEditor({ taskId, compacto = false, on
           />min
         </div>
 
-        <CategorySelect categorias={cats} valor={cat?.nome} onChange={mudarCategoria} disabled={isReadOnly} />
+        <CategorySelect
+          categorias={cats}
+          valor={cat?.nome}
+          onChange={mudarCategoria}
+          desabilitado={isReadOnly}
+        />
 
         <div className="priority-pick">
           <button
