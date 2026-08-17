@@ -156,8 +156,12 @@ export function tarefasComoEventos(blocosExistentes, tarefas, posicionar) {
 
 // Campos visuais do bloco (título/categoria/prioridade/concluído) não ficam no
 // schedule-service — vêm da tarefa vinculada (taskId), resolvida no cache.
-function enriquecerComTarefa(b, tarefasMap) {
+export function enriquecerComTarefa(b, tarefasMap) {
   const t = b.taskId ? tarefasMap.get(b.taskId) : null;
+  // O schedule-service não possui FK para o task-service. Uma tarefa excluída
+  // fora do calendário pode deixar um bloco órfão; ele não pode continuar
+  // aparecendo como tarefa nem disparar PATCH /tasks/{id}/complete (404).
+  if (b.taskId && !t) return null;
   return {
     ...b,
     titulo: t ? t.titulo : 'Bloco',
@@ -994,12 +998,14 @@ export default function WeeklyCalendar({ onDrawer }) {
   // Re-roda quando o servidor responde de novo (refetch pós-mutation) — as
   // mudanças otimistas locais convergem para a verdade do servidor.
   useEffect(() => {
-    if (!blocosSemana) return;
+    // Aguarda também as tarefas: antes disso, todo bloco vinculado pareceria
+    // órfão por alguns milissegundos e faria a grade piscar vazia.
+    if (!blocosSemana || !tarefas) return;
     const comDia = blocosSemana.map(b => {
       const d = dias.findIndex(x => x.iso === b.iso);
       return { ...b, d: d >= 0 ? d : 0 };
     });
-    const reais = comDia.map(b => enriquecerComTarefa(b, tarefasMap));
+    const reais = comDia.map(b => enriquecerComTarefa(b, tarefasMap)).filter(Boolean);
     const virtuais = tarefasComoEventos(reais, tarefas, t => {
       const d = dias.findIndex(x => x.iso === t.dataIso);
       return d >= 0 ? { d } : null;
@@ -1009,8 +1015,8 @@ export default function WeeklyCalendar({ onDrawer }) {
 
   // Vista "mês": eventos achatados por data ISO absoluta (sem índice de dia).
   useEffect(() => {
-    if (vista !== 'mes' || !blocosMes) return;
-    const reais = blocosMes.map(b => enriquecerComTarefa(b, tarefasMap));
+    if (vista !== 'mes' || !blocosMes || !tarefas) return;
+    const reais = blocosMes.map(b => enriquecerComTarefa(b, tarefasMap)).filter(Boolean);
     const virtuais = tarefasComoEventos(reais, tarefas, t =>
       (t.dataIso >= mesFrom && t.dataIso <= mesTo) ? { iso: t.dataIso } : null);
     setEventosMes(reais.concat(virtuais));
