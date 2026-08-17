@@ -2,7 +2,7 @@
 
 Interface web do **JustDoIt**, plataforma de gerenciamento de tarefas e produtividade pessoal por meio de blocos de tempo (*time-blocking*). É uma **SPA React** que consome os 4 microserviços Spring do repositório `JustDoIt`.
 
-> **Regra de ouro:** o backend é a fonte da verdade. O `localStorage` guarda apenas sessão e preferências de UI — **nunca** dado de negócio. Era exatamente esse o bug que motivou a migração do front antigo (vanilla JS) para React.
+> **Regra de ouro:** o backend é a fonte da verdade. O Web Storage guarda apenas sessão e preferências de UI — **nunca** dado de negócio. Era exatamente esse o bug que motivou a migração do front antigo (vanilla JS) para React.
 
 ---
 
@@ -70,7 +70,7 @@ Três arquivos, sem exceção — não há `fetch` solto espalhado pelas página
 |---|---|
 | `api/endpoints.js` | **Todas** as URLs. Os caminhos refletem os controllers reais do backend (`/tasks/{id}/note`, `/cycle-config`, `/module-config`, `/timer`, `/focus-sessions`) |
 | `api/client.js` | `fetch` com refresh automático de token e `ApiError` tipado. `baixarArquivo(url)` passa pelo mesmo caminho de renovação, mas devolve `Blob` (usado pela exportação — `JSON.parse` quebraria num CSV) |
-| `api/session.js` | Leitura/escrita da sessão em `localStorage` |
+| `api/session.js` | Sessão ativa isolada por aba e persistência opcional das sessões lembradas |
 
 O endereço do backend é resolvido **em tempo de execução** pelo hostname, sem variável de ambiente:
 
@@ -92,14 +92,16 @@ Todo dado remoto passa pelo **TanStack Query**; não há Redux, Zustand ou Conte
 - O cache guarda a resposta **crua** da API; o modelo da UI é derivado no `select`.
 - `staleTime` de 30 s e retry que desiste em erro 4xx (não adianta repetir "sem permissão").
 
-O que fica em `localStorage`, e só isso:
+O que fica no Web Storage, e só isso:
 
-| Chave | Conteúdo |
-|---|---|
-| `jdi.sessao` | Tokens + nome/e-mail do usuário |
-| `jdi.tema` | Tema escolhido (a ausência da chave significa "Sistema") |
-| `jdi.inicio-semana` | Preferência de início da semana do calendário |
-| `jdi.todo-notas` | Rascunho não salvo do compositor de notas |
+| Storage | Chave | Conteúdo |
+|---|---|---|
+| `sessionStorage` | `jdi.sessao.ativa` | Conta ativa isolada na aba atual |
+| `localStorage` | `jdi.sessao.lembrada.<id>` | Uma chave independente por sessão persistente |
+| `localStorage` | `jdi.sessao.ultima` | Identificador da última sessão persistente |
+| `localStorage` | `jdi.tema` | Tema escolhido (a ausência da chave significa "Sistema") |
+| `localStorage` | `jdi.inicio-semana` | Preferência de início da semana do calendário |
+| `localStorage` | `jdi.todo-notas` | Rascunho não salvo do compositor de notas |
 
 ---
 
@@ -107,7 +109,7 @@ O que fica em `localStorage`, e só isso:
 
 O `App.jsx` envolve as rotas privadas em `RequireAuth`, que redireciona para `/` quando não há `accessToken` na sessão. A home **é** a tela de login — não existe página `/login` separada; a rota `/login` só redireciona, porque o `client.js` aponta para lá quando o refresh falha.
 
-> ⚠️ Os tokens ficam em `localStorage`, o que os expõe a XSS. É uma decisão herdada do app antigo (a sessão era compartilhada entre os dois fronts durante a migração). A alternativa mais segura é cookie `httpOnly` emitido pelo backend.
+> ⚠️ Sessões lembradas ainda deixam tokens em `localStorage`, o que os expõe a XSS. A alternativa mais segura é cookie `httpOnly` emitido pelo backend.
 
 ---
 

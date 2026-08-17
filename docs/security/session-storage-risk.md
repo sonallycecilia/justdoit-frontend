@@ -3,7 +3,7 @@
 - Identificador: `RISK-SESSION-001`
 - Estado: aberto, com mitigação planejada
 - Ativos afetados: access token, refresh token e sessão autenticada
-- Implementação atual: `localStorage` quando "manter conectado" está ativo e `sessionStorage` nos demais casos
+- Implementação atual: a conta ativa fica isolada por aba no `sessionStorage`; sessões com "manter conectado" também ficam persistidas por identificador no `localStorage`
 
 ## Risco
 

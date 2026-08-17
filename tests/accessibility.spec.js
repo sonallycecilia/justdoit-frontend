@@ -53,8 +53,14 @@ test('métrica WCAG automatizada em todas as rotas', async ({ page }) => {
   for (const surface of surfaces) {
     await page.goto('/');
     await page.evaluate(({ key, value }) => {
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
+      [...Array(localStorage.length).keys()]
+        .map((index) => localStorage.key(index))
+        .filter((storageKey) => storageKey?.startsWith('jdi.sessao'))
+        .forEach((storageKey) => localStorage.removeItem(storageKey));
+      [...Array(sessionStorage.length).keys()]
+        .map((index) => sessionStorage.key(index))
+        .filter((storageKey) => storageKey?.startsWith('jdi.sessao'))
+        .forEach((storageKey) => sessionStorage.removeItem(storageKey));
       if (value) localStorage.setItem(key, value);
     }, {
       key: 'jdi.sessao',

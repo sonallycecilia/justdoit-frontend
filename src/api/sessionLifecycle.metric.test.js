@@ -3,7 +3,8 @@ import { api, ApiError } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
 import { gravarSessao, lerSessao, limparSessao } from '@/api/session';
 
-const SESSION_KEY = 'jdi.sessao';
+const ACTIVE_SESSION_KEY = 'jdi.sessao.ativa';
+const REMEMBERED_SESSION_PREFIX = 'jdi.sessao.lembrada.';
 const TOTAL_SCENARIOS = 7;
 let passedScenarios = 0;
 
@@ -97,10 +98,12 @@ describe('Taxa de Proteção do Ciclo de Sessão (TPS) - cliente frontend', () =
 
     const request = api.get(protectedUrl);
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
-    localStorage.setItem(SESSION_KEY, JSON.stringify({
+    const current = lerSessao();
+    localStorage.setItem(`${REMEMBERED_SESSION_PREFIX}${current.sessionId}`, JSON.stringify({
+      ...current,
       accessToken: 'other-tab.access',
       refreshToken: 'other-tab.refresh',
-      em: Date.now(),
+      em: current.em + 1,
     }));
     firstResponse.resolve(response(401));
 
@@ -123,8 +126,10 @@ describe('Taxa de Proteção do Ciclo de Sessão (TPS) - cliente frontend', () =
     await expect(api.get(endpoints.auth.me)).resolves.toEqual({ ok: true });
 
     expect(lerSessao()).toMatchObject({ accessToken: 'new.access', refreshToken: 'new.refresh' });
-    expect(localStorage.getItem(SESSION_KEY)).toBeNull();
-    expect(sessionStorage.getItem(SESSION_KEY)).not.toBeNull();
+    expect([...Array(localStorage.length).keys()]
+      .map((index) => localStorage.key(index))
+      .some((key) => key?.startsWith(REMEMBERED_SESSION_PREFIX))).toBe(false);
+    expect(sessionStorage.getItem(ACTIVE_SESSION_KEY)).not.toBeNull();
     passScenario();
   });
 
