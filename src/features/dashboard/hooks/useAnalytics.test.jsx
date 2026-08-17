@@ -1,5 +1,6 @@
-// O dashboard lê a semana de duas chamadas: /tasks/report (estimado e executado)
-// e /time-blocks (agendado). O que este teste protege: não voltar ao fan-out por
+// O dashboard lê a semana em uma chamada canônica do schedule-service, que
+// reúne relatório e blocos e devolve snapshot quando fechada. O teste protege:
+// não voltar ao fan-out por
 // tarefa, as três séries não se misturarem, e o executado cair no dia em que foi
 // trabalhado (e não no vencimento da tarefa).
 import { renderHook, waitFor } from '@testing-library/react';
@@ -67,11 +68,11 @@ function bloco(indiceDia, horaIni, horaFim) {
   };
 }
 
-// As duas queries batem em URLs diferentes; o mock responde por rota.
-function responder({ report, blocks = [] }) {
+function responder({ report, blocks = [], status = 'OPEN', source = 'LIVE', dataStatus = 'COMPLETE' }) {
   api.get.mockImplementation((url) => {
-    if (url.includes('/tasks/report')) return Promise.resolve(report);
-    if (url.includes('/time-blocks')) return Promise.resolve(blocks);
+    if (url.includes('/analytics/weeks/')) {
+      return Promise.resolve({ report, timeBlocks: blocks, status, source, dataStatus });
+    }
     return Promise.reject(new Error(`URL inesperada: ${url}`));
   });
 }
@@ -86,13 +87,12 @@ async function analisar(tarefas, resposta) {
 describe('useAnaliseSemanal', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('busca a semana em duas requisições, uma por fonte', async () => {
+  it('busca relatório e agenda da semana em uma requisição canônica', async () => {
     await analisar([], { report: relatorio({}) });
 
     const urls = api.get.mock.calls.map(([url]) => url);
-    expect(urls.filter((u) => u.includes('/tasks/report'))).toHaveLength(1);
-    expect(urls.filter((u) => u.includes('/time-blocks'))).toHaveLength(1);
-    expect(urls[0]).toContain(`from=${semana.inicioIso}`);
+    expect(urls.filter((u) => u.includes('/analytics/weeks/'))).toHaveLength(1);
+    expect(urls[0]).toContain(semana.inicioIso);
   });
 
   it('não chama mais /timer nem /focus-sessions por tarefa', async () => {
@@ -217,6 +217,29 @@ describe('useAnaliseSemanal', () => {
     expect(result.current.estimadoSemData).toBe(0);
   });
 
+  it('usa categorias e conclusão congeladas numa semana fechada', async () => {
+    const report = {
+      ...relatorio({ 0: { estimatedMinutes: 600 } }),
+      totalTasks: 7,
+      dueTasksCompleted: 5,
+      totalEstimatedMinutes: 600,
+      byCategory: [{
+        categoryId: 'cat-1', categoryName: 'Genérico', categoryColor: '#0aa',
+        estimatedMinutes: 600, measuredSeconds: 0, inferredSeconds: 0,
+        dueTasks: 7, dueTasksCompleted: 5,
+      }],
+    };
+    const result = await analisar([], { report, status: 'CLOSED', source: 'SNAPSHOT' });
+
+    expect(result.current.fechada).toBe(true);
+    expect(result.current.fonte).toBe('SNAPSHOT');
+    expect(result.current.conclusao).toEqual({ feitas: 5, total: 7 });
+    expect(result.current.categorias).toEqual([{ nome: 'Genérico', cor: '#0aa', horas: 10 }]);
+    expect(result.current.execucaoPorCategoria[0]).toMatchObject({
+      total: 7, concluidas: 5, pendentes: 2, somenteResumo: true,
+    });
+  });
+
   it('busca a visão geral em uma chamada ao schedule-service e soma os relatórios recebidos', async () => {
     const inicio = new Date();
     inicio.setDate(inicio.getDate() - 100);
@@ -272,10 +295,7 @@ describe('useAnaliseSemanal', () => {
   it('expõe o erro em vez de fingir semana vazia quando o relatório falha', async () => {
     // Sem isto, um serviço fora do ar produz zeros e a tela fica idêntica a uma
     // semana sem nada — o usuário não tem como saber que algo quebrou.
-    api.get.mockImplementation((url) => {
-      if (url.includes('/tasks/report')) return Promise.reject(new ApiError('Erro 404', 404));
-      return Promise.resolve([]);
-    });
+    api.get.mockRejectedValue(new ApiError('Erro 404', 404));
 
     const { result } = renderHook(() => useAnaliseSemanal([]), { wrapper: criarWrapper() });
     await waitFor(() => expect(result.current.erro).toBeTruthy());

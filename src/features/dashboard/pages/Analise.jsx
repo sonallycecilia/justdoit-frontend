@@ -4,6 +4,7 @@
 // O usuário escolhe qualquer semana desde a criação da conta. As semanas são
 // calendários fixos de segunda a domingo, iguais aos planos do schedule-service.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Ic, { ICONS } from '@/components/Ic';
 import Sidebar from '@/components/Sidebar';
 import CategoryChart from '@/features/dashboard/components/CategoryChart';
@@ -11,7 +12,6 @@ import CategoryExecution from '@/features/dashboard/components/CategoryExecution
 import DeviationChart, { SERIES } from '@/features/dashboard/components/DeviationChart';
 import RateRing from '@/features/dashboard/components/RateRing';
 import { useAnaliseSemanal } from '@/features/dashboard/hooks/useAnalytics';
-import { usePlanoSemanal } from '@/features/dashboard/hooks/useWeeklyPlan';
 import { useConta } from '@/features/auth/hooks/useConta';
 import { useCategorias } from '@/features/categories/hooks/useCategories';
 import { useTarefas } from '@/features/tasks/hooks/useTasks';
@@ -140,7 +140,6 @@ export default function Analise() {
   const [semanaSelecionada, setSemanaSelecionada] = useState(() => intervaloSemana().inicioIso);
   const [menuSemanasAberto, setMenuSemanasAberto] = useState(false);
   const [categoriaModo, setCategoriaModo] = useState('estimado');
-  const [confirmandoFechamento, setConfirmandoFechamento] = useState(false);
   const menuSemanasRef = useRef(null);
   const inicioConta = useMemo(() => dataDaConta(usuario, tarefas), [usuario, tarefas]);
   const semanas = useMemo(
@@ -162,7 +161,6 @@ export default function Analise() {
       },
     },
   );
-  const semanaPlano = usePlanoSemanal(analise.semana, { enabled: !geral });
 
   useEffect(() => {
     if (!menuSemanasAberto) return undefined;
@@ -183,13 +181,12 @@ export default function Analise() {
   const carregando = contaQuery.isLoading
     || categoriasQuery.isLoading
     || tarefasQuery.isLoading
-    || analise.carregando
-    || semanaPlano.carregando;
+    || analise.carregando;
   // "Pronto" é o único estado em que um card pode afirmar algo sobre a semana:
   // carregando ainda não sabe, e com erro os zeros não significam "vazio".
   const pronto = !carregando && !analise.erro;
   const insights = montarInsights(analise);
-  const { fechada, resumo, fechar } = semanaPlano;
+  const fechada = analise.fechada;
 
   return (
     <div className="app">
@@ -226,7 +223,6 @@ export default function Analise() {
                       className={geral ? 'is-selected' : ''}
                       onClick={() => {
                         setSemanaSelecionada('overall');
-                        setConfirmandoFechamento(false);
                         setMenuSemanasAberto(false);
                       }}
                     >
@@ -242,7 +238,6 @@ export default function Analise() {
                         key={semana.inicioIso}
                         onClick={() => {
                           setSemanaSelecionada(semana.inicioIso);
-                          setConfirmandoFechamento(false);
                           setMenuSemanasAberto(false);
                         }}
                       >
@@ -253,57 +248,18 @@ export default function Analise() {
                   </div>
                 )}
               </div>
-              {!geral && !fechada && !confirmandoFechamento && (
-                <button
-                  className="btn btn--secondary btn--md"
-                  type="button"
-                  onClick={() => setConfirmandoFechamento(true)}
-                >
-                  Fechar semana
-                </button>
-              )}
-              {!geral && !fechada && confirmandoFechamento && (
-                <>
-                  <button
-                    className="btn btn--secondary btn--md"
-                    type="button"
-                    disabled={fechar.isPending}
-                    onClick={() => setConfirmandoFechamento(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    className="btn btn--primary btn--md"
-                    type="button"
-                    disabled={fechar.isPending}
-                    onClick={() => fechar.mutate(undefined, {
-                      onSuccess: () => setConfirmandoFechamento(false),
-                    })}
-                  >
-                    {fechar.isPending ? 'Fechando…' : 'Confirmar fechamento'}
-                  </button>
-                </>
+              {!geral && !fechada && (
+                <Link className="btn btn--secondary btn--md" to="/todo">
+                  Encerrar semana no To Do
+                </Link>
               )}
             </div>
           </header>
 
-          {confirmandoFechamento && !geral && !fechada && (
+          {!geral && analise.dataStatus === 'PARTIAL' && (
             <div className="card an-card" style={{ marginBottom: 'var(--space-md)' }}>
-              Fechar a semana salva no schedule-service um retrato dos totais atuais.
-              Depois disso, esse resumo histórico não muda quando as tarefas forem editadas.
-            </div>
-          )}
-
-          {fechar.isError && (
-            <div className="card an-card" style={{ marginBottom: 'var(--space-md)' }}>
-              Não foi possível fechar a semana. {explicarErro(fechar.error)}
-            </div>
-          )}
-
-          {semanaPlano.erro && (
-            <div className="card an-card" style={{ marginBottom: 'var(--space-md)' }}>
-              Não foi possível consultar o histórico desta semana no schedule-service.{' '}
-              {explicarErro(semanaPlano.erro)}
+              Esta semana foi encerrada antes do novo histórico analítico. Os dados disponíveis
+              foram reconstruídos e podem estar incompletos.
             </div>
           )}
 
@@ -436,40 +392,6 @@ export default function Analise() {
                       </strong>
                     </a>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {!geral && fechada && resumo && (
-              <div className="card an-card an-wide">
-                <div className="an-card__head">
-                  <span className="an-card__title">Retrato da semana fechada</span>
-                  <span className="an-card__hint">salvo no schedule-service</span>
-                </div>
-                {resumo.dataStatus === 'PARTIAL' && (
-                  <p className="an-card__hint" style={{ marginBottom: 'var(--space-md)' }}>
-                    O task-service não respondeu durante o fechamento; os dados de tarefas deste retrato são parciais.
-                  </p>
-                )}
-                <div className="stats-grid">
-                  <div className="stat">
-                    <span className="stat__label">Agendado</span>
-                    <span className="stat__value">{horas((resumo.totalScheduledMinutes || 0) / 60)}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat__label">Estimado</span>
-                    <span className="stat__value">{horas((resumo.totalEstimatedMinutes || 0) / 60)}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat__label">Executado</span>
-                    <span className="stat__value">{horas((resumo.totalActualSeconds || 0) / 3600)}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat__label">Concluídas</span>
-                    <span className="stat__value">
-                      {resumo.completedTasks || 0} <small>/ {resumo.totalTasks || 0}</small>
-                    </span>
-                  </div>
                 </div>
               </div>
             )}

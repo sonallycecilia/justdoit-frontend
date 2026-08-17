@@ -66,7 +66,11 @@ export function useCriarBloco() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ev) => api.post(endpoints.timeBlocks.create, blocoParaApi(ev)),
-    onSettled: () => qc.invalidateQueries({ queryKey: ['blocos'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['blocos'] });
+      qc.invalidateQueries({ queryKey: ['analytics-week'] });
+      qc.invalidateQueries({ queryKey: ['analytics-overall'] });
+    },
   });
 }
 
@@ -74,7 +78,11 @@ export function useAtualizarBloco() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ev) => api.put(endpoints.timeBlocks.update(ev.id), blocoParaApi(ev)),
-    onSettled: () => qc.invalidateQueries({ queryKey: ['blocos'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['blocos'] });
+      qc.invalidateQueries({ queryKey: ['analytics-week'] });
+      qc.invalidateQueries({ queryKey: ['analytics-overall'] });
+    },
   });
 }
 
@@ -82,7 +90,11 @@ export function useRemoverBloco() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => api.remove(endpoints.timeBlocks.remove(id)),
-    onSettled: () => qc.invalidateQueries({ queryKey: ['blocos'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['blocos'] });
+      qc.invalidateQueries({ queryKey: ['analytics-week'] });
+      qc.invalidateQueries({ queryKey: ['analytics-overall'] });
+    },
   });
 }
 
