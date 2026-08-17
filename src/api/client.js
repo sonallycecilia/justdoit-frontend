@@ -8,6 +8,33 @@ import { lerSessao, gravarSessao, limparSessao } from '@/api/session';
 
 let refreshing = null; // promessa compartilhada p/ evitar refresh duplicado
 
+// O QueryClient vive em main.jsx e não pode ser importado aqui sem criar um
+// ciclo. O evento permite que a raiz descarte imediatamente qualquer dado em
+// cache quando a sessão expira, antes de mandar o usuário para o login.
+export const SESSION_EXPIRED_EVENT = 'jdi:session-expired';
+
+function expirarSessao() {
+  // Requisições concorrentes podem descobrir a expiração ao mesmo tempo. A
+  // primeira limpa e redireciona; as demais não repetem esses efeitos.
+  if (!lerSessao()) return;
+  limparSessao();
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+  window.location.assign('/');
+}
+
+function sessaoFoiRecusadaDepoisDaRenovacao(response, url) {
+  // 401 sempre significa que a credencial não autenticou. Um 403 ainda pode
+  // ser uma regra de negócio legítima; por compatibilidade com backends antigos,
+  // tratamos como sessão apenas quando o próprio /auth/me também foi recusado.
+  return response.status === 401
+    || (response.status === 403 && url === endpoints.auth.me);
+}
+
+function finalizarRepeticao(response, url) {
+  if (sessaoFoiRecusadaDepoisDaRenovacao(response, url)) expirarSessao();
+  return response;
+}
+
 function refreshTokens() {
   if (refreshing) return refreshing; // correção -  atua como uma trava: se já tem refresh em andamento, espera ele terminar e devolve o access token novo.
   const sessao = lerSessao();
@@ -67,10 +94,15 @@ async function requisitar(method, url, body) {
   const sessao = lerSessao();
   const res = await enviar(method, url, body, sessao?.accessToken);
 
-  const podeRenovar = (res.status === 401 || res.status === 403)
-    && sessao?.refreshToken
-    && url !== endpoints.auth.refresh;
-  if (!podeRenovar) return res;
+  const respostaDeAutenticacao = res.status === 401 || res.status === 403;
+  if (!respostaDeAutenticacao || url === endpoints.auth.refresh) return res;
+
+  if (!sessao?.refreshToken) {
+    // 403 pode ser autorização de negócio e não deve deslogar. Já 401, ou
+    // a recusa do endpoint que identifica a conta, provam que a sessão acabou.
+    if (sessaoFoiRecusadaDepoisDaRenovacao(res, url)) expirarSessao();
+    return res;
+  }
 
   // antes da correção: ter duas abas abertas com a mesma sessão podia levar a um refresh token ser descartado,
   // se ambas abas tentassem renovar ao mesmo tempo.
@@ -79,7 +111,7 @@ async function requisitar(method, url, body) {
   // abas da mesma sessão recebem o token novo sem trocar para outra conta.
   const atual = lerSessao();
   if (atual?.accessToken && atual.accessToken !== sessao.accessToken) {
-    return enviar(method, url, body, atual.accessToken);
+    return finalizarRepeticao(await enviar(method, url, body, atual.accessToken), url);
   }
 
   let novoAccess;
@@ -90,13 +122,13 @@ async function requisitar(method, url, body) {
     // ou 429 (too many requests) derrubava o usuário.
     // Agora, só encerra a sessão quando o servidor diz que o refresh token não vale mais (401). 
     if (e instanceof ApiError && e.status === 401) {
-      limparSessao();
-      window.location.assign('/');
+      expirarSessao();
     }
     throw e;
   }
-  // Refresh OK: refaz a requisição original; se ainda falhar, propaga o erro.
-  return enviar(method, url, body, novoAccess);
+  // Refresh OK: refaz a requisição original. Se o token novo também for
+  // recusado, não mantém uma sessão fantasma com o painel preso em 401/403.
+  return finalizarRepeticao(await enviar(method, url, body, novoAccess), url);
 }
 
 async function request(method, url, body) {

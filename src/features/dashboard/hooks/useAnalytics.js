@@ -257,7 +257,13 @@ export function useAnaliseSemanal(tarefas, dataBase, opcoes = {}) {
     carregando: consultas.some((q) => q.isLoading),
     // Sem isto, uma requisição que falha produz zeros e a tela fica idêntica a
     // uma semana vazia — o pior tipo de erro, o silencioso.
-    erro: consultas.find((q) => q.error)?.error || null,
-    recarregar: () => consultas.forEach((q) => q.refetch()),
+    // Conta, categorias e tarefas também alimentam os cards locais. Uma falha
+    // nelas não pode virar zeros nem deixar dados antigos do cache parecerem
+    // atuais, mesmo que /tasks/report tenha respondido.
+    erro: opcoes.erroBase || consultas.find((q) => q.error)?.error || null,
+    recarregar: () => {
+      opcoes.recarregarBase?.();
+      consultas.forEach((q) => q.refetch());
+    },
   };
 }
