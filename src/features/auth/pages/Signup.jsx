@@ -10,6 +10,7 @@ import { alternarTema } from '@/lib/theme';
 import { capitalizarNome, dataIso } from '@/lib/utils';
 import { PasswordStrength } from '../components/PasswordStrength';
 import { validarSenha } from '@/lib/senha';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -30,6 +31,8 @@ export default function Signup() {
 
   const [emailStatus, setEmailStatus] = useState('idle');
   const emailVerificado = useRef('');
+
+  const [turnstileToken, setTurnstileToken] = useState(null);
 
   useEffect(() => {
     const atual = email.trim();
@@ -54,11 +57,15 @@ export default function Signup() {
   }, [email]);
 
   const cadastro = useMutation({
-    mutationFn: () => api.post(endpoints.auth.register, {
+    mutationFn: (token) => api.post(endpoints.auth.register, {
       name: capitalizarNome(nome),
       email: email.trim(),
       password: senha,
       birthDate: dataIso(nascimento),
+    }, {
+      headers: {
+        'X-Turnstile-Token': token
+      }
     }),
     onSuccess: (res) => {
       iniciarSessao(
@@ -75,7 +82,6 @@ export default function Signup() {
     setErroForm('');
     const validacaoSenha = validarSenha(senha);
 
-
     if (!nome.trim()) { setErroForm('Informe seu nome.'); return; }
     if (!EMAIL_RE.test(email.trim())) { setErroForm('E-mail inválido. Use o formato voce@exemplo.com.'); return; }
     if (emailStatus === 'registered') { setErroForm('Este email já está em uso.'); return; }
@@ -87,8 +93,9 @@ export default function Signup() {
     }
     if (senha !== confirmar) { setErroSenha(true); return; }
     if (!termos) { setErroForm('É preciso aceitar os Termos de Uso.'); return; }
+    if (!turnstileToken) { setErroForm('Aguarde a verificação de segurança (Turnstile) ser concluída.'); return; }
 
-    cadastro.mutate();
+    cadastro.mutate(turnstileToken); 
   }
 
   const statusEmail = {
@@ -215,6 +222,20 @@ export default function Signup() {
               </label>
 
               {erroForm && <span className="field__error">{erroForm}</span>}
+              
+              <Turnstile
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                onSuccess={(token) => {
+                  console.log("Turnstile gerado com sucesso:", token);
+                  setTurnstileToken(token);
+                }}
+                onExpire={() => {
+                  console.log("Turnstile expirou");
+                  setTurnstileToken(null);
+                }}
+                options={{ theme: 'light', size: 'invisible' }}
+              />
+
               <button 
                 type="submit" 
                 className="btn btn--primary btn--lg btn--full" 

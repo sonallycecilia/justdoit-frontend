@@ -68,8 +68,8 @@ export class ApiError extends Error {
 }
 // pega a resposta e transforma em JSON ( ou null se não houver corpo)
 // injeta o acess token no header Authorization 
-function enviar(method, url, body, accessToken) {
-  const headers = { 'Content-Type': 'application/json' };
+function enviar(method, url, body, accessToken, headersExtras = {}) {
+  const headers = { 'Content-Type': 'application/json', ...headersExtras };
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
   const options = { method, headers };
   if (body !== undefined) options.body = JSON.stringify(body);
@@ -90,9 +90,9 @@ async function tratarResposta(res) {
 
 // Faz a requisição com renovação de token e devolve a Response crua. Quem chama
 // decide como ler o corpo — JSON (request) ou binário (baixarArquivo).
-async function requisitar(method, url, body) {
+async function requisitar(method, url, body, headersExtras) {
   const sessao = lerSessao();
-  const res = await enviar(method, url, body, sessao?.accessToken);
+  const res = await enviar(method, url, body, sessao?.accessToken, headersExtras);
 
   const respostaDeAutenticacao = res.status === 401 || res.status === 403;
   if (!respostaDeAutenticacao || url === endpoints.auth.refresh) return res;
@@ -111,7 +111,7 @@ async function requisitar(method, url, body) {
   // abas da mesma sessão recebem o token novo sem trocar para outra conta.
   const atual = lerSessao();
   if (atual?.accessToken && atual.accessToken !== sessao.accessToken) {
-    return finalizarRepeticao(await enviar(method, url, body, atual.accessToken), url);
+    return finalizarRepeticao(await enviar(method, url, body, atual.accessToken, headersExtras), url);
   }
 
   let novoAccess;
@@ -128,16 +128,16 @@ async function requisitar(method, url, body) {
   }
   // Refresh OK: refaz a requisição original. Se o token novo também for
   // recusado, não mantém uma sessão fantasma com o painel preso em 401/403.
-  return finalizarRepeticao(await enviar(method, url, body, novoAccess), url);
+  return finalizarRepeticao(await enviar(method, url, body, novoAccess, headersExtras), url);
 }
 
-async function request(method, url, body) {
-  return tratarResposta(await requisitar(method, url, body));
+async function request(method, url, body, headersExtras) {
+  return tratarResposta(await requisitar(method, url, body, headersExtras));
 }
 
 export const api = {
   get: (url) => request('GET', url),
-  post: (url, body) => request('POST', url, body),
+  post: (url, body, config) => request('POST', url, body, config?.headers),
   put: (url, body) => request('PUT', url, body),
   patch: (url, body) => request('PATCH', url, body),
   remove: (url) => request('DELETE', url),
