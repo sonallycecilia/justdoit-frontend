@@ -8,6 +8,8 @@ import { endpoints } from '@/api/endpoints';
 import { useIniciarSessao } from '@/features/auth/hooks/useSessao';
 import { alternarTema } from '@/lib/theme';
 import { capitalizarNome, dataIso } from '@/lib/utils';
+import { PasswordStrength } from '../components/PasswordStrength';
+import { validarSenha } from '@/lib/senha';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -16,7 +18,7 @@ export default function Signup() {
   const iniciarSessao = useIniciarSessao();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
-  const [nascimento, setNascimento] = useState(null); // Date
+  const [nascimento, setNascimento] = useState(null);
   const [nascAberto, setNascAberto] = useState(false);
   const [senha, setSenha] = useState('');
   const [confirmar, setConfirmar] = useState('');
@@ -26,8 +28,7 @@ export default function Signup() {
   const [erroSenha, setErroSenha] = useState(false);
   const [erroForm, setErroForm] = useState('');
 
-  // Verificação de e-mail com debounce (formato + já cadastrado + entregável)
-  const [emailStatus, setEmailStatus] = useState('idle'); // idle|checking|ok|registered|invalid|error
+  const [emailStatus, setEmailStatus] = useState('idle');
   const emailVerificado = useRef('');
 
   useEffect(() => {
@@ -40,13 +41,12 @@ export default function Signup() {
       setEmailStatus('checking');
       api.get(endpoints.auth.checkEmail(atual))
         .then((res) => {
-          if (emailVerificado.current !== atual) return; // resposta obsoleta
+          if (emailVerificado.current !== atual) return;
           if (res?.registered) setEmailStatus('registered');
           else if (res?.deliverable === false) setEmailStatus('invalid');
           else setEmailStatus('ok');
         })
         .catch(() => {
-          // Degradação suave: indisponibilidade da verificação não bloqueia o cadastro.
           if (emailVerificado.current === atual) setEmailStatus('error');
         });
     }, 500);
@@ -61,13 +61,10 @@ export default function Signup() {
       birthDate: dataIso(nascimento),
     }),
     onSuccess: (res) => {
-      // Conta nova nasce como sessão curta (equivalente ao "Manter conectado"
-      // desmarcado), igual ao prazo que o /auth/register emite.
       iniciarSessao(
         { accessToken: res.accessToken, refreshToken: res.refreshToken, name: capitalizarNome(nome) },
         { lembrar: false },
       );
-      // Conta nova cai no setup guiado, como no front antigo.
       navigate('/onboarding', { replace: true });
     },
     onError: (e) => setErroForm(e.message || 'Erro ao criar conta. Tente novamente.'),
@@ -76,13 +73,18 @@ export default function Signup() {
   function enviar(e) {
     e.preventDefault();
     setErroForm('');
+    const validacaoSenha = validarSenha(senha);
+
 
     if (!nome.trim()) { setErroForm('Informe seu nome.'); return; }
     if (!EMAIL_RE.test(email.trim())) { setErroForm('E-mail inválido. Use o formato voce@exemplo.com.'); return; }
     if (emailStatus === 'registered') { setErroForm('Este email já está em uso.'); return; }
     if (emailStatus === 'invalid') { setErroForm('Não encontramos esse provedor de email. Verifique se digitou corretamente.'); return; }
     if (!nascimento) { setErroForm('Informe sua data de nascimento.'); return; }
-    if (senha.length < 8) { setErroForm('A senha precisa de pelo menos 8 caracteres.'); return; }
+    if (!validacaoSenha.isValid) { 
+      setErroForm('Sua senha ainda possui pendências. Verifique os requisitos marcados em vermelho acima.'); 
+      return; 
+    }
     if (senha !== confirmar) { setErroSenha(true); return; }
     if (!termos) { setErroForm('É preciso aceitar os Termos de Uso.'); return; }
 
@@ -188,6 +190,7 @@ export default function Signup() {
                     <Ic d={ICONS.eye} />
                   </button>
                 </div>
+                <PasswordStrength password={senha} />
               </div>
 
               <div className="field">
@@ -212,7 +215,11 @@ export default function Signup() {
               </label>
 
               {erroForm && <span className="field__error">{erroForm}</span>}
-              <button type="submit" className="btn btn--primary btn--lg btn--full" disabled={cadastro.isPending}>
+              <button 
+                type="submit" 
+                className="btn btn--primary btn--lg btn--full" 
+                disabled={cadastro.isPending || (senha.length > 0 && !validarSenha(senha).isValid)}
+              >
                 {cadastro.isPending ? 'Criando conta…' : 'Criar conta'}
               </button>
             </form>
