@@ -20,7 +20,10 @@ jobs:
           node-version: 22.22.2
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # Os runners ubuntu-latest jÃ¡ fornecem as bibliotecas do navegador. Evitar
+      # --with-deps remove a etapa de apt, que pode ser cancelada antes das
+      # auditorias de acessibilidade comeÃ§arem.
+      - run: npx playwright install chromium
 
       - name: Executar testes
         id: tests
