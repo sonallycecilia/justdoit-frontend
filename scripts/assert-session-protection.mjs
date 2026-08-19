@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const expectedFrontendScenarios = 7;
+const expectedFrontendScenarios = 11;
 const expectedBackendScenarios = 5;
 const evidenceDir = resolve('quality-reports');
 const junitPath = resolve(evidenceDir, 'session-lifecycle-junit.xml');
@@ -42,7 +42,7 @@ const result = {
     backendScenarios: expectedBackendScenarios,
     frontendScenarios: expectedFrontendScenarios,
     totalScenarios: expectedBackendScenarios + expectedFrontendScenarios,
-    approvalRule: '5/5 no backend e 7/7 no frontend; ambos os gates devem estar verdes',
+    approvalRule: '5/5 no backend e 11/11 no frontend; ambos os gates devem estar verdes',
   },
 };
 
