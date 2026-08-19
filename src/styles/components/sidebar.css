@@ -439,6 +439,11 @@ a.sidebar-task { text-decoration: none; }
 .notification-panel__header strong { color: var(--color-text); }
 .notification-panel__header span { color: var(--color-text-muted); font-size: var(--font-size-xs); }
 .notification-panel__header button { color: var(--color-text-muted); cursor: pointer; }
+.notification-panel__actions { display: flex; align-items: center; gap: 6px; }
+.notification-panel__clear { padding: 5px 7px; border-radius: var(--radius-sm); font-size: var(--font-size-xs); }
+.notification-panel__clear:hover,
+.notification-panel__clear:focus-visible { color: var(--color-danger); background: var(--color-priority-urgent-soft); outline: none; }
+.notification-panel__clear:disabled { cursor: wait; opacity: .45; }
 .notification-panel__list { overflow-y: auto; }
 .notification-panel__empty { margin: 0; padding: 28px 18px; color: var(--color-text-muted); text-align: center; }
 .notification-panel__error { margin: 0; padding: 10px 16px; background: var(--color-priority-urgent-soft); color: var(--color-danger); font-size: var(--font-size-xs); }

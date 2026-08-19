@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Ic, { ICONS } from '@/components/Ic';
 import {
+  useDeleteAllNotifications,
   useDeleteNotification,
   useMarkNotificationRead,
   useNotifications,
@@ -42,6 +43,7 @@ export default function NotificationCenter() {
   const { data: notifications = [], isLoading } = useNotifications();
   const markRead = useMarkNotificationRead();
   const deleteNotification = useDeleteNotification();
+  const deleteAllNotifications = useDeleteAllNotifications();
   const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications]);
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function NotificationCenter() {
 
     const ids = shownIds();
     const newReminders = notifications.filter((item) => (
-      ['TASK_REMINDER', 'EXPORT_READY'].includes(item.type) && !item.read && !ids.has(item.id)
+      item.type === 'TASK_REMINDER' && !item.read && !ids.has(item.id)
     ));
 
     for (const item of newReminders) {
@@ -109,6 +111,13 @@ export default function NotificationCenter() {
     });
   }
 
+  function deleteAllAlerts() {
+    setDeleteError('');
+    deleteAllNotifications.mutate(undefined, {
+      onError: () => setDeleteError('NÃ£o foi possÃ­vel excluir os alertas. Tente novamente.'),
+    });
+  }
+
   return (
     <div className="notification-center" ref={rootRef}>
       <button
@@ -130,9 +139,21 @@ export default function NotificationCenter() {
               <strong>Alertas</strong>
               <span>{unreadCount ? `${unreadCount} não lido${unreadCount === 1 ? '' : 's'}` : 'Tudo em dia'}</span>
             </div>
-            <button type="button" aria-label="Fechar alertas" onClick={() => setOpen(false)}>
-              <Ic d={ICONS.close} size={16} />
-            </button>
+            <div className="notification-panel__actions">
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  className="notification-panel__clear"
+                  disabled={deleteAllNotifications.isPending}
+                  onClick={deleteAllAlerts}
+                >
+                  Excluir todos
+                </button>
+              )}
+              <button type="button" aria-label="Fechar alertas" onClick={() => setOpen(false)}>
+                <Ic d={ICONS.close} size={16} />
+              </button>
+            </div>
           </header>
           <div className="notification-panel__list">
             {deleteError && (

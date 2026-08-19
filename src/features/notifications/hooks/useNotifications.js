@@ -38,3 +38,20 @@ export function useDeleteNotification() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 }
+
+export function useDeleteAllNotifications() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.remove(endpoints.notifications.removeAll),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['notifications'] });
+      const previous = queryClient.getQueryData(['notifications']);
+      queryClient.setQueryData(['notifications'], []);
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(['notifications'], context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+}

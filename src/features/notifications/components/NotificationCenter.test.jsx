@@ -4,6 +4,7 @@ import NotificationCenter from './NotificationCenter';
 
 const mocks = vi.hoisted(() => ({
   deleteNotification: vi.fn(),
+  deleteAllNotifications: vi.fn(),
   markRead: vi.fn(),
   navigate: vi.fn(),
 }));
@@ -31,6 +32,10 @@ vi.mock('@/features/notifications/hooks/useNotifications', () => ({
     isPending: false,
     variables: undefined,
   }),
+  useDeleteAllNotifications: () => ({
+    mutate: mocks.deleteAllNotifications,
+    isPending: false,
+  }),
 }));
 
 describe('NotificationCenter', () => {
@@ -50,6 +55,19 @@ describe('NotificationCenter', () => {
       expect.objectContaining({ onError: expect.any(Function) }),
     );
     expect(mocks.markRead).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it('exclui todos os alertas sem abrir uma tarefa', () => {
+    render(<NotificationCenter />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Alertas/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir todos' }));
+
+    expect(mocks.deleteAllNotifications).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({ onError: expect.any(Function) }),
+    );
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 });

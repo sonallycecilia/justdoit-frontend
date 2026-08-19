@@ -71,6 +71,7 @@ export const endpoints = {
     unread: `${SVC.notif}/notifications/unread`,
     markRead: (id) => `${SVC.notif}/notifications/${id}/read`,
     remove: (id) => `${SVC.notif}/notifications/${id}`,
+    removeAll: `${SVC.notif}/notifications`,
   },
 
   dados: {
