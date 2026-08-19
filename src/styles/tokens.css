@@ -70,6 +70,7 @@
   --color-success: #3a9469;
   --color-warning: #c08a2e;
   --color-danger:  #b5543f;
+  --color-password-rule-invalid: #9f3d2c;
   --color-info:    #1a6b68;
 
   /* ---------- Tipografia ---------- */
@@ -194,5 +195,6 @@
   --color-success: #4fb085;
   --color-warning: #d6a24a;
   --color-danger:  #d27360;
+  --color-password-rule-invalid: #ff9380;
   --color-info:    #3f8b86;
 }

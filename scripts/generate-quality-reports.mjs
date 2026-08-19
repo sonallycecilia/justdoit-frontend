@@ -46,7 +46,7 @@ const accessibilityResult = accessibility ? `${accessibility.numerator}/${access
 const sessionStatus = sessionProtection
   ? (sessionProtection.passed ? 'IMPLEMENTADA / APROVADA' : 'IMPLEMENTADA / REPROVADA')
   : 'NÃO EXECUTADA';
-const sessionDenominator = sessionProtection?.denominator ?? 7;
+const sessionDenominator = sessionProtection?.denominator ?? 11;
 const sessionResult = sessionProtection
   ? `${sessionProtection.numerator}/${sessionProtection.denominator} (${sessionProtection.percentage}%)`
   : '—';
@@ -105,7 +105,7 @@ ${header}
 |---|---|---:|---:|---:|
 | Proteção do ciclo de sessão (frontend) | ${sessionStatus} | ${sessionDenominator} cenários obrigatórios | ${sessionResult} | 100% exatos |
 
-A TPS usa \`cenários corretos ÷ cenários testados × 100\`. O cliente testa 7/7 cenários: promessa única para renovações concorrentes, token atualizado por outra aba, rotação preservando o storage escolhido, refresh 401, 429, 5xx e falha de rede. O backend possui gate complementar de 5/5 para JWT expirado, rotação, reutilização, logout e rate limiting. O contrato sistêmico é 12/12 e exige os dois pipelines em 100%.
+A TPS usa \`cenários corretos ÷ cenários testados × 100\`. O cliente testa 11/11 cenários: renovações concorrentes, token atualizado por outra aba, rotação preservando o storage escolhido, refresh 401, 429, 5xx e falha de rede, rejeição após rotação, respostas 403 de sessão e de regra de negócio, além de sessão legada sem refresh token. O backend possui gate complementar de 5/5 para JWT expirado, rotação, reutilização, logout e rate limiting. O contrato sistêmico é 16/16 e exige os dois pipelines em 100%.
 
 O risco de access token e refresh token em Web Storage está registrado em \`docs/security/session-storage-risk.md\`; a migração para cookies HttpOnly está planejada no ticket \`docs/backlog/SEC-001-http-only-session.md\`.
 `, 'utf8');

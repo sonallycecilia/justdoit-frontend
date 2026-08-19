@@ -18,8 +18,8 @@ export const PasswordStrength = ({ password = '' }) => {
           <li 
             key={rule.id} 
             className="password-rule-item"
-            style={{ 
-              color: rule.isValid ? 'var(--color-success)' : 'var(--color-danger)' 
+            style={{
+              color: rule.isValid ? 'var(--color-success)' : 'var(--color-password-rule-invalid)',
             }}
           >
             <span aria-hidden="true" className="rule-icon">
