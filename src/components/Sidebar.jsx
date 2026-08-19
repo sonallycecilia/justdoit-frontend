@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import ConfirmModal from '@/components/ConfirmModal';
 import Ic, { ICONS, Mark } from '@/components/Ic';
 import CategoryModal from '@/features/categories/components/CategoryModal';
+import DevelopmentChatModal from '@/features/feedback/components/DevelopmentChatModal';
+import NotificationCenter from '@/features/notifications/components/NotificationCenter';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
 import { alternarTema } from '@/lib/theme';
@@ -12,7 +14,6 @@ import { useCategorias, useRemoverCategoria } from '@/features/categories/hooks/
 import { useConta } from '@/features/auth/hooks/useConta';
 import { useEncerrarSessao } from '@/features/auth/hooks/useSessao';
 import { useAtualizarTarefa, useRemoverTarefa, useTarefas } from '@/features/tasks/hooks/useTasks';
-import NotificationCenter from '@/features/notifications/components/NotificationCenter';
 
 export default function Sidebar({ ativa = 'dashboard' }) {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function Sidebar({ ativa = 'dashboard' }) {
   const [tarefaParaExcluir, setTarefaParaExcluir] = useState(null);
   const [categoriaParaExcluir, setCategoriaParaExcluir] = useState(null);
   const [erroExclusao, setErroExclusao] = useState('');
+  const [chatAberto, setChatAberto] = useState(false);
 
   const { data: categorias } = useCategorias();
   const { data: tarefas } = useTarefas(categorias);
@@ -266,13 +268,24 @@ export default function Sidebar({ ativa = 'dashboard' }) {
         </div>
         <div className="sidebar__actions">
           <Link className="btn-icon" to="/configuracoes" aria-label="Configurações"><Ic d={ICONS.settings} /></Link>
-          <button className="btn-icon" onClick={alternarTema} aria-label="Alternar tema"><Ic d={ICONS.moon} /></button>
+          <button className="btn-icon" type="button" onClick={alternarTema} aria-label="Alternar tema"><Ic d={ICONS.moon} /></button>
         </div>
       </div>
 
+      <button
+        className="floating-action floating-action--chat"
+        type="button"
+        onClick={() => setChatAberto((current) => !current)}
+        aria-label="Chat com o desenvolvimento"
+        aria-expanded={chatAberto}
+        title="Chat com o desenvolvimento"
+      >
+        <Ic d={ICONS.chat} />
+      </button>
       <NotificationCenter />
 
       <CategoryModal aberto={modalAberto} onFechar={() => setModalAberto(false)} />
+      <DevelopmentChatModal aberto={chatAberto} onFechar={() => setChatAberto(false)} />
 
       {menuContexto && (
         <div

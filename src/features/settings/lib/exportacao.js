@@ -24,9 +24,16 @@ export function salvarArquivo(blob, nomeArquivo) {
   const link = document.createElement('a');
   link.href = url;
   link.download = nomeArquivo;
+  link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
-  link.remove();
-  // Revogar no mesmo tick cancela o download em alguns navegadores.
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+
+  // O clique apenas agenda o download. Remover o link ou revogar a URL logo no
+  // tick seguinte ainda pode acontecer antes de o navegador abrir o Blob — em
+  // especial no Safari e em arquivos maiores — e o arquivo nunca é baixado.
+  // Mantemos ambos vivos por tempo suficiente e só então liberamos os recursos.
+  setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 60_000);
 }

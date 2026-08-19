@@ -22,7 +22,7 @@ async function getOu404(url) {
   }
 }
 
-export function usePlanoSemanal(semana) {
+export function usePlanoSemanal(semana, { enabled = true } = {}) {
   const qc = useQueryClient();
   const chavePlano = ['plano-semanal', semana.inicioIso];
 
@@ -30,6 +30,7 @@ export function usePlanoSemanal(semana) {
     queryKey: chavePlano,
     queryFn: () => getOu404(endpoints.weeklyPlans.atual(semana.inicioIso)),
     staleTime: 60_000,
+    enabled,
   });
 
   const planoId = plano.data?.id || null;
@@ -40,7 +41,7 @@ export function usePlanoSemanal(semana) {
   const resumo = useQuery({
     queryKey: ['resumo-semanal', planoId],
     queryFn: () => getOu404(endpoints.weeklyPlans.summary(planoId)),
-    enabled: Boolean(planoId) && fechada,
+    enabled: enabled && Boolean(planoId) && fechada,
     staleTime: 60_000,
   });
 
@@ -69,6 +70,7 @@ export function usePlanoSemanal(semana) {
     fechada,
     resumo: resumo.data || null,
     carregando: plano.isLoading || resumo.isLoading,
+    erro: plano.error || resumo.error || null,
     fechar,
   };
 }

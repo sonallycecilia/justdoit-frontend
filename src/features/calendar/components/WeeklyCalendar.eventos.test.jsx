@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 // Nenhuma chamada acontece aqui — os mocks só evitam carregar os clientes reais.
 vi.mock('@/api/client', () => ({ api: {}, getOuNull: vi.fn() }));
 
-const { tarefasComoEventos } = await import('@/features/calendar/components/WeeklyCalendar');
+const { enriquecerComTarefa, tarefasComoEventos } = await import('@/features/calendar/components/WeeklyCalendar');
 
 const porDia = () => ({ d: 0 });
 
@@ -47,5 +47,23 @@ describe('tarefasComoEventos — altura do evento virtual', () => {
     const eventos = tarefasComoEventos([{ taskId: 't1' }], [tarefa({ duracaoMin: 180 })], porDia);
 
     expect(eventos).toHaveLength(0);
+  });
+});
+
+describe('blocos vinculados a tarefas removidas', () => {
+  it('descarta o bloco órfão em vez de oferecer uma conclusão que sempre retorna 404', () => {
+    const bloco = { id: 'bloco-1', taskId: 'tarefa-removida', iso: '2026-08-05', ini: 8, fim: 9 };
+
+    expect(enriquecerComTarefa(bloco, new Map())).toBeNull();
+  });
+
+  it('preserva blocos avulsos, que não referenciam uma tarefa', () => {
+    const bloco = { id: 'bloco-1', taskId: null, iso: '2026-08-05', ini: 8, fim: 9 };
+
+    expect(enriquecerComTarefa(bloco, new Map())).toMatchObject({
+      id: 'bloco-1',
+      taskId: null,
+      titulo: 'Bloco',
+    });
   });
 });

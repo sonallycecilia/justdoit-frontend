@@ -2,8 +2,9 @@
 // taxa de conclusão e insights — tudo derivado de dados reais do backend.
 //
 // O usuário escolhe qualquer semana desde a criação da conta. As semanas são
-// calendários fixos de domingo a sábado e os números vêm do período escolhido.
+// calendários fixos de segunda a domingo, iguais aos planos do schedule-service.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Ic, { ICONS } from '@/components/Ic';
 import Sidebar from '@/components/Sidebar';
 import CategoryChart from '@/features/dashboard/components/CategoryChart';
@@ -129,9 +130,13 @@ function montarInsights({ conclusao, categorias, totalAgendado, totalEstimado, t
 }
 
 export default function Analise() {
-  const { data: usuario } = useConta();
-  const { data: categorias } = useCategorias();
-  const { data: tarefas, isLoading } = useTarefas(categorias);
+  const contaQuery = useConta();
+  const categoriasQuery = useCategorias();
+  const tarefasQuery = useTarefas(categoriasQuery.data);
+  const usuario = contaQuery.data;
+  const categorias = categoriasQuery.data;
+  const tarefas = tarefasQuery.data;
+  const erroBase = contaQuery.error || categoriasQuery.error || tarefasQuery.error || null;
   const [semanaSelecionada, setSemanaSelecionada] = useState(() => intervaloSemana().inicioIso);
   const [menuSemanasAberto, setMenuSemanasAberto] = useState(false);
   const [categoriaModo, setCategoriaModo] = useState('estimado');
@@ -145,7 +150,16 @@ export default function Analise() {
   const analise = useAnaliseSemanal(
     tarefas,
     geral ? undefined : deIso(semanaSelecionada),
-    { geral, inicio: inicioConta },
+    {
+      geral,
+      inicio: inicioConta,
+      erroBase,
+      recarregarBase: () => {
+        contaQuery.refetch();
+        categoriasQuery.refetch();
+        tarefasQuery.refetch();
+      },
+    },
   );
 
   useEffect(() => {
@@ -164,11 +178,15 @@ export default function Analise() {
     };
   }, [menuSemanasAberto]);
 
-  const carregando = isLoading || analise.carregando;
+  const carregando = contaQuery.isLoading
+    || categoriasQuery.isLoading
+    || tarefasQuery.isLoading
+    || analise.carregando;
   // "Pronto" é o único estado em que um card pode afirmar algo sobre a semana:
   // carregando ainda não sabe, e com erro os zeros não significam "vazio".
   const pronto = !carregando && !analise.erro;
   const insights = montarInsights(analise);
+  const fechada = analise.fechada;
 
   return (
     <div className="app">
@@ -179,7 +197,7 @@ export default function Analise() {
           <header className="page__head">
             <div>
               <div className="page__eyebrow">
-                {geral ? 'Desde a criação da conta' : `Semana de ${analise.semana.rotulo}`}
+                {geral ? 'Desde a criação da conta' : `Semana de ${analise.semana.rotulo}${fechada ? ' · fechada' : ''}`}
               </div>
               <h1 className="page__title">{geral ? 'Visão geral' : 'Análise semanal'}</h1>
             </div>
@@ -230,8 +248,20 @@ export default function Analise() {
                   </div>
                 )}
               </div>
+              {!geral && !fechada && (
+                <Link className="btn btn--secondary btn--md" to="/todo">
+                  Encerrar semana no To Do
+                </Link>
+              )}
             </div>
           </header>
+
+          {!geral && analise.dataStatus === 'PARTIAL' && (
+            <div className="card an-card" style={{ marginBottom: 'var(--space-md)' }}>
+              Esta semana foi encerrada antes do novo histórico analítico. Os dados disponíveis
+              foram reconstruídos e podem estar incompletos.
+            </div>
+          )}
 
           {analise.erro && (
             <div className="card an-card" style={{ marginBottom: 'var(--space-md)' }}>

@@ -14,8 +14,8 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [verSenha, setVerSenha] = useState(false);
-  // Decide o prazo do refresh token no backend E onde os tokens são guardados
-  // aqui: localStorage (sobrevive ao navegador fechar) ou sessionStorage.
+  // Decide o prazo do refresh token no backend. A conta ativa sempre fica
+  // isolada por aba; quando marcado, uma cópia também sobrevive ao navegador.
   const [lembrar, setLembrar] = useState(true);
 
   const login = useMutation({

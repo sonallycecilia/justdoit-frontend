@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import App from '@/App';
 import { iniciarTema } from '@/lib/theme';
-import { ApiError } from '@/api/client';
+import { ApiError, SESSION_EXPIRED_EVENT } from '@/api/client';
 
 // Estilos globais do design system existente (copiados do front antigo)
 import './styles/tokens.css';
@@ -17,6 +17,7 @@ import './styles/components/card.css';
 import './styles/components/badge.css';
 import './styles/components/date-picker.css';
 import './styles/components/legal-modal.css';
+import './styles/components/development-chat.css';
 import './styles/pages/landing.css';
 import './styles/pages/landing-showcase.css';
 import './styles/pages/home.css';
@@ -44,6 +45,10 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// O cliente HTTP emite este evento antes de redirecionar uma sessão expirada.
+// Limpar aqui impede que tarefas/categorias antigas sobrevivam ao próximo login.
+window.addEventListener(SESSION_EXPIRED_EVENT, () => queryClient.clear());
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

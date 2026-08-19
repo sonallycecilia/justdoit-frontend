@@ -80,6 +80,8 @@ export function useTarefa(id, categorias) {
 // o minuto vencer, e o app parecia não computar nada.
 export function invalidarMetricas(qc) {
   qc.invalidateQueries({ queryKey: ['relatorio'] });
+  qc.invalidateQueries({ queryKey: ['analytics-week'] });
+  qc.invalidateQueries({ queryKey: ['analytics-overall'] });
 }
 
 export function useCriarTarefa() {
