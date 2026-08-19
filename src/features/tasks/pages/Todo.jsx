@@ -1,21 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-// Importação blindada para compatibilidade com o Vitest
-import * as ReactWindow from 'react-window';
-let List = ReactWindow.VariableSizeList || ReactWindow.default?.VariableSizeList;
-
-if (typeof List !== 'function') {
-  List = function VitestListMock({ children, itemCount, itemData }) {
-    const itemsToRender = Math.min(itemCount, 15);
-    return (
-      <div data-testid="vitest-fallback-list">
-        {Array.from({ length: itemsToRender }).map((_, index) =>
-          children({ index, style: {}, data: itemData })
-        )}
-      </div>
-    );
-  };
-}
+import { List } from 'react-window';
 
 import Ic, { ICONS } from '@/components/Ic';
 import Sidebar from '@/components/Sidebar';
@@ -44,13 +29,23 @@ export function selecionarOcorrenciasPertinentes(tarefas) {
   return tarefas.filter((tarefa) => !tarefa.seriesId);
 }
 
-const TaskRow = ({ index, style, data }) => {
-  const { items, isReadOnly, toggleDone, navigate, remover, setErroExclusao, setExcluindo } = data;
+const TaskRow = ({
+  index,
+  style,
+  ariaAttributes,
+  items,
+  isReadOnly,
+  toggleDone,
+  navigate,
+  remover,
+  setErroExclusao,
+  setExcluindo,
+}) => {
   const item = items[index];
 
   if (item.type === 'header') {
     return (
-      <div style={{ ...style, paddingTop: '12px' }} className="prio-group" key={`header-${item.nivel}`}>
+      <div {...ariaAttributes} style={{ ...style, paddingTop: '12px' }} className="prio-group">
         <div className="prio-group__head">
           <span className="prio-group__bar" style={{ background: item.cor }} />
           <span className="prio-group__title">{item.rotulo}</span>
@@ -62,7 +57,7 @@ const TaskRow = ({ index, style, data }) => {
 
   const t = item;
   return (
-    <div style={{ ...style, paddingBottom: '8px' }} key={`task-${t.id}`}>
+    <div {...ariaAttributes} style={{ ...style, paddingBottom: '8px' }}>
       <div className="todo-list" style={{ margin: 0, padding: 0 }}>
         <div className={`todo-item ${t.done ? 'is-done' : ''}`} style={{ margin: 0 }}>
           <button
@@ -200,11 +195,6 @@ export default function Todo() {
     }
   }, [visiveis]);
 
-  // Se o Vitest ainda falhar a importação, evitamos o crash retornando um fallback simples apenas no teste
-  if (!List) {
-    return <div data-testid="fallback-list">Fallback de Teste - Erro no React Window</div>;
-  }
-
   return (
     <div className="app">
       <Sidebar ativa="todo" />
@@ -294,15 +284,13 @@ export default function Todo() {
             <div style={{ height: '600px', width: '100%', marginBottom: '32px' }}>
               <List
                 key={JSON.stringify(filtros)}
-                height={600}
-                width="100%"
-                itemCount={flattenedData.length}
-                itemSize={(index) => flattenedData[index].type === 'header' ? 50 : 85}
-                itemData={listData}
+                style={{ height: 600, width: '100%' }}
+                rowCount={flattenedData.length}
+                rowHeight={(index) => flattenedData[index].type === 'header' ? 50 : 85}
+                rowProps={listData}
+                rowComponent={TaskRow}
                 overscanCount={5}
-              >
-                {TaskRow}
-              </List>
+              />
             </div>
           )}
 
