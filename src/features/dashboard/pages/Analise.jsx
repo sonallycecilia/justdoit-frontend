@@ -328,7 +328,7 @@ export default function Analise() {
             <div className="card an-card">
               <div className="an-card__head">
                 <span className="an-card__title">Tempo por categoria</span>
-                <div className="an-card__switch" aria-label="Grandeza do tempo por categoria">
+                <div className="an-card__switch" role="group" aria-label="Grandeza do tempo por categoria">
                   <button className={categoriaModo === 'estimado' ? 'is-on' : ''}
                           onClick={() => setCategoriaModo('estimado')}>Estimado</button>
                   <button className={categoriaModo === 'executado' ? 'is-on' : ''}

@@ -13,6 +13,10 @@ jobs:
   metricas-frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      QUALITY_COMMIT: ${{ github.sha }}
+      QUALITY_RUN_ID: github-actions-${{ github.run_id }}-${{ github.run_attempt }}
+      QUALITY_ENVIRONMENT: GitHub Actions / ubuntu-latest / Node 22.22.2 / Lighthouse desktop local
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,10 +24,10 @@ jobs:
           node-version: 22.22.2
           cache: npm
       - run: npm ci
-      # Os runners ubuntu-latest jÃ¡ fornecem as bibliotecas do navegador. Evitar
-      # --with-deps remove a etapa de apt, que pode ser cancelada antes das
-      # auditorias de acessibilidade comeÃ§arem.
-      - run: npx playwright install chromium
+      - run: npx playwright install --with-deps chromium
+
+      - name: Preparar execução e limpar evidências anteriores
+        run: npm run quality:prepare
 
       - name: Executar testes
         id: tests
@@ -35,23 +39,20 @@ jobs:
       - name: Executar LCP P75
         id: lcp
         continue-on-error: true
-        run: npm run quality:lcp
+        run: npm run quality:lcp:run
 
       - name: Executar métrica de acessibilidade
         id: accessibility
         continue-on-error: true
-        run: npm run quality:a11y
+        run: npm run quality:a11y:run
 
       - name: Executar métrica de proteção do ciclo de sessão
         id: session
         continue-on-error: true
-        run: npm run quality:session
+        run: npm run quality:session:run
 
       - name: Gerar relatórios por atributo
         if: always()
-        env:
-          QUALITY_COMMIT: ${{ github.sha }}
-          QUALITY_ENVIRONMENT: GitHub Actions / ubuntu-latest / Node 22.22.2 / Lighthouse desktop local
         run: npm run quality:report
 
       - name: Publicar relatórios e evidências

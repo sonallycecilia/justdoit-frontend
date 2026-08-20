@@ -12,6 +12,7 @@ import Configuracoes from '@/features/settings/pages/Configuracoes';
 import { estaLogado } from '@/api/session';
 import { HistoryList } from '@/features/weekly-closure/pages/HistoryList';
 import { HistoryDetail } from '@/features/weekly-closure/pages/HistoryDetail';
+import { APP_ROUTES } from '@/appRoutes';
 
 function RequireAuth({ children }) {
   const location = useLocation();
@@ -23,23 +24,32 @@ function RequireAuth({ children }) {
 }
 
 export default function App() {
+  const elements = {
+    home: <Home />,
+    login: <Navigate to="/" replace />,
+    cadastro: <Signup />,
+    onboarding: <Onboarding />,
+    'visao-geral': <VisaoGeral />,
+    tarefas: <Todo />,
+    anotacoes: <Anotacoes />,
+    calendario: <Calendario />,
+    analise: <Analise />,
+    configuracoes: <Configuracoes />,
+    'nova-tarefa': <TaskDetail />,
+    'detalhe-tarefa': <TaskDetail />,
+    historico: <HistoryList />,
+    'detalhe-historico': <HistoryDetail />,
+  };
+
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      {/* Mantida porque o client.js manda para cá quando o refresh do token falha. */}
-      <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
-      <Route path="/visao-geral" element={<RequireAuth><VisaoGeral /></RequireAuth>} />
-      <Route path="/todo" element={<RequireAuth><Todo /></RequireAuth>} />
-      <Route path="/anotacoes" element={<RequireAuth><Anotacoes /></RequireAuth>} />
-      <Route path="/calendario" element={<RequireAuth><Calendario /></RequireAuth>} />
-      <Route path="/analise" element={<RequireAuth><Analise /></RequireAuth>} />
-      <Route path="/configuracoes" element={<RequireAuth><Configuracoes /></RequireAuth>} />
-      <Route path="/tasks/nova" element={<RequireAuth><TaskDetail /></RequireAuth>} />
-      <Route path="/tasks/:id" element={<RequireAuth><TaskDetail /></RequireAuth>} />
-      <Route path="/history" element={<RequireAuth><HistoryList /></RequireAuth>} />
-      <Route path="/history/:cycleId" element={<RequireAuth><HistoryDetail /></RequireAuth>} />
+      {APP_ROUTES.map((route) => (
+        <Route
+          key={route.id}
+          path={route.path}
+          element={route.private ? <RequireAuth>{elements[route.id]}</RequireAuth> : elements[route.id]}
+        />
+      ))}
       {/* Logado, a home do app é a Visão geral; deslogado, a landing + login. */}
       <Route path="*" element={<Navigate to={estaLogado() ? '/visao-geral' : '/'} replace />} />
     </Routes>

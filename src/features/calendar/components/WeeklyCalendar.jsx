@@ -1319,7 +1319,7 @@ export default function WeeklyCalendar({ onDrawer }) {
           </div>
         </div>
 
-        <div className="cal-scroll" tabIndex={0} aria-label="Grade do calendário">
+        <div className="cal-scroll" role="region" tabIndex={0} aria-label="Grade do calendário">
           {vista === 'semana' && <WeekView dias={dias} eventos={eventos} categorias={categorias} mover={mover} moverSemHora={moverParaSemHora} agendarSemHora={agendarSemHora} adicionar={adicionar} onOpen={openModal} onDrawer={temDrawer ? openDrawer : undefined} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} onToggle={toggleEvento} />}
           {vista === 'dia' && <DayView dia={diaAtual} eventos={eventos} categorias={categorias} onOpen={openModal} onDrawer={temDrawer ? openDrawer : undefined} onDelete={pedirRemover} onDeletePack={pedirRemoverVarios} onToggle={toggleEvento} />}
           {vista === 'mes' && <MonthView mesData={mesData} eventos={eventosMes} categorias={categorias} onOpen={openModal} mover={moverMes} onToggle={toggleEvento} />}
