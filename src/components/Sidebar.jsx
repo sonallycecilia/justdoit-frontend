@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ConfirmModal from '@/components/ConfirmModal';
 import Ic, { ICONS, Mark } from '@/components/Ic';
 import CategoryModal from '@/features/categories/components/CategoryModal';
@@ -17,6 +17,7 @@ import { useAtualizarTarefa, useRemoverTarefa, useTarefas } from '@/features/tas
 
 export default function Sidebar({ ativa = 'dashboard' }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const encerrarSessao = useEncerrarSessao();
   const [colapsada, setColapsada] = useState(() => localStorage.getItem('jdi-sidebar-collapsed') === 'true');
   const [catsVisiveis, setCatsVisiveis] = useState(true);
@@ -28,6 +29,7 @@ export default function Sidebar({ ativa = 'dashboard' }) {
   const [categoriaParaExcluir, setCategoriaParaExcluir] = useState(null);
   const [erroExclusao, setErroExclusao] = useState('');
   const [chatAberto, setChatAberto] = useState(false);
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   const { data: categorias } = useCategorias();
   const { data: tarefas } = useTarefas(categorias);
@@ -59,6 +61,31 @@ export default function Sidebar({ ativa = 'dashboard' }) {
       window.removeEventListener('scroll', fechar, true);
     };
   }, [menuContexto]);
+
+  useEffect(() => {
+    setMenuMobileAberto(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!menuMobileAberto) return undefined;
+
+    const overflowAnterior = document.body.style.overflow;
+    const aoTeclar = (event) => {
+      if (event.key === 'Escape') setMenuMobileAberto(false);
+    };
+    const aoRedimensionar = () => {
+      if (window.innerWidth > 880) setMenuMobileAberto(false);
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', aoTeclar);
+    window.addEventListener('resize', aoRedimensionar);
+    return () => {
+      document.body.style.overflow = overflowAnterior;
+      document.removeEventListener('keydown', aoTeclar);
+      window.removeEventListener('resize', aoRedimensionar);
+    };
+  }, [menuMobileAberto]);
 
   function sair() {
     api.post(endpoints.auth.logout).catch(() => {}).finally(() => {
@@ -126,10 +153,31 @@ export default function Sidebar({ ativa = 'dashboard' }) {
   }
 
   return (
-    <aside className={`sidebar ${colapsada ? 'sidebar--collapsed' : ''}`}>
+    <>
+      <button
+        className={`sidebar__mobile-backdrop ${menuMobileAberto ? 'is-visible' : ''}`}
+        type="button"
+        aria-label="Fechar menu"
+        tabIndex={menuMobileAberto ? 0 : -1}
+        onClick={() => setMenuMobileAberto(false)}
+      />
+      <aside
+        id="app-sidebar"
+        className={`sidebar ${colapsada && !menuMobileAberto ? 'sidebar--collapsed' : ''} ${menuMobileAberto ? 'sidebar--mobile-open' : ''}`}
+      >
       <div className="sidebar__brand">
         <Link className="sidebar__mark" to="/visao-geral" aria-label="Ir para a Visão geral"><Mark /></Link>
         <span className="sidebar__word">JustDoIt</span>
+        <button
+          className="sidebar__mobile-toggle"
+          type="button"
+          aria-label={menuMobileAberto ? 'Fechar menu' : 'Abrir menu'}
+          aria-controls="app-sidebar"
+          aria-expanded={menuMobileAberto}
+          onClick={() => setMenuMobileAberto((aberto) => !aberto)}
+        >
+          <Ic d={menuMobileAberto ? ICONS.close : ICONS.list} />
+        </button>
         <button className="sidebar__collapse" onClick={toggleColapso} aria-label={colapsada ? 'Expandir menu' : 'Recolher menu'}>
           <Ic d={ICONS.chevronLeft} />
         </button>
@@ -184,7 +232,7 @@ export default function Sidebar({ ativa = 'dashboard' }) {
         </div>
 
         {catsVisiveis && (
-          <div>
+          <div className="sidebar__categories">
             <div className="sidebar__search">
               <span className="sidebar__search-ic"><Ic d={ICONS.search} /></span>
               <input
@@ -360,6 +408,7 @@ export default function Sidebar({ ativa = 'dashboard' }) {
           As tarefas dessa categoria serão movidas para “Genérico”.
         </p>
       </ConfirmModal>
-    </aside>
+      </aside>
+    </>
   );
 }

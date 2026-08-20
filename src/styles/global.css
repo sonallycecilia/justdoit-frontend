@@ -135,6 +135,15 @@ a:hover { color: var(--color-primary-hover); }
   .page__title { font-size: var(--font-size-2xl); }
 }
 
+@media (max-width: 560px) {
+  .page { padding: var(--space-md); }
+  .page__head { flex-direction: column; gap: var(--space-md); margin-bottom: var(--space-lg); }
+  .page__head > *, .page__head-actions { width: 100%; min-width: 0; }
+  .page__head-actions { flex-wrap: wrap; }
+  .page__head-actions > .btn { flex: 1 1 auto; }
+  .page__title { font-size: var(--font-size-xl); }
+}
+
 /* ---------- Superfícies ---------- */
 .surface-card {
   background: var(--color-card);
