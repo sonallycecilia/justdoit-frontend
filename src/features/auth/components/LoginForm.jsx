@@ -7,6 +7,7 @@ import Ic, { ICONS } from '@/components/Ic';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
 import { useIniciarSessao } from '@/features/auth/hooks/useSessao';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -18,11 +19,18 @@ export default function LoginForm() {
   // isolada por aba; quando marcado, uma cópia também sobrevive ao navegador.
   const [lembrar, setLembrar] = useState(true);
 
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const [erroForm, setErroForm] = useState('');
+
   const login = useMutation({
-    mutationFn: () => api.post(endpoints.auth.login, {
+    mutationFn: (token) => api.post(endpoints.auth.login, {
       email: email.trim(),
       password: senha,
       rememberMe: lembrar,
+    }, {
+      headers: {
+        'X-Turnstile-Token': token
+      }
     }),
     onSuccess: (res) => {
       // Entrar descarta o cache da sessão anterior (ver useSessao): sem isso,
@@ -30,12 +38,18 @@ export default function LoginForm() {
       iniciarSessao({ accessToken: res.accessToken, refreshToken: res.refreshToken }, { lembrar });
       navigate('/visao-geral', { replace: true });
     },
+    onError: (e) => setErroForm(e.message || 'E-mail ou senha incorretos.'),
   });
 
   function enviar(e) {
     e.preventDefault();
+    setErroForm('');
     if (!email.trim() || !senha) return;
-    login.mutate();
+    if (!turnstileToken) {
+      setErroForm('Aguarde a verificação de segurança ser concluída.');
+      return;
+    }
+    login.mutate(turnstileToken);
   }
 
   return (
@@ -98,9 +112,24 @@ export default function LoginForm() {
           <a className="auth__forgot">Esqueceu a senha?</a>
         </div>
 
-        {login.isError && (
-          <span className="field__error">{login.error.message || 'E-mail ou senha incorretos.'}</span>
+        {(login.isError || erroForm) && (
+          <span className="field__error">{erroForm || login.error?.message || 'E-mail ou senha incorretos.'}</span>
         )}
+
+        <Turnstile
+          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+          onSuccess={(token) => {
+            console.log("Turnstile gerado com sucesso:", token);
+            setTurnstileToken(token);
+          }}
+          onExpire={() => {
+            console.log("Turnstile expirou");
+            setTurnstileToken(null);
+          }}
+          onError={(err) => console.error('TURNSTILE ERROR:', err)}
+          options={{ theme: 'light', size: 'invisible' }}
+        />
+
         <button type="submit" className="btn btn--primary btn--lg btn--full" disabled={login.isPending}>
           {login.isPending ? 'Entrando…' : 'Entrar'}
         </button>
