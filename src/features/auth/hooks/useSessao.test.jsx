@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,6 +10,15 @@ import { useEncerrarSessao, useIniciarSessao } from '@/features/auth/hooks/useSe
 vi.mock('@/api/client', () => ({
   api: { post: vi.fn(), get: vi.fn(), put: vi.fn(), patch: vi.fn(), remove: vi.fn() },
   ApiError: class ApiError extends Error {},
+}));
+
+vi.mock('@marsidev/react-turnstile', () => ({
+  Turnstile: ({ onSuccess }) => {
+    useEffect(() => {
+      onSuccess?.('fake-turnstile-token');
+    }, [onSuccess]);
+    return null;
+  },
 }));
 
 const { api } = await import('@/api/client');
