@@ -1,29 +1,21 @@
+import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from 'playwright/test';
+import { AUDIT_TASK_ID, AUDITABLE_ROUTES } from '../src/appRoutes.js';
+import { evidenceMetadata, readQualityContext } from '../scripts/quality-context.mjs';
+import { accessibilityIncompleteAllowlist } from './accessibility-incomplete-allowlist.js';
 
-const TASK_ID = '00000000-0000-0000-0000-000000000001';
-const surfaces = [
-  { name: 'home', path: '/', private: false },
-  { name: 'cadastro', path: '/signup', private: false },
-  { name: 'onboarding', path: '/onboarding', private: true },
-  { name: 'visao-geral', path: '/visao-geral', private: true },
-  { name: 'tarefas', path: '/todo', private: true },
-  { name: 'nova-tarefa', path: '/tasks/nova', private: true },
-  { name: 'detalhe-tarefa', path: `/tasks/${TASK_ID}`, private: true },
-  { name: 'anotacoes', path: '/anotacoes', private: true },
-  { name: 'calendario', path: '/calendario', private: true },
-  { name: 'analise', path: '/analise', private: true },
-  { name: 'configuracoes', path: '/configuracoes', private: true },
-];
+const require = createRequire(import.meta.url);
+const axeVersion = require('axe-core/package.json').version;
 
 function mockedBody(url) {
   if (url.pathname === '/auth/me') {
-    return { id: TASK_ID, name: 'Auditoria', email: 'auditoria@example.com', profile: 'USER' };
+    return { id: AUDIT_TASK_ID, name: 'Auditoria', email: 'auditoria@example.com', profile: 'USER' };
   }
-  if (url.pathname === `/tasks/${TASK_ID}`) {
-    return { id: TASK_ID, title: 'Tarefa de auditoria', status: 'PENDING', priority: 'MEDIUM' };
+  if (url.pathname === `/tasks/${AUDIT_TASK_ID}`) {
+    return { id: AUDIT_TASK_ID, title: 'Tarefa de auditoria', status: 'PENDING', priority: 'MEDIUM' };
   }
   if (url.pathname === '/tasks/report') {
     return { byDay: [], byCategory: [], taskPerformance: [], totalTasks: 0, dueTasksCompleted: 0, totalEstimatedMinutes: 0, totalActualSeconds: 0 };
@@ -46,82 +38,154 @@ async function mockBackend(page) {
   });
 }
 
-test('métrica WCAG automatizada em todas as rotas', async ({ page }) => {
+function axeRule(rule) {
+  return {
+    id: rule.id,
+    impact: rule.impact,
+    help: rule.help,
+    nodes: rule.nodes.length,
+    details: rule.nodes.map((node) => ({
+      target: node.target,
+      html: node.html,
+      failureSummary: node.failureSummary,
+      any: node.any?.map((check) => check.message),
+      all: node.all?.map((check) => check.message),
+      none: node.none?.map((check) => check.message),
+    })),
+  };
+}
+
+function allowanceKey(surface, rule) {
+  return `${surface}:${rule}`;
+}
+
+test('métrica WCAG automatizada em todas as rotas do manifesto', async ({ browser, page }) => {
+  const context = await readQualityContext();
   await mockBackend(page);
   const results = [];
 
-  for (const surface of surfaces) {
-    await page.goto('/');
-    await page.evaluate(({ key, value }) => {
-      [...Array(localStorage.length).keys()]
-        .map((index) => localStorage.key(index))
-        .filter((storageKey) => storageKey?.startsWith('jdi.sessao'))
-        .forEach((storageKey) => localStorage.removeItem(storageKey));
-      [...Array(sessionStorage.length).keys()]
-        .map((index) => sessionStorage.key(index))
-        .filter((storageKey) => storageKey?.startsWith('jdi.sessao'))
-        .forEach((storageKey) => sessionStorage.removeItem(storageKey));
-      if (value) localStorage.setItem(key, value);
-    }, {
-      key: 'jdi.sessao',
-      value: surface.private
-        ? JSON.stringify({ accessToken: 'access-auditoria', refreshToken: 'refresh-auditoria', name: 'Auditoria' })
-        : null,
-    });
+  for (const surface of AUDITABLE_ROUTES) {
+    try {
+      await page.goto('/');
+      await page.evaluate(({ key, value }) => {
+        [...Array(localStorage.length).keys()]
+          .map((index) => localStorage.key(index))
+          .filter((storageKey) => storageKey?.startsWith('jdi.sessao'))
+          .forEach((storageKey) => localStorage.removeItem(storageKey));
+        [...Array(sessionStorage.length).keys()]
+          .map((index) => sessionStorage.key(index))
+          .filter((storageKey) => storageKey?.startsWith('jdi.sessao'))
+          .forEach((storageKey) => sessionStorage.removeItem(storageKey));
+        if (value) localStorage.setItem(key, value);
+      }, {
+        key: 'jdi.sessao',
+        value: surface.private
+          ? JSON.stringify({ accessToken: 'access-auditoria', refreshToken: 'refresh-auditoria', name: 'Auditoria' })
+          : null,
+      });
 
-    await page.goto(surface.path, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(750);
-    expect(new URL(page.url()).pathname, `${surface.name} não pode redirecionar durante a auditoria`).toBe(surface.path);
+      await page.goto(surface.path, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(750);
+      const finalPath = new URL(page.url()).pathname;
+      if (finalPath !== surface.path) {
+        throw new Error(`${surface.name} redirecionou para ${finalPath}`);
+      }
 
-    const axe = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
-      .exclude('[aria-hidden="true"]')
-      .analyze();
+      const axe = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+        .analyze();
 
-    results.push({
-      surface: surface.name,
-      path: surface.path,
-      passedRules: axe.passes.map((rule) => rule.id),
-      violations: axe.violations.map((rule) => ({
-        id: rule.id,
-        impact: rule.impact,
-        help: rule.help,
-        nodes: rule.nodes.length,
-        details: rule.nodes.map((node) => ({ target: node.target, html: node.html, failureSummary: node.failureSummary })),
-      })),
-      incompleteRules: axe.incomplete.map((rule) => rule.id),
-    });
+      results.push({
+        surface: surface.name,
+        path: surface.path,
+        passedRules: axe.passes.map((rule) => rule.id),
+        violations: axe.violations.map(axeRule),
+        incompleteRules: axe.incomplete.map(axeRule),
+        error: null,
+      });
+    } catch (error) {
+      results.push({
+        surface: surface.name,
+        path: surface.path,
+        passedRules: [],
+        violations: [],
+        incompleteRules: [],
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
+  const allowanceByKey = new Map(accessibilityIncompleteAllowlist.map((entry) => (
+    [allowanceKey(entry.surface, entry.rule), entry]
+  )));
+  const observedIncompleteKeys = new Set();
+  const justifiedIncomplete = [];
+  const unjustifiedIncomplete = [];
+  const today = new Date().toISOString().slice(0, 10);
+
+  for (const result of results) {
+    for (const rule of result.incompleteRules) {
+      const key = allowanceKey(result.surface, rule.id);
+      observedIncompleteKeys.add(key);
+      const allowance = allowanceByKey.get(key);
+      const valid = allowance?.justification?.trim()
+        && allowance?.reviewedAt
+        && allowance?.expiresAt >= today;
+      const item = { surface: result.surface, rule: rule.id, details: rule, allowance: allowance ?? null };
+      (valid ? justifiedIncomplete : unjustifiedIncomplete).push(item);
+    }
+  }
+
+  const staleJustifications = accessibilityIncompleteAllowlist.filter((entry) => (
+    !observedIncompleteKeys.has(allowanceKey(entry.surface, entry.rule))
+  ));
   const approved = results.reduce((sum, result) => {
     const violated = new Set(result.violations.map((rule) => rule.id));
-    return sum + new Set(result.passedRules.filter((rule) => !violated.has(rule))).size;
+    const incomplete = new Set(result.incompleteRules.map((rule) => rule.id));
+    return sum + new Set(result.passedRules.filter((rule) => !violated.has(rule) && !incomplete.has(rule))).size;
   }, 0);
-  const denominator = results.reduce((sum, result) => (
-    sum + new Set([...result.passedRules, ...result.violations.map((rule) => rule.id)]).size
-  ), 0);
   const violations = results.reduce((sum, result) => sum + result.violations.length, 0);
+  const incomplete = results.reduce((sum, result) => sum + result.incompleteRules.length, 0);
+  const denominator = approved + violations + incomplete;
   const percentage = denominator ? (approved / denominator) * 100 : 0;
+  const navigationErrors = results.filter((result) => result.error);
+  const passed = results.length === AUDITABLE_ROUTES.length
+    && navigationErrors.length === 0
+    && violations === 0
+    && unjustifiedIncomplete.length === 0
+    && staleJustifications.length === 0;
   const report = {
-    metric: 'Conformidade de acessibilidade automatizada',
+    metric: 'Cobertura de acessibilidade automatizada',
     standard: 'WCAG 2 A/AA, WCAG 2.1 A/AA e WCAG 2.2 AA cobertas pelo axe-core',
-    formula: 'regras-página aprovadas / (regras-página aprovadas + regras-página violadas)',
-    surfacesExpected: surfaces.length,
-    surfacesAudited: results.length,
+    formula: 'regras-página aprovadas / (aprovadas + violadas + inconclusivas)',
+    evidence: evidenceMetadata(context, {
+      axeCoreVersion: axeVersion,
+      playwrightVersion: require('playwright/package.json').version,
+      browser: `Chromium ${browser.version()}`,
+    }),
+    surfacesExpected: AUDITABLE_ROUTES.length,
+    surfacesAudited: results.length - navigationErrors.length,
     numerator: approved,
     denominator,
     percentage: Number(percentage.toFixed(2)),
-    limitPercentage: 100,
     violations,
-    incomplete: results.reduce((sum, result) => sum + result.incompleteRules.length, 0),
-    passed: results.length === surfaces.length && violations === 0 && percentage === 100,
-    measuredAt: new Date().toISOString(),
+    incomplete,
+    justifiedIncomplete,
+    unjustifiedIncomplete,
+    staleJustifications,
+    navigationErrors,
+    passed,
+    status: passed
+      ? (justifiedIncomplete.length ? 'APROVADA COM REVISÃO MANUAL' : 'APROVADA')
+      : 'REPROVADA',
     results,
   };
 
   await mkdir(resolve('quality-reports'), { recursive: true });
   await writeFile(resolve('quality-reports/accessibility.json'), `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
-  expect(report.surfacesAudited).toBe(report.surfacesExpected);
+  expect(navigationErrors, JSON.stringify(navigationErrors, null, 2)).toEqual([]);
   expect(results.flatMap((result) => result.violations), JSON.stringify(report.results, null, 2)).toEqual([]);
+  expect(unjustifiedIncomplete, JSON.stringify(unjustifiedIncomplete, null, 2)).toEqual([]);
+  expect(staleJustifications, JSON.stringify(staleJustifications, null, 2)).toEqual([]);
 });

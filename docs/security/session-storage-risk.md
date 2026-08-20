@@ -16,7 +16,7 @@ Qualquer JavaScript executado na origem da aplicação consegue ler Web Storage.
 - reutilização fora da janela de tolerância revoga as sessões do usuário;
 - logout revoga refresh tokens;
 - o frontend compartilha renovações concorrentes e não encerra a sessão em falhas transitórias;
-- a TPS automatizada exige 12/12 cenários corretos entre backend e frontend.
+- a TPS automatizada exige 16/16 cenários corretos: 5/5 no backend e 11/11 no frontend.
 
 ## Tratamento planejado
 

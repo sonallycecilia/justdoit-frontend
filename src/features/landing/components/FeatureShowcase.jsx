@@ -285,7 +285,9 @@ function estiloDoCard(distancia) {
   const escala = distancia === 0 ? 1 : 0.82;
   return {
     transform: `translateX(calc(-50% + ${distancia * 80}%)) scale(${escala})`,
-    opacity: distancia === 0 ? 1 : (longe ? 0 : 0.3),
+    // As cenas vizinhas continuam menores, mas não recebem transparência:
+    // reduzir a opacidade também reduz o contraste do texto visível abaixo de AA.
+    opacity: longe ? 0 : 1,
   };
 }
 

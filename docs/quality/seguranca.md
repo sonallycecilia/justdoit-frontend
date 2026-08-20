@@ -2,27 +2,20 @@
 
 > Gerado automaticamente.
 >
-> Commit-base: `cf311101cb0b2e2f7da92eb16183ee51e143bed1`
+> Commit: `be973b197b93bb6a9503699cb0ab0a1075ea0dff`
 >
-> Data UTC: `2026-08-11T12:33:33.837Z`
+> Árvore de trabalho: com alterações não commitadas
 >
-> Ambiente: Local / Windows 11 / Node 22 / Vitest 2.1.9 / jsdom
+> Execução: `30d397ad-1d18-4755-9b92-b2a60d0291cd`
+>
+> Data UTC: `2026-08-20T13:32:12.110Z`
+>
+> Ambiente: win32 x64 / Node v22.22.0
 
-| Métrica | Situação | Numerador | Denominador | Resultado | Limite/meta |
-|---|---|---:|---:|---:|---:|
-| Proteção do ciclo de sessão — backend | IMPLEMENTADA / APROVADA | 5 cenários corretos | 5 cenários obrigatórios | 5/5 (100%) | 100% exatos |
-| Proteção do ciclo de sessão — frontend | IMPLEMENTADA / APROVADA | 7 cenários corretos | 7 cenários obrigatórios | 7/7 (100%) | 100% exatos |
-| TPS sistêmica | IMPLEMENTADA / APROVADA | 12 cenários corretos | 12 cenários testados | 12/12 (100%) | 100% exatos |
+| Métrica | Situação | Denominador | Resultado | Limite/meta |
+|---|---|---:|---:|---:|
+| Proteção do ciclo de sessão (frontend) | IMPLEMENTADA / APROVADA | 11 cenários obrigatórios | 11/11 (100%) | 100% exatos |
 
-## Definição do denominador
+A TPS usa `cenários corretos ÷ cenários testados × 100`. O cliente testa 11/11 cenários: renovações concorrentes, token atualizado por outra aba, rotação preservando o storage escolhido, refresh 401, 429, 5xx e falha de rede, rejeição após rotação, respostas 403 de sessão e de regra de negócio, além de sessão legada sem refresh token. O backend possui gate complementar de 5/5 para JWT expirado, rotação, reutilização, logout e rate limiting. O contrato sistêmico esperado é 16/16, mas permanece NÃO AGREGADO enquanto os dois artefatos não forem validados na mesma execução sistêmica.
 
-A TPS usa `cenários corretos ÷ cenários testados × 100`.
-
-- Backend (5): JWT expirado, rotação do refresh token, detecção de reutilização, logout e rate limiting.
-- Frontend (7): promessa única para renovações concorrentes, token atualizado por outra aba, rotação preservando o storage escolhido, refresh 401, refresh 429, refresh 5xx e falha de rede.
-
-Os gates são distribuídos: o pipeline do backend exige 5/5 e o pipeline do frontend exige 7/7. A métrica sistêmica só está aprovada quando ambos atingem 100%.
-
-## Risco residual e migração
-
-O risco das credenciais em Web Storage está registrado em [`RISK-SESSION-001`](../security/session-storage-risk.md). O estudo para migrar o refresh token para cookie `HttpOnly`, `Secure` e `SameSite`, com proteção CSRF, está planejado no ticket [`SEC-001`](../backlog/SEC-001-http-only-session.md).
+O risco de access token e refresh token em Web Storage está registrado em `docs/security/session-storage-risk.md`; a migração para cookies HttpOnly está planejada no ticket `docs/backlog/SEC-001-http-only-session.md`.
