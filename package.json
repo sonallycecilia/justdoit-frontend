@@ -14,9 +14,11 @@
     "quality:lcp": "npm run quality:prepare && npm run quality:lcp:run",
     "quality:a11y:run": "npm run build && playwright test tests/accessibility.spec.js",
     "quality:a11y": "npm run quality:prepare && npm run quality:a11y:run",
+    "quality:responsive:run": "npm run build && playwright test tests/responsive.spec.js",
+    "quality:responsive": "npm run quality:prepare && npm run quality:responsive:run",
     "quality:session:run": "node scripts/run-session-quality.mjs",
     "quality:session": "npm run quality:prepare && npm run quality:session:run",
-    "quality:all": "npm run quality:prepare && npm test -- --reporter=junit --outputFile=quality-reports/vitest-junit.xml && npm run quality:lcp:run && npm run quality:a11y:run && npm run quality:session:run && npm run quality:report",
+    "quality:all": "npm run quality:prepare && npm test -- --reporter=junit --outputFile=quality-reports/vitest-junit.xml && npm run quality:lcp:run && npm run quality:a11y:run && npm run quality:responsive:run && npm run quality:session:run && npm run quality:report",
     "quality:report": "node scripts/generate-quality-reports.mjs"
   },
   "dependencies": {

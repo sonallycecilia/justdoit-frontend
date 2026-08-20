@@ -152,6 +152,7 @@ python run.py back     # só o backend
 | `npm test` | Testes (Vitest + Testing Library, ambiente jsdom) |
 | `npm run test:watch` | Os mesmos testes em modo watch |
 | `npm run quality:lcp` | Mede o LCP em quatro execuções e valida o P75 |
+| `npm run quality:responsive` | Valida todas as rotas em 320 px e 390 px e testa o menu móvel |
 
 ### Métrica de qualidade: LCP no P75
 

@@ -183,3 +183,24 @@
 .exp-format__desc { font-size: var(--font-size-sm); color: var(--color-text-muted); }
 
 @media (max-width: 880px) { .set { padding: var(--space-lg); } }
+
+@media (max-width: 420px) {
+  .set { padding: var(--space-md); }
+  .set-acc-card { padding: var(--space-md); }
+  .set-row, .cat-row { padding-inline: var(--space-md); }
+  .set-row { align-items: flex-start; flex-wrap: wrap; }
+  .set-row__main { min-width: 0; }
+  .set-seg { width: 100%; }
+  .set-seg button { flex: 1; min-width: 0; padding-inline: 8px; }
+  .acc-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: var(--space-sm);
+  }
+  .acc-field__label { grid-column: 1 / -1; width: auto; padding: 0; }
+  .acc-field__input { grid-column: 1; }
+  .acc-field__edit, .acc-field__btns { grid-column: 2; }
+  .set-acc__actions, .cat-add { align-items: stretch; flex-direction: column; }
+  .set-acc__actions .btn, .cat-add .btn { width: 100%; }
+  .cat-add__input { width: 100%; min-width: 0; }
+}

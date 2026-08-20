@@ -54,7 +54,7 @@
 }
 .field__control:hover { border-color: var(--color-accent); }
 .field__control svg { width: 18px; height: 18px; color: var(--color-text-muted); flex: none; }
-.field__control input { flex: 1; border: 0; outline: 0; background: transparent; font-size: var(--font-size-md); color: var(--color-text); }
+.field__control input { flex: 1; min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; font-size: var(--font-size-md); color: var(--color-text); }
 .field__control input::placeholder { color: var(--color-text-faint); }
 
 /* Linha lembrar / esqueci */
@@ -128,4 +128,13 @@
 @media (max-width: 820px) {
   .auth__aside { display: none; }
   .auth--signup .auth__main { max-height: none; overflow-y: visible; align-items: center; }
+}
+
+@media (max-width: 420px) {
+  .auth__main,
+  .auth--signup .auth__main { padding: var(--space-xl) var(--space-md); }
+  .auth__card { min-width: 0; }
+  .auth__title { font-size: var(--font-size-xl); }
+  .auth__rowend { align-items: flex-start; gap: var(--space-sm); flex-wrap: wrap; }
+  .profile-cards { grid-template-columns: 1fr; }
 }
