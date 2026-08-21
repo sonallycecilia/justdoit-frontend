@@ -29,7 +29,10 @@ vi.mock('@/features/notifications/components/NotificationCenter', () => ({
 }));
 
 describe('Sidebar — contato com desenvolvimento', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+  });
 
   it('exibe o botão circular de chat acima das notificações e abre a conversa', async () => {
     render(<MemoryRouter><Sidebar /></MemoryRouter>);
@@ -70,5 +73,22 @@ describe('Sidebar — contato com desenvolvimento', () => {
 
     expect(container.querySelector('.sidebar').style.getPropertyValue('--sidebar-current-width')).toBe('280px');
     expect(divisor).toHaveAttribute('aria-valuenow', '280');
+  });
+
+  it('abre e redimensiona o menu mobile arrastando toda a borda direita', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    const { container } = render(<MemoryRouter><Sidebar /></MemoryRouter>);
+    const sidebar = container.querySelector('.sidebar');
+    vi.spyOn(sidebar, 'getBoundingClientRect').mockReturnValue({ width: 64 });
+    const divisor = screen.getByRole('separator', { name: 'Redimensionar menu lateral' });
+
+    fireEvent.pointerDown(divisor, { pointerId: 3, clientX: 64 });
+    fireEvent.pointerMove(document, { pointerId: 3, clientX: 240 });
+    fireEvent.pointerUp(document, { pointerId: 3, clientX: 240 });
+
+    expect(sidebar).toHaveClass('sidebar--mobile-open');
+    expect(sidebar.style.getPropertyValue('--sidebar-mobile-current-width')).toBe('240px');
+    expect(localStorage.getItem('jdi-sidebar-mobile-width')).toBe('240px');
+    expect(divisor).toHaveAttribute('aria-valuenow', '240');
   });
 });
