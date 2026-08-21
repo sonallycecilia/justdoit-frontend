@@ -493,13 +493,17 @@ button.cal-month__ev { appearance: none; font: inherit; width: 100%; text-align:
   position: absolute; left: 0; top: 0; bottom: 0;
   width: 6px; cursor: ew-resize; z-index: 1;
   display: flex; align-items: center; justify-content: center;
+  touch-action: none;
 }
 .cal-drawer__resize::before {
   content: ''; width: 3px; height: 48px; border-radius: 2px;
-  background: var(--color-border); opacity: 0;
+  background: var(--color-border-strong); opacity: .45;
   transition: opacity var(--duration-fast);
 }
-.cal-drawer__resize:hover::before { opacity: 1; }
+.cal-drawer__resize:hover::before,
+.cal-drawer__resize:focus-visible::before,
+.cal-drawer__resize.is-dragging::before { opacity: 1; background: var(--color-accent); }
+.cal-drawer__resize:focus-visible { outline: none; }
 
 .cal-drawer__head {
   display: flex; align-items: center; gap: var(--space-sm);

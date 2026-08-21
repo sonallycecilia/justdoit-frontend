@@ -7,7 +7,7 @@
 .app { display: flex; min-height: 100vh; }
 
 .sidebar {
-  width: var(--sidebar-width);
+  width: var(--sidebar-current-width, var(--sidebar-width));
   flex: none;
   display: flex;
   flex-direction: column;
@@ -53,15 +53,19 @@
 .sidebar--collapsed .sidebar__collapse svg { transform: rotate(180deg); }
 
 .sidebar__resizer {
-  position: absolute; right: 0; top: 0; bottom: 0; width: 4px;
-  cursor: col-resize; z-index: 10;
+  position: absolute; right: 0; top: 0; bottom: 0; width: 8px;
+  cursor: col-resize; z-index: 10; touch-action: none;
 }
 .sidebar__resizer::after {
-  content: ''; position: absolute; inset: 0;
-  background: var(--color-accent); opacity: 0;
-  transition: opacity var(--duration-fast);
+  content: ''; position: absolute; top: 50%; right: 1px;
+  width: 3px; height: 48px; border-radius: 2px;
+  background: var(--color-border-strong); opacity: .45;
+  transform: translateY(-50%);
+  transition: opacity var(--duration-fast), background var(--duration-fast);
 }
-.sidebar__resizer:hover::after, .sidebar__resizer.is-dragging::after { opacity: 0.35; }
+.sidebar__resizer:hover::after, .sidebar__resizer.is-dragging::after { opacity: 1; background: var(--color-accent); }
+.sidebar__resizer:focus-visible { outline: none; }
+.sidebar__resizer:focus-visible::after { opacity: 1; background: var(--color-accent); }
 
 .sidebar__nav { display: flex; flex-direction: column; gap: 2px; }
 .nav-item {
