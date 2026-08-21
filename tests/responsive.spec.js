@@ -165,3 +165,55 @@ test('sidebar pode ser expandida, usada e fechada em 320px', async ({ page }) =>
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Abrir menu' })).toHaveAttribute('aria-expanded', 'false');
 });
+
+test('sidebar pode ser redimensionada pela borda direita em 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockBackend(page);
+  await setSession(page, true);
+  await page.goto('/calendario', { waitUntil: 'domcontentloaded' });
+
+  const divisor = page.getByRole('separator', { name: 'Redimensionar menu lateral' });
+  await expect(divisor).toBeVisible();
+  const box = await divisor.boundingBox();
+  expect(box).not.toBeNull();
+
+  await page.mouse.move(box.x + box.width - 2, box.y + 220);
+  await page.mouse.down();
+  await page.mouse.move(240, box.y + 220, { steps: 8 });
+  await page.mouse.up();
+
+  const sidebar = page.locator('.sidebar');
+  await expect(sidebar).toHaveClass(/sidebar--mobile-open/);
+  const largura = Math.round((await sidebar.boundingBox()).width);
+  expect(largura).toBeGreaterThan(220);
+  expect(largura).toBeLessThan(260);
+});
+
+test('calendário mobile cresce com a grade e deixa a legenda abaixo da rolagem', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockBackend(page);
+  await setSession(page, true);
+  await page.goto('/calendario', { waitUntil: 'domcontentloaded' });
+
+  const medidas = await page.evaluate(() => {
+    const main = document.querySelector('.app__main--calendar');
+    const grade = document.querySelector('.cal-scroll');
+    return {
+      mainClientHeight: main.clientHeight,
+      mainScrollHeight: main.scrollHeight,
+      gradeHeight: grade.getBoundingClientRect().height,
+    };
+  });
+
+  expect(medidas.mainScrollHeight).toBeGreaterThan(medidas.mainClientHeight);
+  expect(medidas.gradeHeight).toBeGreaterThan(844);
+
+  await page.locator('.app__main--calendar').evaluate((main) => main.scrollTo(0, main.scrollHeight));
+  await expect.poll(() => page.locator('.app__main--calendar').evaluate((main) => main.scrollTop)).toBeGreaterThan(0);
+  const legendaNaViewport = await page.evaluate(() => {
+    const mainRect = document.querySelector('.app__main--calendar').getBoundingClientRect();
+    const legendaRect = document.querySelector('.cal-legend').getBoundingClientRect();
+    return legendaRect.top < mainRect.bottom && legendaRect.bottom > mainRect.top;
+  });
+  expect(legendaNaViewport).toBe(true);
+});

@@ -4,6 +4,7 @@
    alternância dia/semana/mês, cor por categoria + prioridade.
    ============================================================ */
 
+.app__main--calendar { overflow: hidden; }
 .cal-wrap { display: flex; flex-direction: column; height: 100vh; }
 
 /* Topbar */
@@ -528,7 +529,14 @@ button.cal-month__ev { appearance: none; font: inherit; width: 100%; text-align:
 }
 
 @media (max-width: 600px) {
-  .cal-wrap { width: 100%; min-width: 0; height: 100dvh; }
+  .app__main--calendar {
+    max-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cal-wrap { width: 100%; min-width: 0; height: auto; min-height: 100dvh; }
+  .cal-scroll { flex: none; width: 100%; overflow-x: auto; overflow-y: visible; }
   .cal-top { align-items: stretch; padding: var(--space-md); }
   .cal-top__left,
   .cal-top__right { width: 100%; min-width: 0; flex-wrap: wrap; gap: var(--space-sm); }

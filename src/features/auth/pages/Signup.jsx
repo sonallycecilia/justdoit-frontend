@@ -6,6 +6,7 @@ import DatePicker from '@/components/DatePicker';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
 import { useIniciarSessao } from '@/features/auth/hooks/useSessao';
+import { useResponsiveTurnstileSize } from '@/features/auth/hooks/useResponsiveTurnstileSize';
 import { alternarTema } from '@/lib/theme';
 import { capitalizarNome, dataIso } from '@/lib/utils';
 import { PasswordStrength } from '../components/PasswordStrength';
@@ -17,6 +18,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function Signup() {
   const navigate = useNavigate();
   const iniciarSessao = useIniciarSessao();
+  const turnstileSize = useResponsiveTurnstileSize();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [nascimento, setNascimento] = useState(null);
@@ -223,19 +225,19 @@ export default function Signup() {
 
               {erroForm && <span className="field__error">{erroForm}</span>}
               
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Turnstile
-                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                onSuccess={(token) => {
-                  console.log("Turnstile gerado com sucesso:", token);
-                  setTurnstileToken(token);
-                }}
-                onExpire={() => {
-                  console.log("Turnstile expirou");
-                  setTurnstileToken(null);
-                }}
-                options={{ theme: 'light', size: 'normal' }}
-              />
+              <div className="auth__turnstile">
+                <Turnstile
+                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                  onSuccess={(token) => {
+                    console.log("Turnstile gerado com sucesso:", token);
+                    setTurnstileToken(token);
+                  }}
+                  onExpire={() => {
+                    console.log("Turnstile expirou");
+                    setTurnstileToken(null);
+                  }}
+                  options={{ theme: 'light', size: turnstileSize }}
+                />
               </div>
 
               <button 

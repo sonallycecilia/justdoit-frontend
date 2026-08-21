@@ -11,8 +11,7 @@ export default function Calendario() {
   return (
     <div className="app">
       <Sidebar ativa="calendar" />
-      {/* overflow hidden: o scroll fica dentro da grade (.cal-scroll), não na página */}
-      <main className="app__main" style={{ overflow: 'hidden' }}>
+      <main className="app__main app__main--calendar">
         <WeeklyCalendar onDrawer={(ev, dias) => setDrawer({ ev, dias })} />
       </main>
       {drawer && (

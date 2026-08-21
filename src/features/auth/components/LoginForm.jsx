@@ -7,11 +7,13 @@ import Ic, { ICONS } from '@/components/Ic';
 import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
 import { useIniciarSessao } from '@/features/auth/hooks/useSessao';
+import { useResponsiveTurnstileSize } from '@/features/auth/hooks/useResponsiveTurnstileSize';
 import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function LoginForm() {
   const navigate = useNavigate();
   const iniciarSessao = useIniciarSessao();
+  const turnstileSize = useResponsiveTurnstileSize();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [verSenha, setVerSenha] = useState(false);
@@ -116,20 +118,20 @@ export default function LoginForm() {
           <span className="field__error">{erroForm || login.error?.message || 'E-mail ou senha incorretos.'}</span>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <Turnstile
-          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-          onSuccess={(token) => {
-            console.log("Turnstile gerado com sucesso:", token);
-            setTurnstileToken(token);
-          }}
-          onExpire={() => {
-            console.log("Turnstile expirou");
-            setTurnstileToken(null);
-          }}
-          onError={(err) => console.error('TURNSTILE ERROR:', err)}
-          options={{ theme: 'light', size: 'normal' }}
-        />
+        <div className="auth__turnstile">
+          <Turnstile
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+            onSuccess={(token) => {
+              console.log("Turnstile gerado com sucesso:", token);
+              setTurnstileToken(token);
+            }}
+            onExpire={() => {
+              console.log("Turnstile expirou");
+              setTurnstileToken(null);
+            }}
+            onError={(err) => console.error('TURNSTILE ERROR:', err)}
+            options={{ theme: 'light', size: turnstileSize }}
+          />
         </div>
 
         <button type="submit" className="btn btn--primary btn--lg btn--full" disabled={login.isPending}>

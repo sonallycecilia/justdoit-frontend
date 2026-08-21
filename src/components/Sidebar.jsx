@@ -19,6 +19,10 @@ const SIDEBAR_WIDTH_KEY = 'jdi-sidebar-width';
 const SIDEBAR_DEFAULT_WIDTH = 264;
 const SIDEBAR_MIN_WIDTH = 180;
 const SIDEBAR_MAX_WIDTH = 480;
+const SIDEBAR_MOBILE_WIDTH_KEY = 'jdi-sidebar-mobile-width';
+const SIDEBAR_MOBILE_CLOSED_WIDTH = 64;
+const SIDEBAR_MOBILE_DEFAULT_WIDTH = 320;
+const SIDEBAR_MOBILE_MAX_WIDTH = 360;
 
 function limitarLarguraSidebar(largura) {
   return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, largura));
@@ -27,6 +31,18 @@ function limitarLarguraSidebar(largura) {
 function larguraInicialSidebar() {
   const salva = Number.parseFloat(localStorage.getItem(SIDEBAR_WIDTH_KEY));
   return Number.isFinite(salva) ? limitarLarguraSidebar(salva) : SIDEBAR_DEFAULT_WIDTH;
+}
+
+function limitarLarguraSidebarMobile(largura) {
+  const max = Math.min(SIDEBAR_MOBILE_MAX_WIDTH, window.innerWidth);
+  return Math.min(max, Math.max(SIDEBAR_MOBILE_CLOSED_WIDTH, largura));
+}
+
+function larguraInicialSidebarMobile() {
+  const salva = Number.parseFloat(localStorage.getItem(SIDEBAR_MOBILE_WIDTH_KEY));
+  return limitarLarguraSidebarMobile(
+    Number.isFinite(salva) ? salva : SIDEBAR_MOBILE_DEFAULT_WIDTH,
+  );
 }
 
 export default function Sidebar({ ativa = 'dashboard' }) {
@@ -44,8 +60,9 @@ export default function Sidebar({ ativa = 'dashboard' }) {
   const [erroExclusao, setErroExclusao] = useState('');
   const [chatAberto, setChatAberto] = useState(false);
   const [largura, setLargura] = useState(larguraInicialSidebar);
+  const [larguraMobile, setLarguraMobile] = useState(larguraInicialSidebarMobile);
   const [redimensionando, setRedimensionando] = useState(false);
-  const inicioRedimensionamento = useRef({ pointerId: null, x: 0, largura: SIDEBAR_DEFAULT_WIDTH });
+  const inicioRedimensionamento = useRef({ pointerId: null, x: 0, largura: SIDEBAR_DEFAULT_WIDTH, mobile: false });
   const larguraAtual = useRef(largura);
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
@@ -90,16 +107,28 @@ export default function Sidebar({ ativa = 'dashboard' }) {
 
     function aoMover(e) {
       if (e.pointerId !== inicioRedimensionamento.current.pointerId) return;
-      const proxima = limitarLarguraSidebar(
-        inicioRedimensionamento.current.largura + e.clientX - inicioRedimensionamento.current.x,
-      );
+      const bruta = inicioRedimensionamento.current.largura
+        + e.clientX
+        - inicioRedimensionamento.current.x;
+      const proxima = inicioRedimensionamento.current.mobile
+        ? limitarLarguraSidebarMobile(bruta)
+        : limitarLarguraSidebar(bruta);
       larguraAtual.current = proxima;
-      setLargura(proxima);
+      if (inicioRedimensionamento.current.mobile) setLarguraMobile(proxima);
+      else setLargura(proxima);
     }
 
     function aoTerminar(e) {
       if (e.pointerId !== inicioRedimensionamento.current.pointerId) return;
-      localStorage.setItem(SIDEBAR_WIDTH_KEY, `${larguraAtual.current}px`);
+      if (inicioRedimensionamento.current.mobile) {
+        if (larguraAtual.current <= SIDEBAR_MOBILE_CLOSED_WIDTH + 16) {
+          setMenuMobileAberto(false);
+        } else {
+          localStorage.setItem(SIDEBAR_MOBILE_WIDTH_KEY, `${larguraAtual.current}px`);
+        }
+      } else {
+        localStorage.setItem(SIDEBAR_WIDTH_KEY, `${larguraAtual.current}px`);
+      }
       setRedimensionando(false);
     }
 
@@ -116,27 +145,60 @@ export default function Sidebar({ ativa = 'dashboard' }) {
   }, [redimensionando]);
 
   function iniciarRedimensionamento(e) {
-    if (colapsada || menuMobileAberto || window.innerWidth <= 880) return;
-    inicioRedimensionamento.current = { pointerId: e.pointerId, x: e.clientX, largura };
-    larguraAtual.current = largura;
+    const mobile = window.innerWidth <= 880;
+    if (!mobile && colapsada) return;
+    const larguraRenderizada = e.currentTarget.parentElement.getBoundingClientRect().width;
+    const larguraInicial = mobile ? larguraRenderizada : largura;
+    inicioRedimensionamento.current = {
+      pointerId: e.pointerId,
+      x: e.clientX,
+      largura: larguraInicial,
+      mobile,
+    };
+    larguraAtual.current = larguraInicial;
+    if (mobile) {
+      setLarguraMobile(larguraInicial);
+      setMenuMobileAberto(true);
+    }
     e.currentTarget.setPointerCapture?.(e.pointerId);
     setRedimensionando(true);
     e.preventDefault();
   }
 
   function redimensionarPeloTeclado(e) {
+    const mobile = window.innerWidth <= 880;
+    const larguraEmUso = mobile
+      ? (menuMobileAberto ? larguraMobile : SIDEBAR_MOBILE_CLOSED_WIDTH)
+      : largura;
     let proxima;
-    if (e.key === 'ArrowLeft') proxima = largura - 16;
-    if (e.key === 'ArrowRight') proxima = largura + 16;
-    if (e.key === 'Home') proxima = SIDEBAR_MIN_WIDTH;
-    if (e.key === 'End') proxima = SIDEBAR_MAX_WIDTH;
+    if (e.key === 'ArrowLeft') proxima = larguraEmUso - 16;
+    if (e.key === 'ArrowRight') proxima = larguraEmUso + 16;
+    if (e.key === 'Home') proxima = mobile ? SIDEBAR_MOBILE_CLOSED_WIDTH : SIDEBAR_MIN_WIDTH;
+    if (e.key === 'End') proxima = mobile ? limitarLarguraSidebarMobile(SIDEBAR_MOBILE_MAX_WIDTH) : SIDEBAR_MAX_WIDTH;
     if (proxima === undefined) return;
 
     e.preventDefault();
-    const limitada = limitarLarguraSidebar(proxima);
+    const limitada = mobile ? limitarLarguraSidebarMobile(proxima) : limitarLarguraSidebar(proxima);
     larguraAtual.current = limitada;
-    setLargura(limitada);
-    localStorage.setItem(SIDEBAR_WIDTH_KEY, `${limitada}px`);
+    if (mobile) {
+      setLarguraMobile(limitada);
+      setMenuMobileAberto(limitada > SIDEBAR_MOBILE_CLOSED_WIDTH);
+      if (limitada > SIDEBAR_MOBILE_CLOSED_WIDTH) {
+        localStorage.setItem(SIDEBAR_MOBILE_WIDTH_KEY, `${limitada}px`);
+      }
+    } else {
+      setLargura(limitada);
+      localStorage.setItem(SIDEBAR_WIDTH_KEY, `${limitada}px`);
+    }
+  }
+
+  function alternarMenuMobile() {
+    if (menuMobileAberto) {
+      setMenuMobileAberto(false);
+      return;
+    }
+    setLarguraMobile(larguraInicialSidebarMobile());
+    setMenuMobileAberto(true);
   }
 
   useEffect(() => {
@@ -241,7 +303,10 @@ export default function Sidebar({ ativa = 'dashboard' }) {
       <aside
         id="app-sidebar"
         className={`sidebar ${colapsada && !menuMobileAberto ? 'sidebar--collapsed' : ''} ${menuMobileAberto ? 'sidebar--mobile-open' : ''} ${redimensionando ? 'is-resizing' : ''}`}
-        style={{ '--sidebar-current-width': `${largura}px` }}
+        style={{
+          '--sidebar-current-width': `${largura}px`,
+          '--sidebar-mobile-current-width': `${larguraMobile}px`,
+        }}
       >
       <div className="sidebar__brand">
         <Link className="sidebar__mark" to="/visao-geral" aria-label="Ir para a Visão geral"><Mark /></Link>
@@ -252,7 +317,7 @@ export default function Sidebar({ ativa = 'dashboard' }) {
           aria-label={menuMobileAberto ? 'Fechar menu' : 'Abrir menu'}
           aria-controls="app-sidebar"
           aria-expanded={menuMobileAberto}
-          onClick={() => setMenuMobileAberto((aberto) => !aberto)}
+          onClick={alternarMenuMobile}
         >
           <Ic d={menuMobileAberto ? ICONS.close : ICONS.list} />
         </button>
@@ -403,9 +468,11 @@ export default function Sidebar({ ativa = 'dashboard' }) {
         role="separator"
         aria-label="Redimensionar menu lateral"
         aria-orientation="vertical"
-        aria-valuemin={SIDEBAR_MIN_WIDTH}
-        aria-valuemax={SIDEBAR_MAX_WIDTH}
-        aria-valuenow={Math.round(largura)}
+        aria-valuemin={window.innerWidth <= 880 ? SIDEBAR_MOBILE_CLOSED_WIDTH : SIDEBAR_MIN_WIDTH}
+        aria-valuemax={window.innerWidth <= 880 ? limitarLarguraSidebarMobile(SIDEBAR_MOBILE_MAX_WIDTH) : SIDEBAR_MAX_WIDTH}
+        aria-valuenow={Math.round(window.innerWidth <= 880
+          ? (menuMobileAberto ? larguraMobile : SIDEBAR_MOBILE_CLOSED_WIDTH)
+          : largura)}
         tabIndex={0}
         title="Arraste para redimensionar o menu lateral"
         onPointerDown={iniciarRedimensionamento}
