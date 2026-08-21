@@ -116,6 +116,7 @@ export default function LoginForm() {
           <span className="field__error">{erroForm || login.error?.message || 'E-mail ou senha incorretos.'}</span>
         )}
 
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
         <Turnstile
           siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
           onSuccess={(token) => {
@@ -127,8 +128,9 @@ export default function LoginForm() {
             setTurnstileToken(null);
           }}
           onError={(err) => console.error('TURNSTILE ERROR:', err)}
-          options={{ theme: 'light', size: 'invisible' }}
+          options={{ theme: 'light', size: 'normal' }}
         />
+        </div>
 
         <button type="submit" className="btn btn--primary btn--lg btn--full" disabled={login.isPending}>
           {login.isPending ? 'Entrando…' : 'Entrar'}
