@@ -1,209 +1,181 @@
-# JustDoIt — Frontend
+# JustDoIt Frontend
 
-Interface web do **JustDoIt**, plataforma de gerenciamento de tarefas e produtividade pessoal por meio de blocos de tempo (*time-blocking*). É uma **SPA React** que consome os 4 microserviços Spring do repositório `JustDoIt`.
+Interface web do JustDoIt, uma aplicação de produtividade pessoal para tarefas,
+agenda, tempo, notas, ciclos semanais e análises.
 
-> **Regra de ouro:** o backend é a fonte da verdade. O Web Storage guarda apenas sessão e preferências de UI — **nunca** dado de negócio. Era exatamente esse o bug que motivou a migração do front antigo (vanilla JS) para React.
+> Estado verificado em 20/08/2026 contra `origin/main`, commit `540508f`.
+> Informações externas de deploy e qualidade também foram conferidas no GitHub.
 
----
+## Visão rápida
 
-## Estrutura do Projeto
+O frontend é uma SPA em JavaScript e JSX, construída com React 18 e Vite 6. A
+aplicação não usa TypeScript nem uma store global. Dados do servidor ficam no
+TanStack Query; estado visual local usa hooks do React.
 
-Aplicação **React 18 / Vite 6** de página única, em JavaScript + JSX (o projeto **não** usa TypeScript). O `src/` é organizado **por feature**, não por tipo de arquivo: tudo que pertence a um assunto — página, componentes, hooks e libs próprias — mora na mesma pasta.
+Principais dependências de runtime:
 
-```
+- React, React DOM e React Router;
+- TanStack Query para cache e sincronização da API;
+- TipTap para o editor de texto rico das anotações;
+- `react-window` para virtualizar listas grandes de tarefas;
+- `@marsidev/react-turnstile` para o desafio anti-bot.
+
+## Estrutura
+
+```text
 justdoit-frontend/
-├── index.html                 # Entrypoint do Vite (monta #root com src/main.jsx)
-├── vite.config.js             # Plugin React, porta 3000 fixa, alias @, fallback SPA
-├── jsconfig.json              # Resolução do alias @ para o editor
-├── public/                    # Copiado cru para o build
-│   ├── CNAME                  # Domínio próprio (justdoit-app.duckdns.org)
-│   └── favicon.svg
-├── run.py                     # Sobe backend + frontend de uma vez (uso local)
-└── src/
-    ├── main.jsx               # Bootstrap: QueryClient, BrowserRouter, CSS global
-    ├── App.jsx                # Tabela de rotas + guarda de autenticação
-    ├── api/                   # Camada de acesso ao backend
-    ├── components/            # UI compartilhada, sem dono
-    ├── lib/                   # Utilitários genéricos
-    ├── styles/                # Design system global
-    └── features/              # Um diretório por assunto do produto
+├── docs/                 documentação
+├── public/               CNAME e arquivos copiados para o build
+├── scripts/              coleta e geração das métricas de qualidade
+├── src/
+│   ├── api/              cliente HTTP, endpoints e sessão
+│   ├── components/       componentes compartilhados
+│   ├── features/         código organizado por funcionalidade
+│   ├── hooks/            hooks compartilhados
+│   ├── lib/              utilitários
+│   └── styles/           design system em CSS puro
+└── tests/                auditorias Playwright de acessibilidade e responsividade
 ```
 
-Cada feature segue o mesmo layout interno, criando só o que precisa:
+Cada feature cria apenas as pastas de que precisa (`pages`, `components`,
+`hooks`, `api` ou `lib`). Imports entre áreas usam o alias `@/`.
 
-```
-src/features/<nome>/
-├── pages/        # Componente de rota (o que o App.jsx importa)
-├── components/   # Componentes exclusivos da feature
-├── hooks/        # useQuery / useMutation do assunto
-└── lib/          # Regras e conversões próprias (quando houver)
-```
+## Telas e funcionalidades
 
----
-
-## Features
-
-| Feature | Rota(s) | Conteúdo |
+| Área | Rotas | Estado implementado |
 |---|---|---|
-| `landing` | `/` | Home dividida: landing à esquerda, login à direita. `LandingPane`, `Overlays` (Recursos/Sobre/Legal) e `FeatureShowcase` (vitrine animada) |
-| `auth` | `/signup`, `/onboarding` | Cadastro, onboarding e `LoginForm` (renderizado dentro da home). `useConta` — dados do usuário logado |
-| `tasks` | `/todo`, `/tasks/nova`, `/tasks/:id` | To Do e detalhe da tarefa. `TaskEditor` é o corpo único de edição; `lib/priority` e `lib/cycle` traduzem os enums do backend |
-| `categories` | — | `CategoryModal` (cria/edita), `CategorySelect` (dropdown) e `useCategories` |
-| `calendar` | `/calendario` | Grade semanal com arrastar-e-soltar. `WeeklyCalendar`, `TimeBlock`, `EventDrawer`, `EventSummary` |
-| `dashboard` | `/visao-geral`, `/analise` | Visão geral e análise. Gráficos `CategoryChart`, `DeviationChart`, `RateRing` |
-| `notes` | `/anotacoes` | Anotações livres + `NoteComposer` (também usado no To Do) |
-| `settings` | `/configuracoes` | Conta, tema, categorias, exportação de dados (`ExportModal`) e exclusão de conta |
+| Landing e autenticação | `/`, `/signup`, `/onboarding` | login e cadastro com Turnstile, perfil inicial |
+| Visão geral | `/visao-geral` | resumo de tarefas e produtividade |
+| Tarefas | `/todo`, `/tasks/nova`, `/tasks/:id` | CRUD, subtarefas, timer, foco, recorrência e lembrete |
+| Anotações | `/anotacoes` | notas livres com editor TipTap e nota fixada |
+| Calendário | `/calendario` | grade semanal, blocos, arrastar e soltar e painel de evento |
+| Análises | `/analise` | indicadores gerais, categorias e semanas fechadas |
+| Configurações | `/configuracoes` | conta, tema, categorias, exportação e exclusão |
+| Fechamento semanal | `/history`, `/history/:cycleId` | fechamento, histórico e snapshots do ciclo |
 
-### Três decisões de estrutura que não são óbvias
+Também existem, sem rota própria, a central de notificações e o canal “Falar com
+o desenvolvimento”.
 
-- **`categories/` é feature própria, não filha de `tasks/`.** `useCategories` é consumido por tasks, calendar, dashboard, settings **e** pela `Sidebar`. Enterrá-lo dentro de `tasks/` faria cinco consumidores importarem de dentro de uma feature alheia.
-- **`session.js` vive em `api/`, não em `features/auth/`.** Quem o importa é o `api/client.js`, para o refresh de token. Se morasse na feature, a camada compartilhada passaria a depender de uma feature — inversão de dependência.
-- **Cruzamentos deliberados entre features:** `calendar/EventSummary` usa o `TaskEditor` de `tasks/` (é o mesmo corpo de edição da página, propositalmente), e `tasks/Todo` usa o `NoteComposer` de `notes/`.
+## Responsividade atual
 
----
+- Todas as 13 superfícies auditáveis são verificadas em 320 × 568 e 390 × 844.
+- O menu lateral pode ser aberto e redimensionado arrastando toda a borda
+  direita no celular. A largura móvel e a largura desktop são persistidas
+  separadamente.
+- O calendário móvel mantém a grade completa na vertical. A página rola para
+  baixo até a legenda, em vez de comprimir ou cortar a grade.
+- O painel lateral de detalhes do calendário pode ser redimensionado no desktop.
+- Os divisores de redimensionamento aceitam ponteiro e teclado.
+- O Turnstile usa o formato compacto até 332 px e o formato flexível nas telas
+  maiores, evitando overflow no cadastro.
 
-## Camada de API
+## API e estado remoto
 
-Três arquivos, sem exceção — não há `fetch` solto espalhado pelas páginas.
+`src/api/endpoints.js` concentra as URLs. Em desenvolvimento, os serviços usam
+`localhost` nas portas 8080–8083. Fora de `localhost`, todos usam
+`https://justdoitapi.duckdns.org`.
 
-| Arquivo | Responsabilidade |
-|---|---|
-| `api/endpoints.js` | **Todas** as URLs. Os caminhos refletem os controllers reais do backend (`/tasks/{id}/note`, `/cycle-config`, `/module-config`, `/timer`, `/focus-sessions`) |
-| `api/client.js` | `fetch` com refresh automático de token e `ApiError` tipado. `baixarArquivo(url)` passa pelo mesmo caminho de renovação, mas devolve `Blob` (usado pela exportação — `JSON.parse` quebraria num CSV) |
-| `api/session.js` | Sessão ativa isolada por aba e persistência opcional das sessões lembradas |
+`src/api/client.js`:
 
-O endereço do backend é resolvido **em tempo de execução** pelo hostname, sem variável de ambiente:
+- injeta o access token no header `Authorization`;
+- compartilha uma única renovação entre requisições concorrentes;
+- tenta novamente a chamada depois de renovar o token;
+- encerra a sessão somente quando a credencial foi realmente recusada;
+- preserva a sessão em falhas transitórias como rede, 429 e 5xx;
+- baixa arquivos sem tentar interpretar CSV como JSON.
 
-| Ambiente | Destino |
-|---|---|
-| `localhost` / `127.0.0.1` | `:8080` auth · `:8081` tasks · `:8082` schedule · `:8083` notification |
-| Qualquer outro | `https://justdoitapi.duckdns.org` (todos os serviços atrás do Nginx) |
+O backend continua sendo a fonte de verdade dos dados de negócio. As exceções
+locais são rascunhos ainda não enviados e preferências de interface.
 
-**Refresh de token:** um `401`/`403` dispara `POST /auth/refresh` (promessa compartilhada entre requisições concorrentes, uma única tentativa) e refaz a chamada original. Se o refresh falhar, a sessão é limpa e o usuário volta para `/`. O helper `getOuNull(url)` trata `404` como "ainda não existe" — necessário para configs de módulo, nota e timer antes do primeiro `PUT`.
+## Dados mantidos no navegador
 
----
-
-## Estado do servidor
-
-Todo dado remoto passa pelo **TanStack Query**; não há Redux, Zustand ou Context de dados.
-
-- Leitura é `useQuery`, escrita é `useMutation` com invalidação.
-- Toggles e deleções usam *optimistic update* com rollback (`onMutate` / `onError` / `onSettled`).
-- O cache guarda a resposta **crua** da API; o modelo da UI é derivado no `select`.
-- `staleTime` de 30 s e retry que desiste em erro 4xx (não adianta repetir "sem permissão").
-
-O que fica no Web Storage, e só isso:
+### Sessão
 
 | Storage | Chave | Conteúdo |
 |---|---|---|
-| `sessionStorage` | `jdi.sessao.ativa` | Conta ativa isolada na aba atual |
-| `localStorage` | `jdi.sessao.lembrada.<id>` | Uma chave independente por sessão persistente |
-| `localStorage` | `jdi.sessao.ultima` | Identificador da última sessão persistente |
-| `localStorage` | `jdi.tema` | Tema escolhido (a ausência da chave significa "Sistema") |
-| `localStorage` | `jdi.inicio-semana` | Preferência de início da semana do calendário |
-| `localStorage` | `jdi.todo-notas` | Rascunho não salvo do compositor de notas |
+| `sessionStorage` | `jdi.sessao.ativa` | sessão ativa da aba |
+| `localStorage` | `jdi.sessao.lembrada.<id>` | sessões marcadas como “manter conectado” |
+| `localStorage` | `jdi.sessao.ultima` | identificador da última sessão persistente |
+| ambos | `jdi.sessao` | formato antigo, lido apenas para migração |
 
----
+### Preferências, rascunhos e estado visual
 
-## Autenticação
+- `jdi.tema` e `jdi.inicio-semana`;
+- `jdi-sidebar-collapsed`, `jdi-sidebar-width` e
+  `jdi-sidebar-mobile-width`;
+- `jdi-calendar-drawer-width`;
+- `jdi.todo-notas` e `jdi.todo-nota-titulo`;
+- `jdi.rascunho.tarefa`;
+- `jdi_usability_flows`, usado pela instrumentação local de usabilidade;
+- `jdi-browser-notifications-shown` no `sessionStorage`, para não repetir
+  notificações do navegador na mesma aba.
 
-O `App.jsx` envolve as rotas privadas em `RequireAuth`, que redireciona para `/` quando não há `accessToken` na sessão. A home **é** a tela de login — não existe página `/login` separada; a rota `/login` só redireciona, porque o `client.js` aponta para lá quando o refresh falha.
+Access e refresh tokens ainda ficam acessíveis ao JavaScript. O risco e a
+migração planejada estão documentados em
+[Risco de sessão](docs/security/session-storage-risk.md) e
+[SEC-001](docs/backlog/SEC-001-http-only-session.md).
 
-> ⚠️ Sessões lembradas ainda deixam tokens em `localStorage`, o que os expõe a XSS. A alternativa mais segura é cookie `httpOnly` emitido pelo backend.
+## Executar localmente
 
----
-
-## Estilos
-
-CSS puro, sem Tailwind, CSS-in-JS ou pré-processador. Todos os arquivos de `src/styles/` são importados globalmente no `main.jsx`:
-
-- `tokens.css` — variáveis de design (cores, espaçamentos, tipografia)
-- `reset.css`, `global.css` — base
-- `components/` e `pages/` — folhas por componente e por página
-
-Ao criar tela nova, **reusar as classes existentes** antes de escrever CSS.
-
----
-
-## Como Rodar
-
-**Pré-requisitos:** Node 20+ e o backend `JustDoIt` rodando ao lado.
+Pré-requisitos: Node 20 ou superior e o backend rodando ao lado.
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
+npm run dev
 ```
 
-> ⚠️ **A porta 3000 é obrigatória.** O CORS dos serviços Spring só aceita `http://localhost:3000`, por isso o Vite usa `strictPort` — se a porta estiver ocupada ele falha, de propósito, em vez de subir em outra e ver toda requisição bloqueada. Não use o Live Server do VS Code (porta 5500, e ele não compila JSX).
+O Vite escuta `127.0.0.1:3000` com `strictPort`. A porta é fixa porque é a origem
+permitida por padrão no CORS do backend.
 
-Para subir backend e frontend juntos:
+Comandos úteis:
 
-```bash
-python run.py start    # infra + 4 serviços + front
-python run.py front    # só o front
-python run.py back     # só o backend
-```
-
-| Script | O que faz |
+| Comando | Função |
 |---|---|
-| `npm run dev` | Servidor de desenvolvimento com HMR |
-| `npm run build` | Build de produção em `dist/` |
-| `npm run preview` | Serve o `dist/` para conferência |
-| `npm test` | Testes (Vitest + Testing Library, ambiente jsdom) |
-| `npm run test:watch` | Os mesmos testes em modo watch |
-| `npm run quality:lcp` | Mede o LCP em quatro execuções e valida o P75 |
-| `npm run quality:responsive` | Valida todas as rotas em 320 px e 390 px e testa o menu móvel |
+| `npm run dev` | desenvolvimento com HMR |
+| `npm run build` | build de produção em `dist/` |
+| `npm run preview` | serve o build localmente |
+| `npm test` | suíte Vitest |
+| `npm run quality:lcp` | LCP P75 da página inicial |
+| `npm run quality:a11y` | axe-core/Playwright nas rotas auditáveis |
+| `npm run quality:responsive` | auditoria em 320 px e 390 px |
+| `npm run quality:session` | 11 cenários do ciclo de sessão |
+| `npm run quality:all` | executa todos os gates e gera relatórios |
 
-### Métrica de qualidade: LCP no P75
+`run.py` oferece os comandos `start`, `front` e `back` para orquestração local,
+mas depende de o backend existir na pasta irmã esperada.
 
-`npm run quality:lcp` gera o build de produção, executa quatro medições Lighthouse
-da página inicial e calcula o percentil 75 pelo método *nearest rank*:
+## Qualidade verificada
 
-```text
-P75 = valor na posição ceil(0,75 × N) das amostras ordenadas
-```
+Na execução aprovada do commit `1b4663b`, posteriormente integrado à `main`:
 
-A execução é aprovada quando o LCP no P75 é menor ou igual a 2.500 ms. O resultado
-detalhado é gravado em `quality-reports/lcp-p75.json` (diretório ignorado pelo Git).
-O limite pode ser alterado temporariamente pela variável `LCP_P75_LIMIT_MS`.
+- suíte Vitest: aprovada;
+- LCP P75: **913 ms**, com amostras 846, 847, 913 e 1092 ms;
+- acessibilidade automatizada: aprovada nas 13 rotas auditáveis;
+- responsividade: **29/29** cenários aprovados;
+- proteção do ciclo de sessão: **11/11 (100%)**.
 
----
+A execução pode ser consultada no
+[GitHub Actions](https://github.com/sonallycecilia/justdoit-frontend/actions/runs/32437634036).
+Os documentos em `docs/quality/` são snapshots e informam a execução a que se
+referem; não substituem teste manual com leitor de tela nem métricas reais de
+jornada em produção.
 
 ## Deploy
 
-> ⚠️ **Ação manual pendente antes do primeiro merge na `main`.** O GitHub Pages ainda está configurado como *deploy from a branch* (`build_type: legacy`, servindo a raiz da `main`), herança de quando o site era HTML puro. Nessa configuração o `deploy.yml` não vale, e o `index.html` da raiz — que hoje é o entrypoint do Vite — seria servido cru, resultando em página em branco. É preciso trocar em **Settings → Pages → Source → GitHub Actions**. Enquanto isso não for feito, o `CNAME` da raiz é o que sustenta o domínio e não pode ser removido. Detalhes em `docs/ENTENDENDO-O-FRONTEND.md`.
+O GitHub Pages está configurado atualmente com `build_type: workflow`. Um push
+na `main` executa `.github/workflows/deploy.yml`, gera `dist/` e publica pelo
+GitHub Actions.
 
-GitHub Pages via `.github/workflows/deploy.yml`, disparado por push na `main`. Duas peças não podem sumir do build:
+- URL: `https://justdoit-app.duckdns.org/`
+- `public/CNAME` preserva o domínio próprio.
+- O build cria `404.html` como fallback das rotas do React Router.
+- `VITE_TURNSTILE_SITE_KEY` é fornecida como secret durante o build.
 
-- **`public/CNAME`** — domínio próprio (`justdoit-app.duckdns.org`). É por isso que o `base` do Vite fica em `/`, e não numa subpasta do `github.io`.
-- **`404.html`** — gerado pelo plugin `fallbackSpa` do `vite.config.js`, que copia o `index.html` ao fim do build. Sem ele, recarregar `/visao-geral` devolve 404, porque o Pages não conhece as rotas do React Router.
+## Documentação
 
----
-
-## Tech Stack
-
-| Camada | Tecnologia |
-|---|---|
-| Linguagem | JavaScript (ES2022) + JSX — sem TypeScript |
-| Biblioteca de UI | React 18.3 |
-| Build | Vite 6 (`@vitejs/plugin-react`, Babel) |
-| Roteamento | React Router 6 (`BrowserRouter`) |
-| Estado do servidor | TanStack Query 5 |
-| Estado local | `useState` / `useReducer` — sem store global |
-| Estilos | CSS puro com custom properties |
-| Testes | Vitest + Testing Library (jsdom) — só devDependency |
-| Ícones | SVG inline via componente `Ic` — sem biblioteca externa |
-| Gráficos | SVG escrito à mão — sem Chart.js/Recharts |
-| Hospedagem | GitHub Pages + domínio próprio |
-
-O projeto **não** tem dependências de runtime além de React, React DOM, React Router e TanStack Query. Ícones e gráficos são feitos à mão em SVG de propósito, para manter o bundle pequeno e evitar CDN.
-
----
-
-## Convenções
-
-- **Idioma:** código, comentários, nomes de variáveis e de arquivos em **português** (`useTarefas`, `salvar`, `duracaoMin`).
-- **Imports:** entre features, sempre com o alias `@/` (`@/components/Ic`, `@/features/tasks/hooks/useTasks`). Dentro da mesma feature, caminho relativo (`./TimeBlock`) é aceitável. Nada de `../../../`.
-- **Nada de dado de negócio em `localStorage`** — ver a regra de ouro no topo.
-- **Validação de regra de negócio é do backend.** O teto biológico de horas por dia, por exemplo, nunca é validado no cliente: o `400` do task-service vira toast e alerta na UI.
-- **Branch:** `feature/JD-XX-nome-da-tarefa`; tudo entra por Pull Request.
+- [Correção funcional](docs/quality/correcao-funcional.md)
+- [Desempenho](docs/quality/desempenho.md)
+- [Segurança](docs/quality/seguranca.md)
+- [Usabilidade e responsividade](docs/quality/usabilidade.md)
+- [Risco de credenciais no Web Storage](docs/security/session-storage-risk.md)
+- [Plano SEC-001 para cookies HttpOnly](docs/backlog/SEC-001-http-only-session.md)

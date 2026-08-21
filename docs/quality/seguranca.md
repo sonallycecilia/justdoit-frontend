@@ -1,21 +1,22 @@
 # Segurança
 
-> Gerado automaticamente.
->
-> Commit: `be973b197b93bb6a9503699cb0ab0a1075ea0dff`
->
-> Árvore de trabalho: com alterações não commitadas
->
-> Execução: `30d397ad-1d18-4755-9b92-b2a60d0291cd`
->
-> Data UTC: `2026-08-20T13:32:12.110Z`
->
-> Ambiente: win32 x64 / Node v22.22.0
+Última evidência conferida: CI do commit `1b4663b`, executado em
+21/08/2026 UTC no GitHub Actions.
 
-| Métrica | Situação | Denominador | Resultado | Limite/meta |
-|---|---|---:|---:|---:|
-| Proteção do ciclo de sessão (frontend) | IMPLEMENTADA / APROVADA | 11 cenários obrigatórios | 11/11 (100%) | 100% exatos |
+| Métrica | Situação | Resultado | Meta |
+|---|---|---:|---:|
+| Proteção do ciclo de sessão no frontend | APROVADA | 11/11 (100%) | 100% |
 
-A TPS usa `cenários corretos ÷ cenários testados × 100`. O cliente testa 11/11 cenários: renovações concorrentes, token atualizado por outra aba, rotação preservando o storage escolhido, refresh 401, 429, 5xx e falha de rede, rejeição após rotação, respostas 403 de sessão e de regra de negócio, além de sessão legada sem refresh token. O backend possui gate complementar de 5/5 para JWT expirado, rotação, reutilização, logout e rate limiting. O contrato sistêmico esperado é 16/16, mas permanece NÃO AGREGADO enquanto os dois artefatos não forem validados na mesma execução sistêmica.
+Os cenários cobrem renovação concorrente, token atualizado por outra aba,
+rotação sem trocar o storage escolhido, refresh recusado, 429, 5xx, falha de
+rede, rejeição depois da rotação, diferenças entre 401/403 e migração de sessão
+legada.
 
-O risco de access token e refresh token em Web Storage está registrado em `docs/security/session-storage-risk.md`; a migração para cookies HttpOnly está planejada no ticket `docs/backlog/SEC-001-http-only-session.md`.
+O backend possui cinco cenários complementares, mas os resultados de frontend e
+backend ainda são gerados por pipelines independentes. Não há uma execução E2E
+única que permita declarar automaticamente 16/16 para o sistema completo.
+
+Risco aberto: access e refresh tokens permanecem no Web Storage e podem ser
+lidos por JavaScript executado na origem. Consulte
+[RISK-SESSION-001](../security/session-storage-risk.md) e
+[SEC-001](../backlog/SEC-001-http-only-session.md).
