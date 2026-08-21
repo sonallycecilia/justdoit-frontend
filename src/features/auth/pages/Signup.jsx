@@ -223,6 +223,7 @@ export default function Signup() {
 
               {erroForm && <span className="field__error">{erroForm}</span>}
               
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Turnstile
                 siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                 onSuccess={(token) => {
@@ -233,8 +234,9 @@ export default function Signup() {
                   console.log("Turnstile expirou");
                   setTurnstileToken(null);
                 }}
-                options={{ theme: 'light', size: 'invisible' }}
+                options={{ theme: 'light', size: 'normal' }}
               />
+              </div>
 
               <button 
                 type="submit" 
