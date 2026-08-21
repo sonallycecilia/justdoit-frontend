@@ -30,8 +30,12 @@ jobs:
           node-version: 20
           cache: npm
 
+      
       - run: npm ci
-      - run: npm run build
+      - name: Build
+        env:
+          VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+        run: npm run build
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
