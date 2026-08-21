@@ -582,7 +582,13 @@ a.sidebar-task { text-decoration: none; }
   .sidebar__logout { margin-top: 0; }
   .sidebar__section { display: none; justify-content: center; }
   .nav-item { justify-content: center; }
-  .sidebar__collapse, .sidebar__resizer { display: none; }
+  .sidebar__collapse { display: none; }
+  .sidebar__resizer,
+  .sidebar.sidebar--collapsed .sidebar__resizer {
+    display: block;
+    width: 18px;
+    right: 0;
+  }
   .sidebar__categories, .sidebar-cat__tasks, .sidebar-cat__chevron { display: none; }
   .sidebar-cat__header { justify-content: center; }
   .sidebar__brand { flex-direction: column; align-items: center; gap: 4px; padding-bottom: var(--space-md); }
@@ -622,7 +628,7 @@ a.sidebar-task { text-decoration: none; }
   .sidebar.sidebar--mobile-open {
     position: fixed;
     inset: 0 auto 0 0;
-    width: min(320px, 100vw) !important;
+    width: min(var(--sidebar-mobile-current-width, 320px), 100vw) !important;
     height: 100dvh;
     padding: var(--space-md) var(--space-sm) var(--space-sm);
     box-shadow: var(--shadow-modal);
