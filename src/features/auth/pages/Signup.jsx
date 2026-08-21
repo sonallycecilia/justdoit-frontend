@@ -11,6 +11,7 @@ import { alternarTema } from '@/lib/theme';
 import { capitalizarNome, dataIso } from '@/lib/utils';
 import { PasswordStrength } from '../components/PasswordStrength';
 import { validarSenha } from '@/lib/senha';
+import { TURNSTILE_LOCAL_TEST_MODE, TURNSTILE_SITE_KEY } from '@/lib/turnstile';
 import { Turnstile } from '@marsidev/react-turnstile';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -227,7 +228,7 @@ export default function Signup() {
               
               <div className="auth__turnstile">
                 <Turnstile
-                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                  siteKey={TURNSTILE_SITE_KEY}
                   onSuccess={(token) => {
                     console.log("Turnstile gerado com sucesso:", token);
                     setTurnstileToken(token);
@@ -236,7 +237,7 @@ export default function Signup() {
                     console.log("Turnstile expirou");
                     setTurnstileToken(null);
                   }}
-                  options={{ theme: 'light', size: turnstileSize }}
+                  options={{ theme: 'light', size: TURNSTILE_LOCAL_TEST_MODE ? 'invisible' : turnstileSize }}
                 />
               </div>
 

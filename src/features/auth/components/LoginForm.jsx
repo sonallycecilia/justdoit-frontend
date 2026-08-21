@@ -8,6 +8,7 @@ import { api } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
 import { useIniciarSessao } from '@/features/auth/hooks/useSessao';
 import { useResponsiveTurnstileSize } from '@/features/auth/hooks/useResponsiveTurnstileSize';
+import { TURNSTILE_LOCAL_TEST_MODE, TURNSTILE_SITE_KEY } from '@/lib/turnstile';
 import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function LoginForm() {
@@ -120,7 +121,7 @@ export default function LoginForm() {
 
         <div className="auth__turnstile">
           <Turnstile
-            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+            siteKey={TURNSTILE_SITE_KEY}
             onSuccess={(token) => {
               console.log("Turnstile gerado com sucesso:", token);
               setTurnstileToken(token);
@@ -130,7 +131,7 @@ export default function LoginForm() {
               setTurnstileToken(null);
             }}
             onError={(err) => console.error('TURNSTILE ERROR:', err)}
-            options={{ theme: 'light', size: turnstileSize }}
+            options={{ theme: 'light', size: TURNSTILE_LOCAL_TEST_MODE ? 'invisible' : turnstileSize }}
           />
         </div>
 
