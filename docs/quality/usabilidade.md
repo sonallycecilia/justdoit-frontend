@@ -1,27 +1,34 @@
-# Usabilidade
+# Usabilidade e responsividade
 
-> Gerado automaticamente.
->
-> Commit: `be973b197b93bb6a9503699cb0ab0a1075ea0dff`
->
-> Árvore de trabalho: com alterações não commitadas
->
-> Execução: `30d397ad-1d18-4755-9b92-b2a60d0291cd`
->
-> Data UTC: `2026-08-20T13:32:12.110Z`
->
-> Ambiente: win32 x64 / Node v22.22.0
+Última evidência conferida: CI do commit `1b4663b`, executado em
+21/08/2026 UTC no GitHub Actions.
 
-| Métrica | Situação | Denominador | Resultado | Limite/meta |
-|---|---|---:|---:|---:|
-| Taxa de conclusão de tarefas | NÃO IMPLEMENTADA | Jornadas iniciadas (não coletadas) | — | Não definida |
-| Tempo para concluir uma operação | NÃO IMPLEMENTADA | Operações concluídas (não coletadas) | — | Não definido |
-| Cobertura de acessibilidade automatizada | APROVADA COM REVISÃO MANUAL | 299 verificações regra-página | 294/299 (98.33%) | 0 violações; 0 inconclusivos sem justificativa |
+| Verificação | Situação | Cobertura |
+|---|---|---|
+| axe-core em Chromium | APROVADA | 13/13 rotas auditáveis |
+| Responsividade compacta | APROVADA | 13 rotas em 320 × 568 |
+| Responsividade padrão | APROVADA | 13 rotas em 390 × 844 |
+| Interações móveis específicas | APROVADAS | 3 cenários |
 
-## Evidência auxiliar
+O total da suíte responsiva foi **29/29**. Os três cenários específicos verificam:
 
-| Verificação | Situação | Denominador | Resultado | Limite |
-|---|---|---:|---:|---:|
-| Suíte Vitest | APROVADA | 124 casos executados | 124 passaram; 0 falharam | 0 falhas |
+1. abrir, usar e fechar o menu em 320 px;
+2. redimensionar o menu pela borda direita em 390 px;
+3. rolar o calendário completo até a legenda sem cortar a grade.
 
-Os testes de componentes e hooks dão suporte aos fluxos, mas não medem jornadas reais. A acessibilidade usa axe-core em Chromium sobre 13/13 rotas do manifesto da aplicação. O denominador inclui regras aprovadas, violadas e inconclusivas; por isso não é publicado 100% enquanto houver revisão manual. Inconclusivos justificados: 5; sem justificativa: 0. Navegação por teclado dos diálogos é testada no Vitest. Leitores de tela continuam como verificação manual.
+A auditoria procura overflow horizontal, controles cortados e campos invisíveis.
+O cadastro também é coberto em 320 px, incluindo o Turnstile compacto.
+
+## O que ainda depende de avaliação humana
+
+- leitor de tela e qualidade dos anúncios;
+- contraste em estados não alcançados pela automação;
+- compreensão dos textos e dos fluxos;
+- conforto do gesto de arrastar em aparelhos físicos;
+- taxa de conclusão e tempo real de uma jornada.
+
+Existe instrumentação local `jdi_usability_flows`, mas ela não agrega dados de
+usuários em produção. Portanto, taxa de conclusão e tempo por operação ainda não
+são métricas implementadas do produto.
+
+[Consultar execução](https://github.com/sonallycecilia/justdoit-frontend/actions/runs/32437634036)
