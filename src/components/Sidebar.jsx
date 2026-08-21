@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ConfirmModal from '@/components/ConfirmModal';
 import Ic, { ICONS, Mark } from '@/components/Ic';
@@ -15,6 +15,20 @@ import { useConta } from '@/features/auth/hooks/useConta';
 import { useEncerrarSessao } from '@/features/auth/hooks/useSessao';
 import { useAtualizarTarefa, useRemoverTarefa, useTarefas } from '@/features/tasks/hooks/useTasks';
 
+const SIDEBAR_WIDTH_KEY = 'jdi-sidebar-width';
+const SIDEBAR_DEFAULT_WIDTH = 264;
+const SIDEBAR_MIN_WIDTH = 180;
+const SIDEBAR_MAX_WIDTH = 480;
+
+function limitarLarguraSidebar(largura) {
+  return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, largura));
+}
+
+function larguraInicialSidebar() {
+  const salva = Number.parseFloat(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+  return Number.isFinite(salva) ? limitarLarguraSidebar(salva) : SIDEBAR_DEFAULT_WIDTH;
+}
+
 export default function Sidebar({ ativa = 'dashboard' }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,6 +43,10 @@ export default function Sidebar({ ativa = 'dashboard' }) {
   const [categoriaParaExcluir, setCategoriaParaExcluir] = useState(null);
   const [erroExclusao, setErroExclusao] = useState('');
   const [chatAberto, setChatAberto] = useState(false);
+  const [largura, setLargura] = useState(larguraInicialSidebar);
+  const [redimensionando, setRedimensionando] = useState(false);
+  const inicioRedimensionamento = useRef({ pointerId: null, x: 0, largura: SIDEBAR_DEFAULT_WIDTH });
+  const larguraAtual = useRef(largura);
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   const { data: categorias } = useCategorias();
@@ -61,6 +79,65 @@ export default function Sidebar({ ativa = 'dashboard' }) {
       window.removeEventListener('scroll', fechar, true);
     };
   }, [menuContexto]);
+
+  useEffect(() => {
+    if (!redimensionando) return undefined;
+
+    const cursorAnterior = document.body.style.cursor;
+    const selecaoAnterior = document.body.style.userSelect;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function aoMover(e) {
+      if (e.pointerId !== inicioRedimensionamento.current.pointerId) return;
+      const proxima = limitarLarguraSidebar(
+        inicioRedimensionamento.current.largura + e.clientX - inicioRedimensionamento.current.x,
+      );
+      larguraAtual.current = proxima;
+      setLargura(proxima);
+    }
+
+    function aoTerminar(e) {
+      if (e.pointerId !== inicioRedimensionamento.current.pointerId) return;
+      localStorage.setItem(SIDEBAR_WIDTH_KEY, `${larguraAtual.current}px`);
+      setRedimensionando(false);
+    }
+
+    document.addEventListener('pointermove', aoMover);
+    document.addEventListener('pointerup', aoTerminar);
+    document.addEventListener('pointercancel', aoTerminar);
+    return () => {
+      document.removeEventListener('pointermove', aoMover);
+      document.removeEventListener('pointerup', aoTerminar);
+      document.removeEventListener('pointercancel', aoTerminar);
+      document.body.style.cursor = cursorAnterior;
+      document.body.style.userSelect = selecaoAnterior;
+    };
+  }, [redimensionando]);
+
+  function iniciarRedimensionamento(e) {
+    if (colapsada || menuMobileAberto || window.innerWidth <= 880) return;
+    inicioRedimensionamento.current = { pointerId: e.pointerId, x: e.clientX, largura };
+    larguraAtual.current = largura;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setRedimensionando(true);
+    e.preventDefault();
+  }
+
+  function redimensionarPeloTeclado(e) {
+    let proxima;
+    if (e.key === 'ArrowLeft') proxima = largura - 16;
+    if (e.key === 'ArrowRight') proxima = largura + 16;
+    if (e.key === 'Home') proxima = SIDEBAR_MIN_WIDTH;
+    if (e.key === 'End') proxima = SIDEBAR_MAX_WIDTH;
+    if (proxima === undefined) return;
+
+    e.preventDefault();
+    const limitada = limitarLarguraSidebar(proxima);
+    larguraAtual.current = limitada;
+    setLargura(limitada);
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, `${limitada}px`);
+  }
 
   useEffect(() => {
     setMenuMobileAberto(false);
@@ -163,7 +240,8 @@ export default function Sidebar({ ativa = 'dashboard' }) {
       />
       <aside
         id="app-sidebar"
-        className={`sidebar ${colapsada && !menuMobileAberto ? 'sidebar--collapsed' : ''} ${menuMobileAberto ? 'sidebar--mobile-open' : ''}`}
+        className={`sidebar ${colapsada && !menuMobileAberto ? 'sidebar--collapsed' : ''} ${menuMobileAberto ? 'sidebar--mobile-open' : ''} ${redimensionando ? 'is-resizing' : ''}`}
+        style={{ '--sidebar-current-width': `${largura}px` }}
       >
       <div className="sidebar__brand">
         <Link className="sidebar__mark" to="/visao-geral" aria-label="Ir para a Visão geral"><Mark /></Link>
@@ -319,6 +397,20 @@ export default function Sidebar({ ativa = 'dashboard' }) {
           <button className="btn-icon" type="button" onClick={alternarTema} aria-label="Alternar tema"><Ic d={ICONS.moon} /></button>
         </div>
       </div>
+
+      <div
+        className={`sidebar__resizer ${redimensionando ? 'is-dragging' : ''}`}
+        role="separator"
+        aria-label="Redimensionar menu lateral"
+        aria-orientation="vertical"
+        aria-valuemin={SIDEBAR_MIN_WIDTH}
+        aria-valuemax={SIDEBAR_MAX_WIDTH}
+        aria-valuenow={Math.round(largura)}
+        tabIndex={0}
+        title="Arraste para redimensionar o menu lateral"
+        onPointerDown={iniciarRedimensionamento}
+        onKeyDown={redimensionarPeloTeclado}
+      />
 
       <button
         className="floating-action floating-action--chat"

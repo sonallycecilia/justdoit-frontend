@@ -1,7 +1,7 @@
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Sidebar from '@/components/Sidebar';
 
 vi.mock('@/features/categories/hooks/useCategories', () => ({
@@ -29,6 +29,8 @@ vi.mock('@/features/notifications/components/NotificationCenter', () => ({
 }));
 
 describe('Sidebar — contato com desenvolvimento', () => {
+  beforeEach(() => localStorage.clear());
+
   it('exibe o botão circular de chat acima das notificações e abre a conversa', async () => {
     render(<MemoryRouter><Sidebar /></MemoryRouter>);
 
@@ -42,5 +44,31 @@ describe('Sidebar — contato com desenvolvimento', () => {
     await userEvent.click(chat);
     expect(screen.getByRole('dialog', { name: 'Chat com o desenvolvimento' })).toBeInTheDocument();
     expect(chat).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('redimensiona pela borda e preserva a largura escolhida', () => {
+    const { container, unmount } = render(<MemoryRouter><Sidebar /></MemoryRouter>);
+    const divisor = screen.getByRole('separator', { name: 'Redimensionar menu lateral' });
+
+    fireEvent.pointerDown(divisor, { pointerId: 1, clientX: 264 });
+    fireEvent.pointerMove(document, { pointerId: 1, clientX: 360 });
+    fireEvent.pointerUp(document, { pointerId: 1, clientX: 360 });
+
+    expect(container.querySelector('.sidebar').style.getPropertyValue('--sidebar-current-width')).toBe('360px');
+    expect(localStorage.getItem('jdi-sidebar-width')).toBe('360px');
+
+    unmount();
+    const novaMontagem = render(<MemoryRouter><Sidebar /></MemoryRouter>);
+    expect(novaMontagem.container.querySelector('.sidebar').style.getPropertyValue('--sidebar-current-width')).toBe('360px');
+  });
+
+  it('permite redimensionar a borda pelo teclado', () => {
+    const { container } = render(<MemoryRouter><Sidebar /></MemoryRouter>);
+    const divisor = screen.getByRole('separator', { name: 'Redimensionar menu lateral' });
+
+    fireEvent.keyDown(divisor, { key: 'ArrowRight' });
+
+    expect(container.querySelector('.sidebar').style.getPropertyValue('--sidebar-current-width')).toBe('280px');
+    expect(divisor).toHaveAttribute('aria-valuenow', '280');
   });
 });
