@@ -45,6 +45,15 @@ COMPOSE_FILE = os.path.join(BACKEND_DIR, "infra", "docker-compose.yml")
 # Serviços Spring (módulos do settings.gradle.kts). Cada um sobe em janela própria.
 SERVICES = ["auth-service", "task-service", "schedule-service", "notification-service"]
 
+# Somente a infraestrutura deve subir pelo Compose. O arquivo também pode conter
+# serviços de aplicação usados em outros ambientes; iniciá-los sem uma lista
+# explícita faria o backend local subir duas vezes (Docker + Gradle).
+INFRA_SERVICES = ["mysql-justdoit", "redis-justdoit", "prometheus", "grafana"]
+
+# Par oficial da Cloudflare para validar o Turnstile em localhost. A chave real,
+# quando definida em infra/.env, sempre tem precedência.
+LOCAL_TURNSTILE_TEST_SECRET = "1x0000000000000000000000000000000AA"
+
 PORT = 3000  # CORS do backend só aceita http://localhost:3000
 
 
@@ -63,6 +72,7 @@ def load_env():
                 continue
             key, value = line.split("=", 1)
             os.environ[key.strip()] = value.strip()
+    os.environ.setdefault("TURNSTILE_SECRET_KEY", LOCAL_TURNSTILE_TEST_SECRET)
     print(f"[ENV] Carregado {ENV_FILE}")
 
 
@@ -127,7 +137,7 @@ def backend_up():
     """Infra (containers) + os 4 serviços Spring."""
     validate_backend()
     load_env()
-    compose("up", "-d")
+    compose("up", "-d", *INFRA_SERVICES)
     start_services()
     print("\n[BACK] Infra no ar e serviços subindo (cada um na sua janela). "
           "Eles levam alguns segundos até responder.")
@@ -153,12 +163,12 @@ def main():
               "estiverem abertas, para não conflitar nas portas 8080-8083.")
         validate_backend()
         load_env()
-        compose("up", "-d")
+        compose("up", "-d", *INFRA_SERVICES)
         start_services()
     elif cmd == "stop":
         validate_backend()
         load_env()
-        compose("stop")
+        compose("stop", *INFRA_SERVICES)
         print("Infra parada. Feche as janelas dos serviços (jdi-*) e do frontend "
               "manualmente (ou Ctrl+C em cada uma).")
 
